@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { catalog } from "../core/catalog";
 import { available, usage } from "../core/inventory";
 import { componentOf, len, sub, type Vec3 } from "../core/model";
@@ -38,6 +39,100 @@ function Actions({ moveLabel, removeLabel }: { moveLabel: string; removeLabel: s
   );
 }
 
+/** Texto do campo → módulos. Aceita "5,196" (módulos) ou "77,3 mm". */
+function parseCoord(t: string): number | null {
+  const raw = t.trim().toLowerCase().replace(",", ".");
+  const mm = raw.endsWith("mm");
+  const body = raw.replace(/mm$/, "").trim();
+  const v = Number(body);
+  if (!body || !Number.isFinite(v)) return null;
+  return mm ? v / M : v;
+}
+const fieldText = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 4, useGrouping: false });
+
+/** Posição da GC/esfera por coordenadas: leva junto a estrutura ligada (como Mover). */
+function CoordEditor({ id, pos }: { id: string; pos: Vec3 }) {
+  const [x, setX] = useState(fieldText(pos[0]));
+  const [z, setZ] = useState(fieldText(pos[2]));
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    setX(fieldText(pos[0]));
+    setZ(fieldText(pos[2]));
+    setErr(null);
+  }, [id, pos[0], pos[2]]);
+  const apply = () => {
+    const px = parseCoord(x);
+    const pz = parseCoord(z);
+    if (px === null || pz === null) return setErr("Use números em módulos (ex.: 5,196) ou em mm (ex.: 77,3 mm).");
+    setErr(useApp.getState().moveNodeTo(id, [px, pos[1], pz]));
+  };
+  const field = (label: string, v: string, set: (v: string) => void) => (
+    <label className="coord">
+      <span>{label}</span>
+      <input
+        value={v}
+        inputMode="decimal"
+        onChange={(e) => set(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") apply();
+          if (e.key === "Escape") (setX(fieldText(pos[0])), setZ(fieldText(pos[2])), setErr(null), (e.target as HTMLInputElement).blur());
+        }}
+        aria-label={`Coordenada ${label} em módulos`}
+      />
+    </label>
+  );
+  return (
+    <div className="coords">
+      <div className="coords-row">
+        {field("X", x, setX)}
+        {field("Z", z, setZ)}
+        <button onClick={apply}>Aplicar</button>
+      </div>
+      <p className="coords-help">
+        Em módulos (1 M = {fmt(M, 2)} mm) ou em mm (ex.: 77,3 mm). Enter aplica. A estrutura ligada vai junto.
+      </p>
+      {err && <p className="coords-err" role="alert">{err}</p>}
+    </div>
+  );
+}
+
+/** Distâncias desta GC às outras, marcando as que batem com o vão de uma barra. */
+function Distances({ id }: { id: string }) {
+  const model = useModel();
+  const n = model.nodes[id];
+  const tol = catalog.settings.tolerancia_encaixe_mm / M;
+  const bars = Object.values(catalog.pieces).filter((p) => p.type === "bar" && p.spanM).map((p) => ({ code: p.code, span: p.spanM![0] }));
+  const others = Object.values(model.nodes)
+    .filter((o) => o.kind === "support" && o.id !== id)
+    .map((o) => {
+      const d = len(sub(o.pos, n.pos));
+      return { o, d, bar: bars.find((b) => Math.abs(b.span - d) <= tol)?.code };
+    })
+    .sort((a, b) => a.d - b.d)
+    .slice(0, 5);
+  if (!others.length) return null;
+  return (
+    <table className="bom dist">
+      <thead>
+        <tr>
+          <th>Até a GC</th>
+          <th>Distância</th>
+          <th>Barra</th>
+        </tr>
+      </thead>
+      <tbody>
+        {others.map(({ o, d, bar }) => (
+          <tr key={o.id} className={bar ? "match" : ""}>
+            <td>{posText(o.pos)}</td>
+            <td>{fmt(d, 2)} M · {fmt(d * M, 1)} mm</td>
+            <td>{bar ?? "—"}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 function Selected() {
   const model = useModel();
   const sel = useApp((s) => s.selection)!;
@@ -55,6 +150,8 @@ function Selected() {
           <Row k="Peças ligadas" v={links} />
           <Row k="Mover e girar" v={`levam a estrutura inteira (${group} ${group === 1 ? "nó" : "nós"})`} />
         </dl>
+        <CoordEditor id={n.id} pos={n.pos} />
+        {n.kind === "support" && <Distances id={n.id} />}
         <Actions moveLabel="Mover estrutura" removeLabel={n.kind === "support" ? "Remover GC e o que sai dela" : "Remover esfera e peças ligadas"} />
       </>
     );

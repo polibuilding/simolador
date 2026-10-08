@@ -1,10 +1,10 @@
 // Estado da aplicação (zustand). O modelo vive dentro de um histórico para desfazer/refazer.
 import { create } from "zustand";
 import { catalog } from "../core/catalog";
-import { codeOf, removeMany, removeSelection, rotateSelection, type Sel } from "../core/edit";
+import { codeOf, moveGroup, removeMany, removeSelection, rotateSelection, type Sel } from "../core/edit";
 import { createHistory, push, redo, undo, type History } from "../core/history";
 import { defaultInventory, type InventoryConfig } from "../core/inventory";
-import { emptyModel, membersAt, type Model } from "../core/model";
+import { emptyModel, membersAt, type Model, type Vec3 } from "../core/model";
 import { overlappingNodes, type Check } from "../core/rules";
 import { fromFile, toFile, type SheetMeta } from "../core/serialization";
 import { applyCandidate, type Candidate } from "../core/snapping";
@@ -65,6 +65,8 @@ interface State {
   undo: () => void;
   redo: () => void;
   setSnap: (v: boolean) => void;
+  /** leva a GC/esfera (e a estrutura ligada a ela) para a posição dada em módulos; devolve o erro, se houver */
+  moveNodeTo: (nodeId: string, target: Vec3) => string | null;
   setIncline: (v: boolean) => void;
   setShiftHeld: (v: boolean) => void;
   setInventory: (inv: InventoryConfig) => void;
@@ -229,6 +231,17 @@ export const useApp = create<State>((set, get) => ({
   undo: () => set((s) => ({ history: undo(s.history), selection: null, multi: [], ghost: null, tool: { kind: "select" } })),
   redo: () => set((s) => ({ history: redo(s.history), selection: null, multi: [], ghost: null, tool: { kind: "select" } })),
   setSnap: (snap) => set({ snap }),
+  moveNodeTo: (nodeId, target) => {
+    const { history } = get();
+    const n = history.present.nodes[nodeId];
+    if (!n) return "Peça não encontrada.";
+    const delta: Vec3 = [target[0] - n.pos[0], 0, target[2] - n.pos[2]];
+    if (Math.hypot(delta[0], delta[2]) < 1e-6) return null;
+    const r = moveGroup(catalog, history.present, nodeId, delta, 0);
+    if (!r.check.ok) return r.check.errors[0];
+    set({ history: push(history, r.model), hint: null });
+    return null;
+  },
   setIncline: (incline) => set({ incline, rotIndex: 0 }),
   setShiftHeld: (shiftHeld) => (get().shiftHeld === shiftHeld ? undefined : set({ shiftHeld, rotIndex: 0 })),
   setInventory: (inventory) => set({ inventory }),

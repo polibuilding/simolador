@@ -12,8 +12,9 @@ import { moveGroup } from "../core/edit";
 import { findNodeAt, len, sub, type Model, type Vec3 } from "../core/model";
 import type { Sel } from "../core/edit";
 import {
-  allCandidates, anchorPos, markerPos, supportCandidate, supportPosition, type Candidate,
+  allCandidates, anchorPos, markerPos, supportCandidate, supportGuides, supportPosition, type Candidate, type SupportGuide,
 } from "../core/snapping";
+import { componentOf } from "../core/model";
 import { inclineOn, useApp, workingModel } from "../ui/store";
 import { BASE_Y, M, toWorld } from "../render/units";
 
@@ -73,6 +74,18 @@ export function candidatesFor(model: Model, code: string, inv: ReturnType<typeof
   return cache;
 }
 
+// guias da GC (pontos azuis e amarelos): recalcula quando muda o modelo, o estoque ou o que está sendo movido
+let guideCache: { model: Model; inv: unknown; key: string; guides: SupportGuide[] } | null = null;
+export function guidesFor(model: Model, inv: ReturnType<typeof useApp.getState>["inventory"], ignore: Set<string> = new Set()) {
+  const key = [...ignore].sort().join(",");
+  if (guideCache && guideCache.model === model && guideCache.inv === inv && guideCache.key === key) return guideCache.guides;
+  guideCache = { model, inv, key, guides: supportGuides(catalog, inv, model, ignore) };
+  return guideCache.guides;
+}
+
+/** A GC sendo colocada/movida "puxa" para um ponto-guia perto do cursor (na tela), em qualquer modo de encaixe. */
+const GUIDE_PX = 18;
+
 export function Placement() {
   const { camera, gl, controls } = useThree();
   const down = useRef<{ x: number; y: number } | null>(null);
@@ -102,6 +115,16 @@ export function Placement() {
       const ndc = new THREE.Vector2(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
       raycaster.setFromCamera(ndc, camera);
       return raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -yMm), new THREE.Vector3());
+    };
+
+    const nearGuide = (guides: SupportGuide[], ev: PointerEvent, rect: DOMRect) => {
+      let best: { g: SupportGuide; d: number } | null = null;
+      for (const g of guides) {
+        const sp = toScreen(toWorld(g.pos), rect);
+        const d = Math.hypot(sp.x - ev.clientX, sp.y - ev.clientY);
+        if (d < GUIDE_PX && (!best || d < best.d)) best = { g, d };
+      }
+      return best?.g ?? null;
     };
 
     const inGizmo = (ev: PointerEvent, rect: DOMRect) => ev.clientX > rect.right - GIZMO_PX && ev.clientY < rect.top + GIZMO_PX;
@@ -160,10 +183,15 @@ export function Placement() {
         if (!node) return st.disarm();
         const hit = planeHit(ev, rect, BASE_Y + node.pos[1] * M);
         if (!hit) return;
-        const target = supportPosition(catalog, { x: hit.x / M, z: hit.z / M }, st.snap);
+        let target = supportPosition(catalog, { x: hit.x / M, z: hit.z / M }, st.snap);
+        let guide: SupportGuide | null = null;
+        if (node.kind === "support" && !tool.turns) {
+          guide = nearGuide(guidesFor(st.history.present, st.inventory, componentOf(st.history.present, tool.nodeId)), ev, rect);
+          if (guide) target = guide.pos;
+        }
         const delta: Vec3 = [target[0] - node.pos[0], 0, target[2] - node.pos[2]];
         const r = moveGroup(catalog, st.history.present, tool.nodeId, delta, tool.turns);
-        return st.setGhost({ kind: "group", model: r.model, ids: r.ids, check: r.check }, r.check.errors[0] ?? null);
+        return st.setGhost({ kind: "group", model: r.model, ids: r.ids, check: r.check }, r.check.errors[0] ?? guide?.text ?? null);
       }
 
       const code = tool.code;
@@ -173,9 +201,11 @@ export function Placement() {
       if (catalog.pieces[code]?.type === "support") {
         const hit = planeHit(ev, rect, 0);
         if (!hit) return st.setGhost(null, "Aponte para a chapa.");
-        const pos = supportPosition(catalog, { x: hit.x / M, z: hit.z / M }, st.snap);
+        let pos = supportPosition(catalog, { x: hit.x / M, z: hit.z / M }, st.snap);
+        const guide = nearGuide(guidesFor(model, inv), ev, rect);
+        if (guide) pos = guide.pos;
         const cand = supportCandidate(catalog, inv, model, pos);
-        return st.setGhost({ kind: "cand", cand }, cand.check.ok ? null : cand.check.errors[0]);
+        return st.setGhost({ kind: "cand", cand }, cand.check.ok ? guide?.text ?? null : cand.check.errors[0]);
       }
 
       // ---- demais peças: ponto de encaixe mais próximo ----

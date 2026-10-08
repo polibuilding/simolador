@@ -330,3 +330,19 @@ dl { margin: 0 0 16px; }
 .props .multi-note { color: var(--graphite); margin: 0 0 12px; }
 .props .actions.multi { grid-template-columns: 1fr; }
 .mouse-help { margin: 14px 0 0; padding-left: 18px; color: var(--graphite); font-size: 12px; }
+
+/* ---------- coordenadas e distâncias ---------- */
+.coords { margin: -4px 0 16px; }
+.coords-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: end; }
+.coord { display: grid; gap: 2px; font-size: 12px; color: var(--graphite); }
+.coord input {
+  font: inherit; font-size: 14px; color: var(--ink); width: 100%; min-width: 0;
+  padding: 6px 7px; border: 1px solid var(--rule); border-radius: 0; background: #fff;
+}
+.coord input:focus { border-color: var(--ink); outline: none; }
+.coords-row button { padding: 7px 10px; }
+.coords-help { margin: 6px 0 0; font-size: 12px; color: var(--graphite); }
+.coords-err { margin: 6px 0 0; font-size: 12px; color: var(--bad); font-weight: 600; }
+.bom.dist { margin-bottom: 16px; font-size: 12px; }
+.bom.dist td:first-child { font-weight: 400; }
+.bom.dist tr.match td { color: #1f5fbf; font-weight: 700; }

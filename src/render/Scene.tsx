@@ -3,9 +3,9 @@ import { Environment, GizmoHelper, GizmoViewcube, Lightformer, OrbitControls } f
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { catalog } from "../core/catalog";
-import type { Model, Vec3 } from "../core/model";
+import { componentOf, type Model, type Vec3 } from "../core/model";
 import { markerPos, type Candidate } from "../core/snapping";
-import { candidatesFor, Placement } from "../interaction/Placement";
+import { candidatesFor, guidesFor, Placement } from "../interaction/Placement";
 import { useApp, useModel, inclineOn, workingModel } from "../ui/store";
 import type { Sel } from "../core/edit";
 import { Bar, GroundConnection, GroundPlate, Sphere, type Look } from "./pieces/pieces";
@@ -149,7 +149,31 @@ function Markers() {
   const model = useApp((s) => workingModel(s));
   const ref = useRef<THREE.InstancedMesh>(null);
   const ringRef = useRef<THREE.InstancedMesh>(null);
+  const blueRef = useRef<THREE.InstancedMesh>(null);
+  const yellowRef = useRef<THREE.InstancedMesh>(null);
   const code = tool.kind === "place" ? tool.code : null;
+  // GC: pontos azuis (a um vão de barra de outra GC) e amarelos (vértice de triângulo), nos dois modos de encaixe
+  const present = useApp((s) => s.history.present);
+  const { blue, yellow, guideKeys } = useMemo(() => {
+    const empty = { blue: [] as THREE.Vector3[], yellow: [] as THREE.Vector3[], guideKeys: new Set<string>() };
+    let guides;
+    if (code && catalog.pieces[code]?.type === "support") {
+      const inv = tool.kind === "place" && tool.moving ? { ...inventory, unlimited: true } : inventory;
+      guides = guidesFor(model, inv);
+    } else if (tool.kind === "moveGroup" && present.nodes[tool.nodeId]?.kind === "support" && !tool.turns) {
+      guides = guidesFor(present, inventory, componentOf(present, tool.nodeId));
+    } else return empty;
+    const lift = (p: Vec3) => {
+      const w = toWorld(p);
+      w.y = 0.6;
+      return w;
+    };
+    return {
+      blue: guides.filter((g) => g.kind === "blue").map((g) => lift(g.pos)),
+      yellow: guides.filter((g) => g.kind === "yellow").map((g) => lift(g.pos)),
+      guideKeys: new Set(guides.map((g) => g.pos.join(","))),
+    };
+  }, [code, model, present, inventory, tool]);
   const { dots, rings } = useMemo(() => {
     if (!code || !snap) return { dots: [] as THREE.Vector3[], rings: [] as THREE.Vector3[] };
     const inv = tool.kind === "place" && tool.moving ? { ...inventory, unlimited: true } : inventory;
@@ -163,14 +187,14 @@ function Markers() {
       if (c.kind === "member" && c.inclined && !occupied.has(c.toPos.join(","))) continue; // inclinadas livres: sem ponto
       const p = markerPos(model, c);
       const k = p.join(",");
-      if (seen.has(k)) continue;
+      if (seen.has(k) || guideKeys.has(k)) continue;
       seen.add(k);
       const w = toWorld(p);
       if (c.kind === "support") w.y = 0.4;
       (occupied.has(k) ? rings : dots).push(w);
     }
     return { dots, rings };
-  }, [code, snap, model, inventory, tool, inclined]);
+  }, [code, snap, model, inventory, tool, inclined, guideKeys]);
 
   useEffect(() => {
     const m = new THREE.Matrix4();
@@ -178,7 +202,11 @@ function Markers() {
     if (ref.current) (ref.current.count = dots.length), (ref.current.instanceMatrix.needsUpdate = true);
     rings.forEach((p, i) => ringRef.current?.setMatrixAt(i, m.makeTranslation(p.x, p.y, p.z)));
     if (ringRef.current) (ringRef.current.count = rings.length), (ringRef.current.instanceMatrix.needsUpdate = true);
-  }, [dots, rings]);
+    for (const [r, list] of [[blueRef, blue], [yellowRef, yellow]] as const) {
+      list.forEach((p, i) => r.current?.setMatrixAt(i, m.makeTranslation(p.x, p.y, p.z)));
+      if (r.current) (r.current.count = list.length), (r.current.instanceMatrix.needsUpdate = true);
+    }
+  }, [dots, rings, blue, yellow]);
 
   const max = 2000;
   return (
@@ -186,6 +214,14 @@ function Markers() {
       <instancedMesh ref={ref} args={[undefined, undefined, max]} raycast={() => null} frustumCulled={false}>
         <sphereGeometry args={[2.6, 12, 8]} />
         <meshBasicMaterial color={COLORS.valid} transparent opacity={0.85} depthTest={false} />
+      </instancedMesh>
+      <instancedMesh ref={blueRef} args={[undefined, undefined, 400]} raycast={() => null} frustumCulled={false}>
+        <sphereGeometry args={[3.6, 14, 10]} />
+        <meshBasicMaterial color={COLORS.guideBlue} transparent opacity={0.95} depthTest={false} />
+      </instancedMesh>
+      <instancedMesh ref={yellowRef} args={[undefined, undefined, 400]} raycast={() => null} frustumCulled={false}>
+        <sphereGeometry args={[3.6, 14, 10]} />
+        <meshBasicMaterial color={COLORS.guideYellow} transparent opacity={0.95} depthTest={false} />
       </instancedMesh>
       <instancedMesh ref={ringRef} args={[undefined, undefined, max]} raycast={() => null} frustumCulled={false}>
         <sphereGeometry args={[10.5, 20, 14]} />
