@@ -31,7 +31,8 @@ export interface Plate {
  * Ligação num nó.
  * RC90: dirs = as duas direções (unitárias, nos eixos) das peças a 90°. Com `base`, fica entre a GC e o pilar:
  *       dirs = [para cima, lado da GC].
- * CC / CC90: dirs = [eixo] (unitário positivo) do par de barras alinhadas que a ligação torna contínuo.
+ * CC / CC90: dirs = [eixo] (unitário positivo) do par de barras alinhadas que a ligação torna contínuo;
+ *            side = lado da esfera onde a peça fica (um dos 4 perpendiculares ao eixo, livre de barra transversal).
  */
 export interface Connector {
   id: string;
@@ -39,6 +40,8 @@ export interface Connector {
   node: string;
   dirs: Vec3[];
   base?: boolean;
+  /** CC / CC90: lado da esfera em que a peça fica (unitário, perpendicular ao eixo). */
+  side?: Vec3;
 }
 
 export interface Model {
@@ -65,7 +68,7 @@ export const norm = (a: Vec3): Vec3 => scale(a, 1 / (len(a) || 1));
 export const samePos = (a: Vec3, b: Vec3, tol = 1e-4) => len(sub(a, b)) < tol;
 export const round4 = (v: Vec3): Vec3 => v.map((c) => Math.round(c * 1e4) / 1e4 + 0) as Vec3;
 
-export function findNodeAt(model: Model, pos: Vec3, tol = 1e-4): MolaNode | undefined {
+export function findNodeAt(model: Model, pos: Vec3, tol = 1e-3): MolaNode | undefined {
   return Object.values(model.nodes).find((n) => samePos(n.pos, pos, tol));
 }
 
@@ -132,8 +135,11 @@ export function connectorSupported(model: Model, c: Connector): boolean {
   }
   const ax = c.dirs[0];
   if (!barAlong(ax) || !barAlong(scale(ax, -1))) return false;
+  if (c.side && barAlong(c.side)) return false; // uma barra transversal ocupou o lado
   if (c.code === "CC90") {
-    return Object.values(model.connectors).some((o) => o.code === "CC" && o.node === c.node && Math.abs(dot(o.dirs[0], ax)) < EPS);
+    return Object.values(model.connectors).some(
+      (o) => o.code === "CC" && o.node === c.node && Math.abs(dot(o.dirs[0], ax)) < EPS && (!c.side || !o.side || samePos(o.side, c.side, 1e-6)),
+    );
   }
   return true;
 }
@@ -233,6 +239,7 @@ export function transformNodes(model: Model, ids: Set<string>, pivot: Vec3, turn
         // eixos das CC ficam sempre positivos
         return c.code === "RC90" ? r : (r.map((x) => Math.abs(x)) as Vec3);
       }),
+      ...(c.side ? { side: rotY(c.side, turns) } : {}),
     };
   }
   return { ...model, nodes, connectors };

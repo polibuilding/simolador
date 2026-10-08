@@ -1,6 +1,6 @@
 # SiMOLAdor — plano do programa
 
-Versão 0.4 · 08/10/2026 · Planejamento antes da implementação. Inclui as respostas da equipe em `A-CONFIRMAR.xlsx` (decisões Q, encaixes E, pranchas P). Regras de montagem detalhadas em `docs/regras-de-encaixe.md`. Peças: `docs/kit-mola-pecas.md`.
+Versão 0.5 · 08/10/2026 · Planejamento antes da implementação. Inclui as respostas da equipe em `A-CONFIRMAR.xlsx` (decisões Q, encaixes E, pranchas P). Regras de montagem detalhadas em `docs/regras-de-encaixe.md`. Peças: `docs/kit-mola-pecas.md`.
 
 ## 1. Objetivo
 
@@ -143,7 +143,7 @@ Exemplo de entrada em `catalog.json` (gerado de `data/parametros.xlsx` por `npm 
 - **Peças realistas, mas leves**: mola como hélice procedural metálica, esferas cromadas, ligações em plástico cinza claro, chapa de base preta com a grade branca igual à real (18 × 12 módulos).
 - **Layout**:
   - à esquerda, a paleta de peças por kit, com o restante em estoque ("B6 18/24");
-  - no centro, a cena 3D com cubo de vistas;
+  - no centro, a cena 3D com cubo de vistas (faces, arestas e cantos) e o botão Enquadrar;
   - à direita, as propriedades da peça selecionada;
   - no topo, a barra de ferramentas (Selecionar, Mover, Apagar, Desfazer, Vistas, Prancha);
   - embaixo, a barra de status (avisos de validação, contagem de peças).
@@ -210,7 +210,8 @@ Referência: `siMOLAdor/sheets/Projeto_Desafio Poli USP_P01–P03.pdf` (AutoCAD 
 | 1. Protótipo ✅ | chapa, esferas, GC (grade e livre), B6/B12 na grade; arrastar, encaixar, salvar/abrir; publicado no GitHub Pages | montar o pórtico simples do manual |
 | 2. Kits 1 e 2 completos ✅ | diagonais, placas, RC90, CC, CC90, B4; estoque configurável; regras; mover e girar; pontos de encaixe | Estrutura 01 do Desafio 2022 montada com a contagem certa (`examples/`) |
 | 3. Pranchas ✅ (1ª versão) | capa, plantas por pavimento, 4 elevações, escala automática, carimbo editável, PDF, SVG e DXF | plantas e vistas da "Estrutura 01" equivalentes às do Desafio 2022 |
-| 4. Geometria livre | triângulos e geodésicas (E19) | geodésica do manual do Kit 2 |
+| 3b. Edição avançada ✅ | barras inclinadas (passos de 15° nos planos ortogonais e fechamento entre esferas); cubo de vistas; CC/CC90 nos 4 lados; seleção por retângulo (janela e cruzamento); botão esquerdo seleciona, direito gira | triângulo de B6 sobre o pórtico; isométrica pelo cubo; trecho da Estrutura 01 selecionado e apagado |
+| 4. Geometria livre | geodésicas e barras fora dos planos ortogonais (E19); mover várias peças juntas | geodésica do manual do Kit 2 |
 | 5. App local + Kits 3/4 | empacotar com Tauri (Q01); cabos, arcos | — |
 
 Análise estrutural: fora do escopo (Q09).

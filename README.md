@@ -8,22 +8,25 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 
 - **Todas as peças dos Kits 1 e 2**: ligação de base, barras B4/B6/B12, diagonais D4x6/D6x6/D6x12, placas P6x6/P6x12 (laje ou parede), ligações RC90, CC e CC90.
 - **Encaixe**: pontos verdes mostram onde a peça escolhida entra. Sobre uma esfera, a barra sobe; puxando o cursor para um lado, ela vai para aquele lado; **R** alterna as opções.
+- **Barras inclinadas**: em passos de 15° nos planos X, Y e Z, e fechando entre duas esferas que estejam à distância da barra (triângulos).
+- **CC e CC90 nos 4 lados** da esfera (R troca o lado), menos onde chega uma barra transversal.
 - **Regras do kit**: comprimentos, ângulo mínimo de 45° entre barras, nada deitado na chapa, diagonais só no vão nominal, placas presas em 4 esferas, ligações nos cantos certos, estoque. O motivo de cada bloqueio aparece no rodapé.
 - **Editar**: selecionar; **mover** (M, botão ou arrastar a peça); **girar** (R); remover; desfazer e refazer. Mover uma ligação de base leva a estrutura inteira.
-- **Câmera**: enquadrar (F), 3D, frente, lado e topo, sem limite de altura.
+- **Seleção por retângulo**: para a direita pega o que fica inteiro dentro; para a esquerda, o que tocar. O painel mostra a lista de peças e as medidas do trecho, copia a lista e apaga tudo de uma vez.
+- **Câmera**: cubo de vistas no canto (faces, arestas e cantos para isométricas) e Enquadrar (F), sem limite de altura.
 - **Pranchas**: capa com isométrica e lista de peças, plantas por pavimento e vistas A–D no padrão do Desafio Poli-USP; escala automática; carimbo editável; **PDF**, **DXF** (camadas MOLA-*) e SVG.
 - Estoque configurável, arquivos `.mola`, salvamento automático no navegador.
 
 Exemplos em `examples/`: o pórtico simples e a **Estrutura 01 do Desafio 2022**, reconstruída a partir das pranchas originais.
 
-Próximos passos: medidas reais da CC e da CC90, geometria livre para triângulos e geodésicas (fase 4), app local (fase 5).
+Próximos passos: medidas reais da CC e da CC90, mover várias peças juntas, geodésicas (barras fora dos planos X, Y e Z), app local (fase 5).
 
 ## Como usar
 
 1. Arraste uma **ligação de base** da paleta para a chapa.
 2. Clique numa barra (por exemplo, **B6**) e passe o cursor sobre uma esfera: a barra sobe. Puxe o cursor para o lado para fazer vigas, ou leve-o até um ponto verde. Clique para encaixar.
 3. **R** alterna as opções; **Esc** para de colocar peças; **M** move a peça selecionada; **Delete** remove; **Ctrl+Z / Ctrl+Y** desfazem e refazem; **F** enquadra.
-4. Na cena: botão esquerdo gira, botão direito move, a roda dá zoom.
+4. Na cena: botão **esquerdo** seleciona (arrastando, faz um retângulo de seleção); botão **direito** gira a vista; **Shift+direito** ou botão do meio move a vista; a roda dá zoom. O cubo no canto leva às vistas e isométricas. Shift+clique soma peças à seleção; Ctrl+A seleciona tudo.
 5. **Gerar pranchas** abre as folhas; dali saem o PDF e o DXF.
 
 ## Medidas e quantidades das peças

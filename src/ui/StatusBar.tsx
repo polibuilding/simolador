@@ -22,7 +22,7 @@ export function StatusBar() {
   const message =
     hint ??
     (tool.kind === "select"
-      ? "Clique numa peça para ver os detalhes. Arraste a peça selecionada para mover; R gira; Delete remove."
+      ? "Esquerdo seleciona (arraste para um retângulo); direito gira a vista; Shift+direito move. Peça selecionada: arraste ou M move, R gira, Delete remove."
       : ok
         ? dragging
           ? "Solte para encaixar."

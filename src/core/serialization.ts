@@ -73,7 +73,12 @@ export function fromFile(raw: unknown): { model: Model; inventory: InventoryConf
     if (!nodes[c.node]) throw new MolaFileError(`Ligação ${c.id} num nó que não existe.`);
     const dirs = (c.dirs ?? []).map(vec);
     if (dirs.some((d) => !d)) throw new MolaFileError(`Ligação ${c.id} inválida.`);
-    connectors[c.id] = { id: c.id, code: c.code, node: c.node, dirs: dirs as Vec3[], ...(c.base ? { base: true } : {}) };
+    const side = c.side ? vec(c.side) : null;
+    connectors[c.id] = {
+      id: c.id, code: c.code, node: c.node, dirs: dirs as Vec3[],
+      ...(c.base ? { base: true } : {}),
+      ...(side ? { side } : c.code === "CC" || c.code === "CC90" ? { side: defaultSide(dirs[0] as Vec3) } : {}),
+    };
   }
   const all = [...Object.keys(nodes), ...Object.keys(members), ...Object.keys(plates), ...Object.keys(connectors)];
   const maxId = Math.max(0, ...all.map((k) => Number(k.slice(1)) || 0));
@@ -83,4 +88,9 @@ export function fromFile(raw: unknown): { model: Model; inventory: InventoryConf
     name: f.name ?? "Estrutura",
     sheet: f.sheet,
   };
+}
+
+/** Arquivos antigos (sem lado): CC no lado de cima; em pilares, no lado +x. */
+function defaultSide(ax: Vec3): Vec3 {
+  return Math.abs(ax[1]) > 0.5 ? [1, 0, 0] : [0, 1, 0];
 }

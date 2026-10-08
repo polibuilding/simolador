@@ -1,5 +1,5 @@
 import { Canvas, useThree } from "@react-three/fiber";
-import { Environment, Lightformer, OrbitControls } from "@react-three/drei";
+import { Environment, GizmoHelper, GizmoViewcube, Lightformer, OrbitControls } from "@react-three/drei";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { catalog } from "../core/catalog";
@@ -18,15 +18,16 @@ const typeOf = (code: string) => catalog.pieces[code]?.type;
 function ModelGroup({
   model, lookOf, interactive, hidden,
 }: { model: Model; lookOf: (id: string) => Look; interactive: boolean; hidden?: Set<string> }) {
-  const { select, setHover, setPendingDrag } = useApp.getState();
+  const { select, toggleMulti, setHover, setPendingDrag } = useApp.getState();
   const selection = useApp((s) => s.selection);
   const handlers = (kind: Sel["kind"], id: string) =>
     interactive
       ? {
-          onPick: (e: { delta: number; stopPropagation: () => void }) => {
+          onPick: (e: { delta: number; stopPropagation: () => void; nativeEvent: MouseEvent }) => {
             if (e.delta > 4) return;
             e.stopPropagation();
-            select({ kind, id });
+            if (e.nativeEvent.shiftKey || e.nativeEvent.ctrlKey || e.nativeEvent.metaKey) toggleMulti({ kind, id });
+            else select({ kind, id });
           },
           onHover: (over: boolean) => setHover(over ? id : null),
           onDown: (e: { button: number; stopPropagation: () => void; nativeEvent: PointerEvent }) => {
@@ -64,7 +65,7 @@ function ModelGroup({
         c.code === "RC90" ? (
           <RigidConnector key={c.id} at={pos[c.node]} dirs={c.dirs} base={c.base} look={lookOf(c.id)} {...handlers("connector", c.id)} />
         ) : (
-          <ContinuousConnector key={c.id} at={pos[c.node]} axis={c.dirs[0]} code={c.code} look={lookOf(c.id)} {...handlers("connector", c.id)} />
+          <ContinuousConnector key={c.id} at={pos[c.node]} axis={c.dirs[0]} side={c.side} code={c.code} look={lookOf(c.id)} {...handlers("connector", c.id)} />
         ),
       )}
     </group>
@@ -74,11 +75,19 @@ function ModelGroup({
 function ModelView() {
   const model = useModel();
   const selection = useApp((s) => s.selection);
+  const multi = useApp((s) => s.multi);
   const hoverId = useApp((s) => s.hoverId);
   const selecting = useApp((s) => s.tool.kind === "select");
   const groupGhost = useApp((s) => (s.ghost?.kind === "group" ? s.ghost : null));
+  const multiIds = useMemo(() => new Set(multi.map((x) => x.id)), [multi]);
   const lookOf = (id: string): Look =>
-    groupGhost?.ids.has(id) ? "normal" : selection?.id === id ? "selected" : selecting && hoverId === id ? "hover" : "normal";
+    groupGhost?.ids.has(id)
+      ? "normal"
+      : selection?.id === id || multiIds.has(id)
+        ? "selected"
+        : selecting && hoverId === id
+          ? "hover"
+          : "normal";
   // durante "mover estrutura", a estrutura original some e aparece o fantasma
   const shown = useMemo(() => {
     if (!groupGhost) return model;
@@ -110,7 +119,7 @@ function candidateModel(base: Model, c: Candidate): { model: Model } {
   }
   if (c.kind === "connector") {
     node(base.nodes[c.spec.node].pos, "gn");
-    m.connectors.g = { id: "g", code: c.spec.code, node: "gn", dirs: c.spec.dirs, base: c.spec.base };
+    m.connectors.g = { id: "g", code: c.spec.code, node: "gn", dirs: c.spec.dirs, base: c.spec.base, side: c.spec.side };
   }
   return { model: m };
 }
@@ -150,6 +159,7 @@ function Markers() {
     const rings: THREE.Vector3[] = [];
     for (const c of cands) {
       if (!c.check.ok) continue;
+      if (c.kind === "member" && c.inclined && !occupied.has(c.toPos.join(","))) continue; // inclinadas livres: sem ponto
       const p = markerPos(model, c);
       const k = p.join(",");
       if (seen.has(k)) continue;
@@ -222,7 +232,11 @@ export function Scene() {
       shadows
       dpr={[1, 2]}
       camera={{ position: [PLATE_W / 2 + 230, 260, PLATE_D / 2 + 330], fov: 35, near: 1, far: 60000 }}
-      onPointerMissed={() => select(null)}
+      onPointerMissed={(e) => {
+        // o clique que encerra um retângulo de seleção não apaga a seleção
+        if (performance.now() - useApp.getState().boxEndedAt < 250) return;
+        if (!(e.shiftKey || e.ctrlKey || e.metaKey)) select(null);
+      }}
       gl={{ preserveDrawingBuffer: true }}
     >
       <color attach="background" args={["#eef1f0"]} />
@@ -259,8 +273,23 @@ export function Scene() {
       <Markers />
       <Placement />
       <CameraRig />
+      <GizmoHelper alignment="top-right" margin={[84, 84]}>
+        <group scale={1.4}>
+          <GizmoViewcube
+            faces={["DIREITA", "ESQUERDA", "TOPO", "BASE", "FRENTE", "TRÁS"]}
+            font="bold 19px Arial"
+            color="#d9dfdc"
+            textColor="#0d1211"
+            strokeColor="#1d2422"
+            hoverColor="#9fd3bd"
+            opacity={1}
+          />
+        </group>
+      </GizmoHelper>
       <OrbitControls
         makeDefault
+        // esquerdo = selecionar (clique ou retângulo); direito = girar; Shift+direito ou meio = mover; roda = zoom
+        mouseButtons={{ LEFT: undefined as unknown as THREE.MOUSE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.ROTATE }}
         target={[PLATE_W / 2, 40, PLATE_D / 2]}
         maxPolarAngle={Math.PI / 2 - 0.02}
         minDistance={40}

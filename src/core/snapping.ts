@@ -2,17 +2,18 @@
 import type { Catalog } from "./catalog";
 import type { InventoryConfig } from "./inventory";
 import {
-  AXES, EPS, UP, type Model, type Vec3, add, addConnector, addMember, addPlate, addSupport, dot, findNodeAt,
-  membersAt, directionFrom, plateKey, scale,
+  AXES, EPS, UP, type Model, type Vec3, add, addConnector, addMember, addPlate, addSupport, cross, dot, findNodeAt,
+  membersAt, directionFrom, plateKey, samePos, scale,
 } from "./model";
 import {
-  plateCorners, validateConnector, validateMember, validatePlate, validateSupport,
+  inclineStep, plateCorners, validateConnector, validateMember, validatePlate, validateSupport,
   type Check, type ConnectorSpec, type PlateGeom,
 } from "./rules";
 
 export type Candidate =
   | { kind: "support"; code: string; pos: Vec3; check: Check }
-  | { kind: "member"; code: string; fromId: string; toPos: Vec3; check: Check }
+  /** `inclined`: barra inclinada (fora dos eixos); não ganha ponto verde, aparece ao puxar o cursor a partir da esfera */
+  | { kind: "member"; code: string; fromId: string; toPos: Vec3; check: Check; inclined?: boolean }
   | { kind: "plate"; code: string; geom: PlateGeom; check: Check }
   | { kind: "connector"; spec: ConnectorSpec; check: Check };
 
@@ -62,15 +63,56 @@ function cableOffsets(a: number, b: number): Vec3[] {
   return out;
 }
 
+/** Direções inclinadas: nos três planos da estrutura, em múltiplos do passo, sem os eixos. */
+const dirCache = new Map<number, Vec3[]>();
+export function inclinedDirs(stepDeg: number): Vec3[] {
+  let out = dirCache.get(stepDeg);
+  if (out) return out;
+  out = [];
+  if (!(stepDeg > 0)) return out;
+  const seen = new Set<string>();
+  for (const [i, j] of [[0, 1], [0, 2], [1, 2]] as [number, number][]) {
+    for (let a = 0; a < 360; a += stepDeg) {
+      if (a % 90 === 0) continue;
+      const v: Vec3 = [0, 0, 0];
+      v[i] = Math.cos((a * Math.PI) / 180);
+      v[j] = Math.sin((a * Math.PI) / 180);
+      const k = v.map((x) => x.toFixed(5)).join(",");
+      if (!seen.has(k)) (seen.add(k), out.push(v));
+    }
+  }
+  dirCache.set(stepDeg, out);
+  return out;
+}
+
 export function memberCandidates(cat: Catalog, inv: InventoryConfig, model: Model, code: string, fromId: string): Candidate[] {
   const piece = cat.pieces[code];
   const from = model.nodes[fromId];
   if (!piece || !from || !piece.spanM) return [];
-  const offsets = piece.type === "cable" ? cableOffsets(piece.spanM[0], piece.spanM[1]) : AXES.map((d) => scale(d, piece.spanM![0]));
-  return offsets.map((o) => {
-    const toPos = add(from.pos, o);
-    return { kind: "member" as const, code, fromId, toPos, check: validateMember(cat, inv, model, code, fromId, toPos) };
+  const mk = (toPos: Vec3, inclined = false): Candidate => ({
+    kind: "member", code, fromId, toPos, inclined, check: validateMember(cat, inv, model, code, fromId, toPos),
   });
+  if (piece.type === "cable") return cableOffsets(piece.spanM[0], piece.spanM[1]).map((o) => mk(add(from.pos, o)));
+  const span = piece.spanM[0];
+  const out = AXES.map((d) => mk(add(from.pos, scale(d, span))));
+  const seen = new Set(out.map((c) => (c as { toPos: Vec3 }).toPos.join(",")));
+  // fechar numa esfera existente à distância exata (triângulos, geodésicas)
+  const tol = cat.settings.tolerancia_encaixe_mm / cat.settings.modulo_mm;
+  for (const n of Object.values(model.nodes)) {
+    if (n.id === fromId) continue;
+    const d = Math.hypot(n.pos[0] - from.pos[0], n.pos[1] - from.pos[1], n.pos[2] - from.pos[2]);
+    if (Math.abs(d - span) <= tol && !seen.has(n.pos.join(","))) {
+      seen.add(n.pos.join(","));
+      out.push(mk(n.pos, !AXES.some((a) => samePos(scale(a, span), [n.pos[0] - from.pos[0], n.pos[1] - from.pos[1], n.pos[2] - from.pos[2]], 1e-3))));
+    }
+  }
+  // inclinadas até um ponto novo
+  for (const d of inclinedDirs(inclineStep(cat))) {
+    const p = add(from.pos, scale(d, span)).map((x) => Math.round(x * 1e4) / 1e4 + 0) as Vec3;
+    if (seen.has(p.join(",")) || findNodeAt(model, p)) continue;
+    out.push(mk(p, true));
+  }
+  return out;
 }
 
 export function plateCandidates(cat: Catalog, inv: InventoryConfig, model: Model, code: string): Candidate[] {
@@ -119,10 +161,21 @@ export function connectorCandidates(cat: Catalog, inv: InventoryConfig, model: M
         specs.push({ code, node: nodeId, dirs: [UP, side], base: true });
       }
     }
-  } else if (code === "CC" || code === "CC90") {
+  } else if (code === "CC") {
+    const has = (d: Vec3) => dirs.some((x) => Math.abs(dot(x, d) - 1) < EPS);
     for (const ax of [[1, 0, 0], [0, 1, 0], [0, 0, 1]] as Vec3[]) {
-      const has = (d: Vec3) => dirs.some((x) => Math.abs(dot(x, d) - 1) < EPS);
-      if (has(ax) && has(scale(ax, -1))) specs.push({ code, node: nodeId, dirs: [ax] });
+      if (!(has(ax) && has(scale(ax, -1)))) continue;
+      // os 4 lados perpendiculares ao par; lado com barra transversal fica de fora (L6)
+      for (const side of AXES.filter((s) => Math.abs(dot(s, ax)) < EPS)) {
+        if (!has(side)) specs.push({ code, node: nodeId, dirs: [ax], side });
+      }
+    }
+  } else if (code === "CC90") {
+    const has = (d: Vec3) => dirs.some((x) => Math.abs(dot(x, d) - 1) < EPS);
+    for (const c of Object.values(model.connectors)) {
+      if (c.node !== nodeId || c.code !== "CC" || !c.side) continue;
+      const ax = cross(c.dirs[0], c.side).map(Math.abs) as Vec3;
+      if (has(ax) && has(scale(ax, -1))) specs.push({ code, node: nodeId, dirs: [ax], side: c.side });
     }
   }
   return specs.map((spec) => ({ kind: "connector" as const, spec, check: validateConnector(cat, inv, model, spec) }));

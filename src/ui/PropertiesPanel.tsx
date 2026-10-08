@@ -14,6 +14,8 @@ const STATUS_TEXT: Record<string, string> = {
 };
 const fmt = (n: number, d = 1) => n.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
 const posText = (p: Vec3) => `(${p.map((v) => fmt(v, Number.isInteger(v) ? 0 : 2)).join("; ")})`;
+const SIDE_NAME = (d: Vec3) =>
+  d[1] > 0.5 ? "de cima" : d[1] < -0.5 ? "de baixo" : d[0] > 0.5 ? "+X" : d[0] < -0.5 ? "−X" : d[2] > 0.5 ? "+Z" : "−Z";
 const AXIS_NAME = (d: Vec3) => (Math.abs(d[0]) ? "X" : Math.abs(d[1]) ? "vertical (Y)" : "Z");
 
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
@@ -107,7 +109,7 @@ function Selected() {
         <Row k="Na esfera" v={posText(model.nodes[c.node].pos)} />
         <Row
           k={c.code === "RC90" ? "Canto" : "Par contínuo"}
-          v={c.code === "RC90" ? (c.base ? "entre a GC e o pilar" : `${AXIS_NAME(c.dirs[0])} com ${AXIS_NAME(c.dirs[1])}`) : `barras no eixo ${AXIS_NAME(c.dirs[0])}`}
+          v={c.code === "RC90" ? (c.base ? "entre a GC e o pilar" : `${AXIS_NAME(c.dirs[0])} com ${AXIS_NAME(c.dirs[1])}`) : `barras no eixo ${AXIS_NAME(c.dirs[0])}${c.side ? `, lado ${SIDE_NAME(c.side)}` : ""} (R troca o lado)`}
         />
         <Row k="Origem da medida" v={STATUS_TEXT[p?.status ?? ""] ?? "—"} />
       </dl>
@@ -134,7 +136,11 @@ function Summary() {
           <li>Sobre uma esfera, a barra sai dela: R gira a direção.</li>
           <li>Clique numa peça da paleta para usá-la várias vezes; Esc para parar.</li>
           <li>Arraste a peça selecionada para mudar de lugar; R gira.</li>
-          <li>Na cena: esquerdo gira, direito move, roda dá zoom. F enquadra.</li>
+        </ul>
+        <ul className="mouse-help">
+          <li>Botão esquerdo: seleciona; arrastando, faz um retângulo (para a direita, só o que fica inteiro dentro; para a esquerda, o que tocar).</li>
+          <li>Botão direito: gira a vista. Shift+direito ou botão do meio: move a vista. Roda: zoom.</li>
+          <li>Cubo no canto: clique numa face, aresta ou canto para vistas e isométricas. F enquadra.</li>
         </ul>
       </>
     );
@@ -177,7 +183,84 @@ function Summary() {
   );
 }
 
+/** Várias peças selecionadas: lista por código e medidas do conjunto. */
+function MultiSelected() {
+  const model = useModel();
+  const multi = useApp((s) => s.multi);
+  const { removeSelected, select } = useApp.getState();
+  const count: Record<string, number> = {};
+  const nodeIds = new Set<string>();
+  for (const s of multi) {
+    if (s.kind === "node") {
+      const n = model.nodes[s.id];
+      if (!n) continue;
+      count[n.kind === "support" ? "GC" : "C"] = (count[n.kind === "support" ? "GC" : "C"] ?? 0) + 1;
+      nodeIds.add(n.id);
+    } else if (s.kind === "member") {
+      const m = model.members[s.id];
+      if (!m) continue;
+      count[m.code] = (count[m.code] ?? 0) + 1;
+      nodeIds.add(m.a).add(m.b);
+    } else if (s.kind === "plate") {
+      const p = model.plates[s.id];
+      if (!p) continue;
+      count[p.code] = (count[p.code] ?? 0) + 1;
+      p.corners.forEach((c) => nodeIds.add(c));
+    } else {
+      const c = model.connectors[s.id];
+      if (!c) continue;
+      count[c.code] = (count[c.code] ?? 0) + 1;
+      nodeIds.add(c.node);
+    }
+  }
+  const ps = [...nodeIds].map((id) => model.nodes[id]?.pos).filter(Boolean) as Vec3[];
+  const span = (k: 0 | 1 | 2) => (ps.length ? (Math.max(...ps.map((p) => p[k])) - Math.min(...ps.map((p) => p[k]))) * M : 0);
+  const codes = Object.keys(count).sort();
+  const total = codes.reduce((s, c) => s + count[c], 0);
+  const text = [
+    `Seleção (${total} peças)`,
+    ...codes.map((c) => `${c}\t${catalog.pieces[c]?.name ?? c}\t${count[c]}`),
+    `Planta: ${fmt(span(0), 0)} x ${fmt(span(2), 0)} mm; altura: ${fmt(span(1), 0)} mm`,
+  ].join("\n");
+  return (
+    <>
+      <h2>{total} peças selecionadas</h2>
+      <p className="multi-note">Shift+clique soma ou tira peças; Esc limpa.</p>
+      <dl>
+        <Row k="Planta (entre centros)" v={`${fmt(span(0), 0)} × ${fmt(span(2), 0)} mm`} />
+        <Row k="Altura (entre centros)" v={`${fmt(span(1), 0)} mm`} />
+      </dl>
+      <table className="bom">
+        <thead>
+          <tr>
+            <th>Peça</th>
+            <th>Nome</th>
+            <th>Qtd.</th>
+          </tr>
+        </thead>
+        <tbody>
+          {codes.map((c) => (
+            <tr key={c}>
+              <td>{c}</td>
+              <td>{catalog.pieces[c]?.name.replace(` ${c}`, "") ?? c}</td>
+              <td>{count[c]}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="actions multi" style={{ marginTop: 14 }}>
+        <button onClick={() => navigator.clipboard?.writeText(text).then(() => useApp.setState({ hint: "Lista copiada." }), () => undefined)}>
+          Copiar lista
+        </button>
+        <button onClick={() => select(null)}>Limpar seleção</button>
+        <button className="danger" onClick={removeSelected}>Remover as {total} peças</button>
+      </div>
+    </>
+  );
+}
+
 export function PropertiesPanel() {
   const sel = useApp((s) => s.selection);
-  return <aside className="props">{sel ? <Selected /> : <Summary />}</aside>;
+  const many = useApp((s) => s.multi.length > 0);
+  return <aside className="props">{many ? <MultiSelected /> : sel ? <Selected /> : <Summary />}</aside>;
 }

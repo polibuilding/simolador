@@ -127,19 +127,19 @@ export function RigidConnector({
 
 /** CC / CC90 (formato provisório até as medidas): ponte sobre a esfera, ao longo do eixo do par de barras. */
 export function ContinuousConnector({
-  at, axis, code, look = "normal", ...p
-}: { at: THREE.Vector3; axis: Vec3; code: string; look?: Look } & Pickable) {
+  at, axis, side: sideIn, code, look = "normal", ...p
+}: { at: THREE.Vector3; axis: Vec3; side?: Vec3; code: string; look?: Look } & Pickable) {
   const tall = code === "CC90";
   const { matrix, geom } = useMemo(() => {
     const u = v3(axis);
-    // lado onde a peça fica: para cima se o par é horizontal; senão, +x
-    const side = Math.abs(axis[1]) > 0.5 ? new THREE.Vector3(1, 0, 0) : Y.clone();
+    // lado da esfera onde a peça fica (escolhido ao colocar; arquivos antigos: para cima, ou +x em pilares)
+    const side = sideIn ? v3(sideIn) : Math.abs(axis[1]) > 0.5 ? new THREE.Vector3(1, 0, 0) : Y.clone();
     const L = SPHERE_R + 14;
     const base = tall ? SPHERE_R + 1.5 : BAR_R;
     const h = tall ? 9 : 5;
     const pts: [number, number][] = [[-L, base], [L, base], [L - 4, base + h], [-L + 4, base + h]];
     return { matrix: basis(at, u, side), geom: extruded(pts, 6) };
-  }, [at, axis, tall]);
+  }, [at, axis, tall, sideIn]);
   const mat = useMaterial(look, tall ? "#c4c9cd" : "#d6dadd", 0.05, 0.5);
   return <mesh geometry={geom} material={mat} matrix={matrix} matrixAutoUpdate={false} castShadow {...pickProps(p)} />;
 }
