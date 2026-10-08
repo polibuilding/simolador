@@ -1,6 +1,6 @@
 # Regras de encaixe — siMOLAdor
 
-Versão 3.1 · 08/10/2026 (fase 3 implementada: barras inclinadas, CC em 4 lados, seleção por retângulo; inclinação sob demanda e folga das esferas). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
+Versão 3.2 · 08/10/2026 (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
 
 Uma regra **bloqueia** quando torna o encaixe inválido (fantasma vermelho, não deixa soltar). Uma regra **avisa** quando a montagem é possível, mas não é recomendada (fantasma verde, aviso na barra de status).
 
@@ -29,7 +29,7 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 
 | # | Regra | Tipo | Origem |
 |---|---|---|---|
-| D1 | Só existem três diagonais e cada uma só vale no seu vão nominal: o vetor entre os nós, em módulos, deve ser (a, b) ou (b, a) num plano ortogonal. | bloqueia | E11 |
+| D1 | Só existem três diagonais e cada uma só vale no seu vão nominal: o vetor entre os nós, em módulos, é (a, b) ou (b, a) num plano ortogonal, **ou**, num painel inclinado, as pontas estão à distância da diagonal de um retângulo a × b e existe a esfera de um dos outros cantos (lados a e b a 90°). | bloqueia | E11, equipe 08/10 |
 | D2 | Podem ficar em planos verticais ou horizontais (contraventamento em planta). | — | E12 |
 | D3 | Trabalham só à tração: desenhadas como cabo fino; marcadas como "só tração" nas propriedades. | visual | E10 |
 | D4 | Duas diagonais cruzadas no mesmo vão (X) são permitidas; elas não colidem entre si. | — | pranchas 2022 |
@@ -39,18 +39,18 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 
 | # | Regra | Tipo | Origem |
 |---|---|---|---|
-| L1 | **RC90** fica num nó, no canto entre duas peças a 90°. Prende na esfera (ímã do topo) e nas duas molas (ímãs laterais). | bloqueia se não houver duas peças a 90° no nó | E03 |
+| L1 | **RC90** fica num nó, no canto entre duas barras a 90°, em **qualquer plano** (inclusive num quadro inclinado de uma treliça). Prende na esfera (ímã do topo) e nas duas molas (ímãs laterais). | bloqueia se não houver duas barras a 90° no nó | E03, equipe 08/10 |
 | L2 | Uma RC90 por canto. Um nó pode ter vários cantos (ex.: pilar com duas vigas = 2 cantos), e o usuário escolhe em quais colocar. | bloqueia a 2ª no mesmo canto | E04 |
 | L3 | Na **GC**, a RC90 vai entre a GC e o pilar. O usuário pode pôr uma, ou uma de cada lado do pilar (até 4, uma por lado). | — | E04 |
 | L4 | **CC** (forma 1, trapézio baixo) vai direto na esfera, ligando duas molas alinhadas (180°) e tornando-as contínuas. Não substitui a esfera. Uma CC por nó. | bloqueia sem duas barras alinhadas, ou se o nó já tem CC | E05, equipe 08/10 |
 | L5 | **CC90** (forma 2, chapéu alto) vai **por cima de uma CC** no mesmo nó, **do mesmo lado**, e enrijece um segundo par de molas alinhadas, perpendicular ao primeiro e no mesmo plano: o nó vira um X contínuo. Uma CC90 por nó. | bloqueia sem CC no nó, ou sem o segundo par alinhado a 90° | E06, equipe 08/10 |
-| L6 | **Lado da CC/CC90**: a peça pode ficar em qualquer um dos 4 lados da esfera perpendiculares às barras que ela une (para uma viga: em cima, embaixo e nos dois lados; para um pilar: nos 4 lados horizontais), **menos** num lado onde chega uma barra transversal (viga ou pilar ligado nesse ponto). **R** alterna os lados livres. Depois de colocada a CC, não se pode encaixar barra no lado ocupado por ela. | bloqueia | equipe 08/10 |
+| L6 | **Lado da CC/CC90**: a peça pode ficar em qualquer um dos 4 lados da esfera perpendiculares às barras que ela une (para uma viga: em cima, embaixo e nos dois lados; para um pilar: nos 4 lados horizontais; para um par inclinado: a normal do plano e a perpendicular dentro dele), **menos** num lado onde chega uma barra transversal (viga ou pilar ligado nesse ponto). **R** alterna os lados livres. Depois de colocada a CC, não se pode encaixar barra no lado ocupado por ela. | bloqueia | equipe 08/10 |
 
 ## 5. Placas (P6x6, P6x12)
 
 | # | Regra | Tipo | Origem |
 |---|---|---|---|
-| P1 | Exige 4 nós nos cantos de um retângulo com o vão da placa (6×6 ou 6×12 módulos), em qualquer plano ortogonal: horizontal (laje) ou vertical (parede). | bloqueia | E07, E09 |
+| P1 | Exige 4 esferas nos cantos de um retângulo com o vão da placa (6×6 ou 6×12 módulos), em **qualquer plano**: laje, parede ou inclinada (as 4 esferas no mesmo plano, lados a 90° e com as medidas certas). | bloqueia | E07, E09, equipe 08/10 |
 | P2 | A placa fica no plano dos centros dos nós, entre as barras e esferas, presa nas 4 esferas pelos chanfros com ímã. | geometria | E07 |
 | P3 | Sem as 4 barras do contorno a placa é aceita, mas com aviso ("placa sem barras no contorno: menos estável"). | avisa | E08 |
 | P4 | Uma placa por vão. | bloqueia | — |
@@ -65,6 +65,8 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | G4 | A estrutura pode passar da borda da chapa (balanço); só os apoios precisam estar nela. | — | E18 |
 | G5 | A esfera da GC fica a `gc_centro_esfera_mm` acima da chapa. É o nível zero (PAV. TÉRREO) da estrutura. | geometria | pranchas 2022 |
 | G6 | Nada deitado no nível da chapa: barras, diagonais ou placas horizontais em y = 0 (por exemplo, barra entre duas GC). | bloqueia | equipe 08/10 |
+| G7 | **Guias ao colocar ou mover uma GC** (nos dois modos de encaixe): **azul** = a 4, 6 ou 12 módulos (vão de B4, B6 ou B12) de outra GC, em X ou Z; **amarelo** = terceiro vértice de um triângulo cujos lados são vãos de barra, com todos os ângulos ≥ 45°, apoiado em duas GC que já estão a um vão de barra uma da outra (na prática, triângulos equiláteros de B4, B6 ou B12). A GC "puxa" para o guia a menos de 18 px do cursor; o rodapé diz qual é. | — | equipe 08/10 |
+| G8 | **Coordenadas**: com uma GC ou esfera selecionada, o painel aceita X e Z em módulos (ex.: 5,196) ou em mm (ex.: 77,3 mm); a estrutura ligada vai junto, com as mesmas regras de Mover. O painel também lista a distância às GC mais próximas e marca as que batem com o vão de uma barra. | — | equipe 08/10 |
 
 ## 7. Estoque
 

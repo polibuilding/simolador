@@ -23,4 +23,8 @@ export const COLORS = {
   invalid: "#e5484d",
   select: "#2563eb",
   hover: "#5b8def",
+  /** GC a um vão de barra de outra GC */
+  guideBlue: "#3d8bff",
+  /** GC no vértice de um triângulo de barras */
+  guideYellow: "#ffc21a",
 };

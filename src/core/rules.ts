@@ -3,7 +3,7 @@
 import type { Catalog } from "./catalog";
 import { remaining, type InventoryConfig } from "./inventory";
 import {
-  EPS, UP, type Model, type Vec3, type Member, add, cross, dot, findNodeAt, len, membersAt,
+  DIR_TOL, EPS, UP, type Model, type Vec3, type Member, add, cross, dot, findNodeAt, len, membersAt,
   directionFrom, memberAlong, norm, plateKey, samePos, scale, sub,
 } from "./model";
 
@@ -127,6 +127,22 @@ export function inStepPlane(cat: Catalog, v: Vec3): boolean {
   return Math.min(r, step - r) < 0.2;
 }
 
+/**
+ * Diagonal num painel inclinado: as pontas estão à distância da diagonal de um retângulo a × b
+ * e existe uma esfera num dos outros cantos desse retângulo (lados a e b, a 90°).
+ */
+export function inclinedPanel(model: Model, p: Vec3, q: Vec3, a: number, b: number, tol: number): boolean {
+  if (Math.abs(len(sub(q, p)) - Math.hypot(a, b)) > tol) return false;
+  return Object.values(model.nodes).some((k) => {
+    const u = sub(k.pos, p);
+    const v = sub(q, k.pos);
+    const lu = len(u);
+    const lv = len(v);
+    const sizes = (Math.abs(lu - a) <= tol && Math.abs(lv - b) <= tol) || (Math.abs(lu - b) <= tol && Math.abs(lv - a) <= tol);
+    return sizes && Math.abs(dot(u, v)) / (lu * lv) < 1e-3;
+  });
+}
+
 /** G6: nada deitado no nível da chapa (barras, diagonais ou placas horizontais em y = 0). */
 const onGround = (...ps: Vec3[]) => ps.every((p) => Math.abs(p[1]) < EPS);
 
@@ -163,7 +179,8 @@ export function validateMember(
     const [a, b] = piece.spanM ?? [0, 0];
     const sorted = [...nonZero].sort((p, q) => p - q);
     const want = [a, b].sort((p, q) => p - q);
-    if (nonZero.length !== 2 || Math.abs(sorted[0] - want[0]) > tolM || Math.abs(sorted[1] - want[1]) > tolM) {
+    const ortho = nonZero.length === 2 && Math.abs(sorted[0] - want[0]) <= tolM && Math.abs(sorted[1] - want[1]) <= tolM;
+    if (!ortho && !(findNodeAt(model, toPos) && inclinedPanel(model, from.pos, toPos, a, b, tolM))) {
       errors.push(`A ${code} só vale num vão de ${a} × ${b} módulos.`);
     }
   }
@@ -181,7 +198,7 @@ export function validateMember(
   errors.push(...collisionErrors(cat, model, from.pos, toPos, fromId, target?.id, cable));
   // lado de esfera ocupado por CC/CC90
   const sideTaken = (nodeId: string, d: Vec3) =>
-    Object.values(model.connectors).some((c) => c.node === nodeId && c.side && samePos(c.side, d, 1e-6));
+    Object.values(model.connectors).some((c) => c.node === nodeId && c.side && samePos(c.side, d, DIR_TOL));
   if (sideTaken(fromId, dir) || (target && sideTaken(target.id, scale(dir, -1)))) {
     errors.push("Esse lado da esfera está ocupado por uma ligação contínua.");
   }
@@ -203,19 +220,34 @@ export interface PlateGeom {
 export function plateCorners(origin: Vec3, u: Vec3, a: number, v: Vec3, b: number): PlateGeom {
   const p1 = add(origin, scale(u, a));
   const p3 = add(origin, scale(v, b));
-  return { corners: [origin, p1, add(p1, scale(v, b)), p3], normal: norm(cross(u, v)).map(Math.abs) as Vec3 };
+  return { corners: [origin, p1, add(p1, scale(v, b)), p3], normal: norm(cross(u, v)) };
 }
 
-function rectInPlane(g: PlateGeom) {
-  // eixos do plano = os dois eixos com variação
-  const axes = [0, 1, 2].filter((i) => Math.abs(g.normal[i]) < 0.5);
-  const lo = axes.map((i) => Math.min(...g.corners.map((c) => c[i])));
-  const hi = axes.map((i) => Math.max(...g.corners.map((c) => c[i])));
-  const k = [0, 1, 2].find((i) => Math.abs(g.normal[i]) > 0.5)!;
-  return { axes, lo, hi, k, level: g.corners[0][k] };
+/** Duas placas no mesmo plano (qualquer orientação) se sobrepõem? Eixos separadores = lados das duas. */
+function platesOverlap(a: Vec3[], b: Vec3[]): boolean {
+  const n = norm(cross(sub(a[1], a[0]), sub(a[3], a[0])));
+  const n2 = norm(cross(sub(b[1], b[0]), sub(b[3], b[0])));
+  if (Math.abs(Math.abs(dot(n, n2)) - 1) > DIR_TOL || Math.abs(dot(n, sub(b[0], a[0]))) > 1e-3) return false;
+  const axes = [sub(a[1], a[0]), sub(a[3], a[0]), sub(b[1], b[0]), sub(b[3], b[0])].map(norm);
+  return axes.every((ax) => {
+    const pa = a.map((p) => dot(p, ax));
+    const pb = b.map((p) => dot(p, ax));
+    return Math.min(Math.max(...pa), Math.max(...pb)) - Math.max(Math.min(...pa), Math.min(...pb)) > 1e-3;
+  });
+}
+
+/** Quatro pontos formam um retângulo a × b (em qualquer orientação), na ordem ao redor? */
+export function isRect(c: Vec3[], a: number, b: number, tol: number): boolean {
+  const u = sub(c[1], c[0]);
+  const v = sub(c[3], c[0]);
+  const lu = len(u);
+  const lv = len(v);
+  const sizes = (Math.abs(lu - a) <= tol && Math.abs(lv - b) <= tol) || (Math.abs(lu - b) <= tol && Math.abs(lv - a) <= tol);
+  return sizes && Math.abs(dot(u, v)) / (lu * lv) < 1e-3 && len(sub(add(c[0], add(u, v)), c[2])) <= tol;
 }
 
 export function validatePlate(cat: Catalog, inv: InventoryConfig, model: Model, code: string, g: PlateGeom, ignoreId?: string): Check {
+  const s = cat.settings;
   const errors: string[] = [];
   const warnings: string[] = [];
   const piece = cat.pieces[code];
@@ -226,18 +258,15 @@ export function validatePlate(cat: Catalog, inv: InventoryConfig, model: Model, 
   if (onGround(...g.corners)) errors.push("Nada pode ficar deitado na chapa."); // G6
   if (nodes.every(Boolean)) {
     const key = plateKey(nodes.map((n) => n!.id));
-    const r = rectInPlane(g);
+    const [A, B] = piece.spanM ?? [0, 0];
+    if (!isRect(g.corners, A, B, s.tolerancia_encaixe_mm / s.modulo_mm)) errors.push(`A ${code} precisa de 4 esferas num retângulo de ${A} × ${B} módulos.`); // P1
     for (const p of Object.values(model.plates)) {
       if (p.id === ignoreId) continue;
       if (plateKey(p.corners) === key) {
         errors.push("Já existe uma placa nesse vão."); // P4
         break;
       }
-      const pg = p.corners.map((id) => model.nodes[id].pos) as PlateGeom["corners"];
-      const pr = rectInPlane({ corners: pg, normal: norm(cross(sub(pg[1], pg[0]), sub(pg[3], pg[0]))).map(Math.abs) as Vec3 });
-      if (pr.k !== r.k || Math.abs(pr.level - r.level) > EPS) continue;
-      const overlap = r.axes.every((_, i) => Math.min(r.hi[i], pr.hi[i]) - Math.max(r.lo[i], pr.lo[i]) > EPS);
-      if (overlap) {
+      if (platesOverlap(g.corners, p.corners.map((id) => model.nodes[id].pos))) {
         errors.push("Encosta em outra placa no mesmo plano.");
         break;
       }
@@ -266,7 +295,7 @@ export interface ConnectorSpec {
 }
 
 const sameDirs = (a: Vec3[], b: Vec3[]) =>
-  a.length === b.length && a.every((d) => b.some((e) => samePos(d, e, 1e-6)));
+  a.length === b.length && a.every((d) => b.some((e) => samePos(d, e, DIR_TOL)));
 
 export function validateConnector(cat: Catalog, inv: InventoryConfig, model: Model, spec: ConnectorSpec): Check {
   const errors: string[] = [];
@@ -277,7 +306,7 @@ export function validateConnector(cat: Catalog, inv: InventoryConfig, model: Mod
   if (spec.code === "RC90") {
     if (spec.base) {
       if (n.kind !== "support" || !barAlong(UP)) errors.push("Na ligação de base, a RC90 precisa de um pilar subindo."); // L3
-    } else if (spec.dirs.length !== 2 || Math.abs(dot(spec.dirs[0], spec.dirs[1])) > EPS || !spec.dirs.every(barAlong)) {
+    } else if (spec.dirs.length !== 2 || Math.abs(dot(spec.dirs[0], spec.dirs[1])) > DIR_TOL || !spec.dirs.every(barAlong)) {
       errors.push("A RC90 vai no canto entre duas barras a 90°."); // L1
     }
     if (existing.some((c) => c.code === "RC90" && !!c.base === !!spec.base && sameDirs(c.dirs, spec.dirs))) {
@@ -287,12 +316,12 @@ export function validateConnector(cat: Catalog, inv: InventoryConfig, model: Mod
     const ax = spec.dirs[0];
     if (!ax || !barAlong(ax) || !barAlong(scale(ax, -1))) errors.push(`A ${spec.code} precisa de duas barras alinhadas no nó.`);
     const side = spec.side;
-    if (!side || Math.abs(dot(side, ax)) > EPS) errors.push("Escolha um lado da esfera perpendicular às barras.");
+    if (!side || Math.abs(dot(side, ax)) > DIR_TOL) errors.push("Escolha um lado da esfera perpendicular às barras.");
     else if (barAlong(side)) errors.push("Esse lado tem uma barra transversal: a ligação não cabe."); // L6
     const cc = existing.filter((c) => c.code === "CC");
     if (spec.code === "CC" && cc.length) errors.push("Essa esfera já tem uma CC; para travar o outro par, use a CC90."); // L4
     if (spec.code === "CC90") {
-      const base = cc.find((c) => Math.abs(dot(c.dirs[0], ax)) < EPS && (!c.side || !side || samePos(c.side, side, 1e-6)));
+      const base = cc.find((c) => Math.abs(dot(c.dirs[0], ax)) < DIR_TOL && (!c.side || !side || samePos(c.side, side, DIR_TOL)));
       if (!base) errors.push("A CC90 vai por cima de uma CC, no mesmo lado, travando o par perpendicular."); // L5
       if (existing.some((c) => c.code === "CC90")) errors.push("Essa esfera já tem uma CC90.");
     }

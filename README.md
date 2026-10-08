@@ -10,6 +10,9 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 - **Encaixe**: pontos verdes mostram onde a peça escolhida entra. Sobre uma esfera, a barra sobe; puxando o cursor para um lado, ela vai para aquele lado; **R** alterna as opções.
 - **Barras inclinadas**: por padrão as barras vão só nos eixos; segure **Shift** (ou ligue "Barras: Inclinadas", tecla **I**) para inclinar em passos de 15° nos planos X, Y e Z. Fechar entre duas esferas que estejam à distância da barra (triângulos) vale sempre. Uma barra que não alcança a esfera fica vermelha e o rodapé diz quanto faltou.
 - **CC e CC90 nos 4 lados** da esfera (R troca o lado), menos onde chega uma barra transversal.
+- **Planos inclinados**: placas, diagonais, RC90, CC e CC90 também em quadros inclinados (treliças), desde que as esferas estejam no mesmo plano e nas distâncias certas.
+- **Guias da ligação de base**: ao colocar ou mover uma GC, pontos **azuis** a um vão de barra (4, 6 ou 12 módulos) de outra GC e **amarelos** no vértice de um triângulo de barras. A GC encaixa neles mesmo no modo Livre.
+- **Coordenadas**: com uma GC selecionada, digite X e Z no painel (em módulos ou em mm); o painel mostra as distâncias às outras GC e quais batem com uma barra.
 - **Regras do kit**: comprimentos, ângulo mínimo de 45° entre barras, nada deitado na chapa, diagonais só no vão nominal, placas presas em 4 esferas, ligações nos cantos certos, estoque. O motivo de cada bloqueio aparece no rodapé.
 - **Editar**: selecionar; **mover** (M, botão ou arrastar a peça); **girar** (R); remover; desfazer e refazer. Mover uma ligação de base leva a estrutura inteira.
 - **Seleção por retângulo**: para a direita pega o que fica inteiro dentro; para a esquerda, o que tocar. O painel mostra a lista de peças e as medidas do trecho, copia a lista e apaga tudo de uma vez.

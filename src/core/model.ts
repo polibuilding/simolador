@@ -55,6 +55,8 @@ export interface Model {
 export const emptyModel = (): Model => ({ nodes: {}, members: {}, plates: {}, connectors: {}, nextId: 1 });
 
 export const EPS = 1e-6;
+/** Tolerância para comparar direções unitárias (posições inclinadas são arredondadas a 1e-4). */
+export const DIR_TOL = 1e-4;
 export const UP: Vec3 = [0, 1, 0];
 export const AXES: Vec3[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
 
@@ -85,7 +87,28 @@ export function directionFrom(model: Model, m: Member, nodeId: string): Vec3 {
 
 /** Membro que sai do nó na direção `dir` (unitária), se houver. */
 export function memberAlong(model: Model, nodeId: string, dir: Vec3, filter?: (m: Member) => boolean): Member | undefined {
-  return membersAt(model, nodeId).find((m) => (!filter || filter(m)) && samePos(directionFrom(model, m, nodeId), dir, 1e-6));
+  return membersAt(model, nodeId).find((m) => (!filter || filter(m)) && samePos(directionFrom(model, m, nodeId), dir, DIR_TOL));
+}
+
+/** Direção com sinal canônico (primeira componente não nula positiva): identifica o eixo de um par de barras alinhadas. */
+export function canonicalDir(d: Vec3): Vec3 {
+  const k = d.findIndex((x) => Math.abs(x) > DIR_TOL);
+  return k >= 0 && d[k] < 0 ? (d.map((x) => -x + 0) as Vec3) : d;
+}
+
+/**
+ * Os 4 lados de uma esfera em volta de um par de barras alinhadas no eixo `ax`.
+ * Eixo da estrutura: os 4 eixos perpendiculares (como antes). Eixo inclinado num plano da estrutura:
+ * a normal desse plano (±) e a perpendicular dentro do plano (±). Ordem: o mais "para cima" primeiro.
+ */
+export function sidesAround(ax: Vec3): Vec3[] {
+  const a = norm(ax);
+  if (a.filter((x) => Math.abs(x) > DIR_TOL).length === 1) return AXES.filter((s) => Math.abs(dot(s, a)) < DIR_TOL);
+  const zero = a.findIndex((x) => Math.abs(x) < DIR_TOL);
+  const p: Vec3 = zero >= 0 ? (AXES.find((s) => Math.abs(s[zero]) === 1 && s[zero] > 0) as Vec3) : norm(Math.abs(a[1]) < 0.99 ? cross(a, UP) : cross(a, [1, 0, 0]));
+  const q = norm(cross(a, p));
+  const r4 = (v: Vec3) => v.map((x) => Math.round(x * 1e6) / 1e6 + 0) as Vec3;
+  return [p, scale(p, -1), q, scale(q, -1)].map(r4).sort((u, v) => v[1] - u[1]);
 }
 
 export const plateKey = (ids: string[]) => [...ids].sort().join("|");
@@ -138,7 +161,7 @@ export function connectorSupported(model: Model, c: Connector): boolean {
   if (c.side && barAlong(c.side)) return false; // uma barra transversal ocupou o lado
   if (c.code === "CC90") {
     return Object.values(model.connectors).some(
-      (o) => o.code === "CC" && o.node === c.node && Math.abs(dot(o.dirs[0], ax)) < EPS && (!c.side || !o.side || samePos(o.side, c.side, 1e-6)),
+      (o) => o.code === "CC" && o.node === c.node && Math.abs(dot(o.dirs[0], ax)) < DIR_TOL && (!c.side || !o.side || samePos(o.side, c.side, DIR_TOL)),
     );
   }
   return true;
@@ -237,7 +260,7 @@ export function transformNodes(model: Model, ids: Set<string>, pivot: Vec3, turn
       dirs: c.dirs.map((d) => {
         const r = rotY(d, turns);
         // eixos das CC ficam sempre positivos
-        return c.code === "RC90" ? r : (r.map((x) => Math.abs(x)) as Vec3);
+        return c.code === "RC90" ? r : canonicalDir(r);
       }),
       ...(c.side ? { side: rotY(c.side, turns) } : {}),
     };
