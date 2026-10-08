@@ -1,0 +1,72 @@
+{
+  "format": "simolador",
+  "version": 1,
+  "savedAt": "2026-10-08T16:55:02.975Z",
+  "name": "Pórtico simples",
+  "moduleMm": 14.87,
+  "inventory": {
+    "kits": {
+      "1": 1,
+      "2": 1
+    },
+    "unlimited": false
+  },
+  "nodes": [
+    {
+      "id": "n1",
+      "kind": "support",
+      "pos": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "id": "n2",
+      "kind": "support",
+      "pos": [
+        9,
+        0,
+        3
+      ]
+    },
+    {
+      "id": "n3",
+      "kind": "sphere",
+      "pos": [
+        3,
+        6,
+        3
+      ]
+    },
+    {
+      "id": "n5",
+      "kind": "sphere",
+      "pos": [
+        9,
+        6,
+        3
+      ]
+    }
+  ],
+  "members": [
+    {
+      "id": "m4",
+      "code": "B6",
+      "a": "n1",
+      "b": "n3"
+    },
+    {
+      "id": "m6",
+      "code": "B6",
+      "a": "n2",
+      "b": "n5"
+    },
+    {
+      "id": "m7",
+      "code": "B6",
+      "a": "n3",
+      "b": "n5"
+    }
+  ]
+}
