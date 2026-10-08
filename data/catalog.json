@@ -1,0 +1,289 @@
+{
+  "_meta": {
+    "generatedBy": "scripts/gerar-dados.mjs",
+    "source": "data/parametros.xlsx",
+    "generatedAt": "2026-10-08T16:55:20.038Z",
+    "doNotEdit": "Arquivo gerado. Edite data/parametros.xlsx e rode npm run dados."
+  },
+  "schemaVersion": 2,
+  "units": {
+    "moduleMm": 14.87
+  },
+  "settings": {
+    "modulo_mm": 14.87,
+    "esfera_diametro_mm": 15,
+    "barra_diametro_mm": 6,
+    "barra_desconto_mm": 14.6,
+    "diagonal_desconto_mm": 24.6,
+    "diagonal_terminal_mm": 5.2,
+    "cabo_diametro_mm": 1,
+    "placa_desconto_mm": 7.3,
+    "placa_espessura_mm": 4,
+    "gc_diametro_mm": 44,
+    "gc_altura_mm": 10.5,
+    "gc_centro_esfera_mm": 7.5,
+    "rc90_cateto_mm": 18.3,
+    "rc90_espessura_mm": 6,
+    "chapa_modulos_x": 18,
+    "chapa_modulos_y": 12,
+    "chapa_espessura_mm": 3,
+    "prancha_escala": "auto",
+    "prancha_formato": "A3",
+    "prancha_projeto": "DESAFIO POLI-USP 2026",
+    "angulo_minimo_membros_graus": 45,
+    "max_membros_por_plano": 8,
+    "gc_encaixe_padrao": "grade",
+    "tolerancia_encaixe_mm": 0.5
+  },
+  "pieces": [
+    {
+      "code": "C",
+      "name": "Esfera",
+      "type": "node",
+      "spanM": null,
+      "geometry": {
+        "diameterMm": 15
+      },
+      "behavior": null,
+      "status": "desenho",
+      "notes": "Diâmetro em Geral"
+    },
+    {
+      "code": "GC",
+      "name": "Ligação de base",
+      "type": "support",
+      "spanM": null,
+      "geometry": {
+        "diameterMm": 44,
+        "heightMm": 10.5,
+        "sphereCenterAboveGroundMm": 7.5,
+        "hasSphere": true
+      },
+      "behavior": null,
+      "status": "desenho",
+      "notes": "Tem esfera embutida (E17). Centro da GC deve ficar dentro da chapa, borda inclusive (E18)"
+    },
+    {
+      "code": "RC90",
+      "name": "Ligação rígida 90°",
+      "type": "connector",
+      "spanM": null,
+      "geometry": {
+        "legMm": 18.3,
+        "thicknessMm": 6
+      },
+      "behavior": null,
+      "status": "desenho",
+      "notes": "Trapezoidal; prende na esfera e nas duas molas a 90°. Uma por canto; na GC, opcional uma de cada lado (E03, E04)"
+    },
+    {
+      "code": "CC",
+      "name": "Ligação contínua",
+      "type": "connector",
+      "spanM": null,
+      "geometry": {
+        "lengthMm": null,
+        "widthMm": null,
+        "heightMm": null
+      },
+      "behavior": null,
+      "status": "a medir",
+      "notes": "Forma 1 da caixa do Kit 2 (trapézio baixo). Vai direto na esfera, ligando duas molas alinhadas: enrijece o nó a 180° (E05). Medidas: preencher as colunas medidas"
+    },
+    {
+      "code": "CC90",
+      "name": "Ligação contínua 90° (sobreposta)",
+      "type": "connector",
+      "spanM": null,
+      "geometry": {
+        "lengthMm": null,
+        "widthMm": null,
+        "heightMm": null
+      },
+      "behavior": null,
+      "status": "a medir",
+      "notes": "Forma 2 da caixa do Kit 2 (chapéu alto). Vai por cima de uma CC no mesmo nó, enrijecendo um segundo par de molas alinhadas, perpendicular ao primeiro: forma um X. Exige CC no nó. Medidas: preencher as colunas medidas"
+    },
+    {
+      "code": "B4",
+      "name": "Barra B4",
+      "type": "bar",
+      "spanM": [
+        4
+      ],
+      "geometry": {
+        "centerToCenterMm": 59.48,
+        "lengthMm": 44.88,
+        "diameterMm": 6
+      },
+      "sources": {
+        "lengthMm": "regra"
+      },
+      "behavior": "tração, compressão e flexão",
+      "status": "calculado",
+      "notes": null
+    },
+    {
+      "code": "B6",
+      "name": "Barra B6",
+      "type": "bar",
+      "spanM": [
+        6
+      ],
+      "geometry": {
+        "centerToCenterMm": 89.22,
+        "lengthMm": 74.62,
+        "diameterMm": 6
+      },
+      "sources": {
+        "lengthMm": "regra"
+      },
+      "behavior": "tração, compressão e flexão",
+      "status": "confirmado",
+      "notes": "Equipe mediu ≈ 75 mm (08/10/2026); a regra dá 74,6. Medida aproximada: mantida a regra"
+    },
+    {
+      "code": "B12",
+      "name": "Barra B12",
+      "type": "bar",
+      "spanM": [
+        12
+      ],
+      "geometry": {
+        "centerToCenterMm": 178.44,
+        "lengthMm": 163.84,
+        "diameterMm": 6
+      },
+      "sources": {
+        "lengthMm": "regra"
+      },
+      "behavior": "tração, compressão e flexão",
+      "status": "desenho",
+      "notes": null
+    },
+    {
+      "code": "D4x6",
+      "name": "Diagonal D4x6",
+      "type": "cable",
+      "spanM": [
+        4,
+        6
+      ],
+      "geometry": {
+        "centerToCenterMm": 107.23,
+        "cableLengthMm": 82.63,
+        "cableDiameterMm": 1,
+        "terminalMm": 5.2
+      },
+      "sources": {
+        "cableLengthMm": "regra"
+      },
+      "behavior": "só tração",
+      "status": "calculado",
+      "notes": null
+    },
+    {
+      "code": "D6x6",
+      "name": "Diagonal D6x6",
+      "type": "cable",
+      "spanM": [
+        6,
+        6
+      ],
+      "geometry": {
+        "centerToCenterMm": 126.18,
+        "cableLengthMm": 101.58,
+        "cableDiameterMm": 1,
+        "terminalMm": 5.2
+      },
+      "sources": {
+        "cableLengthMm": "regra"
+      },
+      "behavior": "só tração",
+      "status": "desenho",
+      "notes": null
+    },
+    {
+      "code": "D6x12",
+      "name": "Diagonal D6x12",
+      "type": "cable",
+      "spanM": [
+        6,
+        12
+      ],
+      "geometry": {
+        "centerToCenterMm": 199.5,
+        "cableLengthMm": 174.9,
+        "cableDiameterMm": 1,
+        "terminalMm": 5.2
+      },
+      "sources": {
+        "cableLengthMm": "regra"
+      },
+      "behavior": "só tração",
+      "status": "calculado",
+      "notes": null
+    },
+    {
+      "code": "P6x6",
+      "name": "Placa P6x6",
+      "type": "plate",
+      "spanM": [
+        6,
+        6
+      ],
+      "geometry": {
+        "lengthMm": 81.92,
+        "widthMm": 81.92,
+        "thicknessMm": 4
+      },
+      "sources": {
+        "lengthMm": "regra",
+        "widthMm": "regra",
+        "thicknessMm": "estimado"
+      },
+      "behavior": null,
+      "status": "desenho",
+      "notes": "Liga nas 4 esferas pelos chanfros com ímã; barras no contorno recomendadas (E07, E08)"
+    },
+    {
+      "code": "P6x12",
+      "name": "Placa P6x12",
+      "type": "plate",
+      "spanM": [
+        12,
+        6
+      ],
+      "geometry": {
+        "lengthMm": 171.14,
+        "widthMm": 81.92,
+        "thicknessMm": 4
+      },
+      "sources": {
+        "lengthMm": "regra",
+        "widthMm": "regra",
+        "thicknessMm": "estimado"
+      },
+      "behavior": null,
+      "status": "desenho",
+      "notes": "Vão A = comprimento, Vão B = largura. Liga nas 4 esferas (E07)"
+    },
+    {
+      "code": "G",
+      "name": "Chapa de base",
+      "type": "ground",
+      "spanM": [
+        18,
+        12
+      ],
+      "geometry": {
+        "lengthMm": 267.66,
+        "widthMm": 178.44,
+        "thicknessMm": 3
+      },
+      "behavior": null,
+      "status": "desenho",
+      "notes": "Tamanho pela grade em Geral"
+    }
+  ]
+}

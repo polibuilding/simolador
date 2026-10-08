@@ -1,0 +1,47 @@
+{
+  "_meta": {
+    "generatedBy": "scripts/gerar-dados.mjs",
+    "source": "data/parametros.xlsx",
+    "generatedAt": "2026-10-08T16:55:20.038Z",
+    "doNotEdit": "Arquivo gerado. Edite data/parametros.xlsx e rode npm run dados."
+  },
+  "schemaVersion": 2,
+  "kits": {
+    "1": {
+      "name": "Mola Structural Kit 1",
+      "color": "#1DB88E",
+      "officialCount": 122,
+      "pieces": {
+        "C": 12,
+        "GC": 4,
+        "RC90": 48,
+        "B6": 24,
+        "B12": 6,
+        "D6x6": 12,
+        "D6x12": 12,
+        "P6x12": 3,
+        "G": 1
+      },
+      "totalCount": 122
+    },
+    "2": {
+      "name": "Mola Structural Kit 2",
+      "color": "#E5484D",
+      "officialCount": 145,
+      "pieces": {
+        "C": 18,
+        "GC": 6,
+        "RC90": 12,
+        "CC": 12,
+        "CC90": 12,
+        "B4": 18,
+        "B6": 30,
+        "D4x6": 24,
+        "D6x6": 9,
+        "P6x6": 3,
+        "G": 1
+      },
+      "totalCount": 145
+    }
+  }
+}
