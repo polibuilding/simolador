@@ -1,9 +1,10 @@
-// Regras de encaixe da fase 1. Numeração conforme docs/regras-de-encaixe.md.
+// Regras de encaixe. Numeração conforme docs/regras-de-encaixe.md.
 // Nenhum número fixo aqui: tudo vem de catalog.settings (data/parametros.xlsx).
 import type { Catalog } from "./catalog";
 import { remaining, type InventoryConfig } from "./inventory";
 import {
-  EPS, type Model, type Vec3, dot, findNodeAt, len, membersAt, directionFrom, sub, scale,
+  EPS, UP, type Model, type Vec3, type Member, add, cross, dot, findNodeAt, len, membersAt,
+  directionFrom, memberAlong, norm, plateKey, samePos, scale, sub,
 } from "./model";
 
 export interface Check {
@@ -13,10 +14,16 @@ export interface Check {
 }
 
 const result = (errors: string[], warnings: string[] = []): Check => ({ ok: errors.length === 0, errors, warnings });
+const typeOf = (cat: Catalog, code: string) => cat.pieces[code]?.type;
+const isBarM = (cat: Catalog) => (m: Member) => typeOf(cat, m.code) === "bar";
+
+function stockErrors(cat: Catalog, inv: InventoryConfig, model: Model, code: string): string[] {
+  return remaining(cat, inv, model, code) < 1 ? [`Acabaram as ${code} do estoque.`] : [];
+}
 
 // ---------------- Ligação de base (GC) ----------------
 
-export function validateSupport(cat: Catalog, inv: InventoryConfig, model: Model, pos: Vec3): Check {
+export function validateSupport(cat: Catalog, inv: InventoryConfig, model: Model, pos: Vec3, ignore: Set<string> = new Set()): Check {
   const s = cat.settings;
   const errors: string[] = [];
   const [x, y, z] = pos;
@@ -26,40 +33,39 @@ export function validateSupport(cat: Catalog, inv: InventoryConfig, model: Model
     errors.push("O centro da ligação de base precisa ficar dentro da chapa.");
   }
   // G3: sem sobreposição com outra GC
-  const minDistM = s.gc_diametro_mm / s.modulo_mm - s.tolerancia_encaixe_mm / s.modulo_mm;
+  const minDistM = (s.gc_diametro_mm - s.tolerancia_encaixe_mm) / s.modulo_mm;
   for (const n of Object.values(model.nodes)) {
-    if (n.kind !== "support") continue;
+    if (n.kind !== "support" || ignore.has(n.id)) continue;
     if (len(sub(n.pos, pos)) < minDistM) {
       errors.push("Encosta em outra ligação de base.");
       break;
     }
   }
-  // Não pode cair em cima de uma esfera já existente
   const at = findNodeAt(model, pos);
-  if (at && at.kind === "sphere") errors.push("Já existe uma esfera nesse ponto.");
-  // S2: estoque
-  if (remaining(cat, inv, model, "GC") < 1) errors.push("Acabaram as ligações de base (GC) do estoque.");
+  if (at && !ignore.has(at.id) && at.kind === "sphere") errors.push("Já existe uma esfera nesse ponto.");
+  if (!ignore.size) errors.push(...stockErrors(cat, inv, model, "GC"));
   return result(errors);
 }
 
-// ---------------- Barras ----------------
+// ---------------- Geometria auxiliar ----------------
 
 function angleDeg(u: Vec3, v: Vec3) {
   const c = Math.max(-1, Math.min(1, dot(u, v) / (len(u) * len(v))));
   return (Math.acos(c) * 180) / Math.PI;
 }
 
-/** Ângulo mínimo (N3) entre a nova direção e os membros que já saem do nó. */
+/** N3: ângulo mínimo entre barras no mesmo nó (diagonais são cabos finos e não entram nesta regra). */
 function angleErrors(cat: Catalog, model: Model, nodeId: string, dir: Vec3, where: string): string[] {
   const minA = cat.settings.angulo_minimo_membros_graus;
   for (const m of membersAt(model, nodeId)) {
+    if (!isBarM(cat)(m)) continue;
     const a = angleDeg(directionFrom(model, m, nodeId), dir);
-    if (a < minA - 0.5) return [`Ângulo de ${a.toFixed(0)}° com outra peça na ${where} (mínimo ${minA}°).`];
+    if (a < minA - 0.5) return [`Ângulo de ${a.toFixed(0)}° com outra barra na ${where} (mínimo ${minA}°).`];
   }
   return [];
 }
 
-/** C1: o novo segmento não pode se sobrepor a um membro colinear nem atravessar um nó. */
+/** C1: o segmento não pode sobrepor um membro colinear nem atravessar um nó. */
 function collisionErrors(model: Model, a: Vec3, b: Vec3, fromId: string, targetId?: string): string[] {
   const d = sub(b, a);
   const L = len(d);
@@ -67,26 +73,28 @@ function collisionErrors(model: Model, a: Vec3, b: Vec3, fromId: string, targetI
   const onSegment = (p: Vec3) => {
     const w = sub(p, a);
     const t = dot(w, u);
-    const perp = len(sub(w, scale(u, t)));
-    return { t, perp };
+    return { t, perp: len(sub(w, scale(u, t))) };
   };
   for (const n of Object.values(model.nodes)) {
     if (n.id === fromId || n.id === targetId) continue;
     const { t, perp } = onSegment(n.pos);
-    if (perp < 1e-3 && t > EPS && t < L - EPS) return ["A barra atravessaria uma esfera."];
+    if (perp < 1e-3 && t > EPS && t < L - EPS) return ["A peça atravessaria uma esfera."];
   }
   for (const m of Object.values(model.members)) {
-    const p = model.nodes[m.a].pos;
-    const q = model.nodes[m.b].pos;
-    const sp = onSegment(p);
-    const sq = onSegment(q);
-    if (sp.perp > 1e-3 || sq.perp > 1e-3) continue; // não colinear
+    const sp = onSegment(model.nodes[m.a].pos);
+    const sq = onSegment(model.nodes[m.b].pos);
+    if (sp.perp > 1e-3 || sq.perp > 1e-3) continue;
     const lo = Math.max(0, Math.min(sp.t, sq.t));
     const hi = Math.min(L, Math.max(sp.t, sq.t));
     if (hi - lo > EPS) return ["Já existe uma peça nesse trecho."];
   }
   return [];
 }
+
+/** G6: nada deitado no nível da chapa (barras, diagonais ou placas horizontais em y = 0). */
+const onGround = (...ps: Vec3[]) => ps.every((p) => Math.abs(p[1]) < EPS);
+
+// ---------------- Barras e diagonais ----------------
 
 export function validateMember(
   cat: Catalog, inv: InventoryConfig, model: Model, code: string, fromId: string, toPos: Vec3,
@@ -96,36 +104,176 @@ export function validateMember(
   const from = model.nodes[fromId];
   const errors: string[] = [];
   const warnings: string[] = [];
-  if (!piece || piece.type !== "bar") return result([`Peça ${code} não é uma barra.`]);
+  if (!piece || (piece.type !== "bar" && piece.type !== "cable")) return result([`${code} não é barra nem diagonal.`]);
   if (!from) return result(["Nó de origem não existe."]);
+  const cable = piece.type === "cable";
 
   const v = sub(toPos, from.pos);
   const L = len(v);
-  if (L < EPS) return result(["A barra precisa de duas pontas diferentes."]);
-  // B1: comprimento
-  const span = piece.spanM?.[0] ?? 0;
-  if (Math.abs(L - span) * s.modulo_mm > s.tolerancia_encaixe_mm) {
-    errors.push(`A ${code} vence ${span} módulos; a distância é ${L.toFixed(2)}.`);
+  if (L < EPS) return result(["A peça precisa de duas pontas diferentes."]);
+  const tolM = s.tolerancia_encaixe_mm / s.modulo_mm;
+  const absC = v.map(Math.abs);
+  const nonZero = absC.filter((c) => c > EPS);
+
+  if (!cable) {
+    const span = piece.spanM?.[0] ?? 0;
+    if (Math.abs(L - span) > tolM) errors.push(`A ${code} vence ${span} módulos; a distância é ${L.toFixed(2)}.`); // B1
+    if (nonZero.length !== 1) errors.push("Barras só nas direções dos eixos (X, Y ou Z)."); // B2
+  } else {
+    // D1: só no vão nominal, num plano ortogonal
+    const [a, b] = piece.spanM ?? [0, 0];
+    const sorted = [...nonZero].sort((p, q) => p - q);
+    const want = [a, b].sort((p, q) => p - q);
+    if (nonZero.length !== 2 || Math.abs(sorted[0] - want[0]) > tolM || Math.abs(sorted[1] - want[1]) > tolM) {
+      errors.push(`A ${code} só vale num vão de ${a} × ${b} módulos.`);
+    }
   }
-  // B2: só nos eixos (modo grade, fases 1–3)
-  const nonZero = v.filter((c) => Math.abs(c) > EPS).length;
-  if (nonZero !== 1) errors.push("Nesta versão, barras só nas direções dos eixos (X, Y ou Z).");
-  // Abaixo da chapa
-  if (toPos[1] < -EPS) errors.push("A barra iria para baixo da chapa.");
+  if (toPos[1] < -EPS) errors.push("A peça iria para baixo da chapa.");
+  if (onGround(from.pos, toPos)) errors.push("Nada pode ficar deitado na chapa: comece pelos pilares."); // G6
 
   const target = findNodeAt(model, toPos);
+  if (cable && !target) errors.push("A diagonal liga duas esferas que já existem."); // D5
   const dir = scale(v, 1 / L);
-  errors.push(...angleErrors(cat, model, fromId, dir, "origem"));
+  if (!cable) errors.push(...angleErrors(cat, model, fromId, dir, "origem"));
   if (target) {
     if (target.id === fromId) errors.push("As duas pontas estão no mesmo nó.");
-    errors.push(...angleErrors(cat, model, target.id, scale(dir, -1), "outra ponta"));
+    if (!cable) errors.push(...angleErrors(cat, model, target.id, scale(dir, -1), "outra ponta"));
   }
   errors.push(...collisionErrors(model, from.pos, toPos, fromId, target?.id));
 
-  // S2: estoque
-  if (remaining(cat, inv, model, code) < 1) errors.push(`Acabaram as ${code} do estoque.`);
+  errors.push(...stockErrors(cat, inv, model, code));
   if (!target && remaining(cat, inv, model, "C") < 1) errors.push("Acabaram as esferas (C) do estoque.");
-
   if (!target && toPos[1] < EPS) warnings.push("Esfera apoiada direto na chapa, sem ligação de base.");
   return result(errors, warnings);
+}
+
+// ---------------- Placas ----------------
+
+export interface PlateGeom {
+  corners: [Vec3, Vec3, Vec3, Vec3]; // origem, origem+u·a, origem+u·a+v·b, origem+v·b
+  normal: Vec3;
+}
+
+/** Ordem dos cantos ao redor do retângulo. */
+export function plateCorners(origin: Vec3, u: Vec3, a: number, v: Vec3, b: number): PlateGeom {
+  const p1 = add(origin, scale(u, a));
+  const p3 = add(origin, scale(v, b));
+  return { corners: [origin, p1, add(p1, scale(v, b)), p3], normal: norm(cross(u, v)).map(Math.abs) as Vec3 };
+}
+
+function rectInPlane(g: PlateGeom) {
+  // eixos do plano = os dois eixos com variação
+  const axes = [0, 1, 2].filter((i) => Math.abs(g.normal[i]) < 0.5);
+  const lo = axes.map((i) => Math.min(...g.corners.map((c) => c[i])));
+  const hi = axes.map((i) => Math.max(...g.corners.map((c) => c[i])));
+  const k = [0, 1, 2].find((i) => Math.abs(g.normal[i]) > 0.5)!;
+  return { axes, lo, hi, k, level: g.corners[0][k] };
+}
+
+export function validatePlate(cat: Catalog, inv: InventoryConfig, model: Model, code: string, g: PlateGeom, ignoreId?: string): Check {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const piece = cat.pieces[code];
+  if (!piece || piece.type !== "plate") return result([`${code} não é placa.`]);
+  const nodes = g.corners.map((c) => findNodeAt(model, c));
+  if (nodes.some((n) => !n)) errors.push("A placa precisa de uma esfera em cada um dos 4 cantos."); // P1
+  if (g.corners.some((c) => c[1] < -EPS)) errors.push("A placa iria para baixo da chapa.");
+  if (onGround(...g.corners)) errors.push("Nada pode ficar deitado na chapa."); // G6
+  if (nodes.every(Boolean)) {
+    const key = plateKey(nodes.map((n) => n!.id));
+    const r = rectInPlane(g);
+    for (const p of Object.values(model.plates)) {
+      if (p.id === ignoreId) continue;
+      if (plateKey(p.corners) === key) {
+        errors.push("Já existe uma placa nesse vão."); // P4
+        break;
+      }
+      const pg = p.corners.map((id) => model.nodes[id].pos) as PlateGeom["corners"];
+      const pr = rectInPlane({ corners: pg, normal: norm(cross(sub(pg[1], pg[0]), sub(pg[3], pg[0]))).map(Math.abs) as Vec3 });
+      if (pr.k !== r.k || Math.abs(pr.level - r.level) > EPS) continue;
+      const overlap = r.axes.every((_, i) => Math.min(r.hi[i], pr.hi[i]) - Math.max(r.lo[i], pr.lo[i]) > EPS);
+      if (overlap) {
+        errors.push("Encosta em outra placa no mesmo plano.");
+        break;
+      }
+    }
+    // P3: barras do contorno recomendadas
+    const ids = nodes.map((n) => n!.id);
+    const edges = [0, 1, 2, 3].filter((i) => {
+      const a = ids[i];
+      const b = ids[(i + 1) % 4];
+      return !Object.values(model.members).some((m) => isBarM(cat)(m) && ((m.a === a && m.b === b) || (m.a === b && m.b === a)));
+    });
+    if (edges.length) warnings.push("Placa sem barras em todo o contorno: menos estável.");
+  }
+  if (!ignoreId) errors.push(...stockErrors(cat, inv, model, code));
+  return result(errors, warnings);
+}
+
+// ---------------- Ligações ----------------
+
+export interface ConnectorSpec {
+  code: string;
+  node: string;
+  dirs: Vec3[];
+  base?: boolean;
+}
+
+const sameDirs = (a: Vec3[], b: Vec3[]) =>
+  a.length === b.length && a.every((d) => b.some((e) => samePos(d, e, 1e-6)));
+
+export function validateConnector(cat: Catalog, inv: InventoryConfig, model: Model, spec: ConnectorSpec): Check {
+  const errors: string[] = [];
+  const n = model.nodes[spec.node];
+  if (!n) return result(["Escolha uma esfera."]);
+  const existing = Object.values(model.connectors).filter((c) => c.node === spec.node);
+  const barAlong = (d: Vec3) => !!memberAlong(model, spec.node, d, isBarM(cat));
+  if (spec.code === "RC90") {
+    if (spec.base) {
+      if (n.kind !== "support" || !barAlong(UP)) errors.push("Na ligação de base, a RC90 precisa de um pilar subindo."); // L3
+    } else if (spec.dirs.length !== 2 || Math.abs(dot(spec.dirs[0], spec.dirs[1])) > EPS || !spec.dirs.every(barAlong)) {
+      errors.push("A RC90 vai no canto entre duas barras a 90°."); // L1
+    }
+    if (existing.some((c) => c.code === "RC90" && !!c.base === !!spec.base && sameDirs(c.dirs, spec.dirs))) {
+      errors.push("Esse canto já tem uma RC90."); // L2
+    }
+  } else if (spec.code === "CC" || spec.code === "CC90") {
+    const ax = spec.dirs[0];
+    if (!ax || !barAlong(ax) || !barAlong(scale(ax, -1))) errors.push(`A ${spec.code} precisa de duas barras alinhadas no nó.`);
+    const cc = existing.filter((c) => c.code === "CC");
+    if (spec.code === "CC" && cc.length) errors.push("Essa esfera já tem uma CC; para travar o outro par, use a CC90."); // L4
+    if (spec.code === "CC90") {
+      if (!cc.some((c) => Math.abs(dot(c.dirs[0], ax)) < EPS)) errors.push("A CC90 vai por cima de uma CC, no par perpendicular."); // L5
+      if (existing.some((c) => c.code === "CC90")) errors.push("Essa esfera já tem uma CC90.");
+    }
+  } else {
+    errors.push(`${spec.code} não é uma ligação.`);
+  }
+  errors.push(...stockErrors(cat, inv, model, spec.code));
+  return result(errors);
+}
+
+/** Depois de mover ou girar uma estrutura: tudo continua válido? */
+export function validateMovedModel(cat: Catalog, model: Model, moved: Set<string>): Check {
+  const errors: string[] = [];
+  for (const id of moved) {
+    const n = model.nodes[id];
+    if (n.pos[1] < -EPS) errors.push("A estrutura iria para baixo da chapa.");
+    if (n.kind === "support") {
+      const c = validateSupport(cat, { kits: {}, unlimited: true }, model, n.pos, moved);
+      errors.push(...c.errors);
+    }
+    for (const o of Object.values(model.nodes)) {
+      if (o.id !== id && !moved.has(o.id) && samePos(o.pos, n.pos)) errors.push("Bateria em outra esfera.");
+    }
+  }
+  for (const m of Object.values(model.members)) {
+    if (!moved.has(m.a) && !moved.has(m.b)) continue;
+    const a = model.nodes[m.a].pos;
+    const b = model.nodes[m.b].pos;
+    if (onGround(a, b)) errors.push("Uma peça ficaria deitada na chapa.");
+    const others = { ...model, members: Object.fromEntries(Object.entries(model.members).filter(([k]) => k !== m.id)) };
+    errors.push(...collisionErrors(others, a, b, m.a, m.b));
+  }
+  return result([...new Set(errors)]);
 }

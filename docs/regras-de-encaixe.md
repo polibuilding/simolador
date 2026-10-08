@@ -1,6 +1,6 @@
 # Regras de encaixe — siMOLAdor
 
-Versão 1.1 · 08/10/2026. Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
+Versão 2 · 08/10/2026 (fase 2 implementada). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
 
 Uma regra **bloqueia** quando torna o encaixe inválido (fantasma vermelho, não deixa soltar). Uma regra **avisa** quando a montagem é possível, mas não é recomendada (fantasma verde, aviso na barra de status).
 
@@ -10,7 +10,7 @@ Uma regra **bloqueia** quando torna o encaixe inválido (fantasma vermelho, não
 |---|---|---|---|
 | N1 | Todo nó é uma esfera C ou uma GC. A GC tem esfera embutida: não se coloca esfera C dentro da GC, e a GC não consome esfera do estoque. | estrutura | E17 |
 | N2 | Barras, diagonais e placas só se ligam a nós; nunca barra com barra direto. | bloqueia | E15, E19 |
-| N3 | Ângulo entre duas peças lineares no mesmo nó ≥ `angulo_minimo_membros_graus` (45°). | bloqueia | E14 |
+| N3 | Ângulo entre duas **barras** no mesmo nó ≥ `angulo_minimo_membros_graus` (45°). Diagonais são cabos finos e não entram nesta regra (a D4x6 faz 34° com a barra). | bloqueia | E14 |
 | N4 | No máximo `max_membros_por_plano` (8) peças lineares num mesmo plano de um nó. É consequência de N3, mantida como checagem explícita. | bloqueia | E13 |
 | N5 | Nó sem nenhuma peça ligada (esfera solta) é permitido durante a montagem. | avisa | — |
 
@@ -33,6 +33,7 @@ No modo grade, as direções possíveis a partir de um nó são os múltiplos de
 | D2 | Podem ficar em planos verticais ou horizontais (contraventamento em planta). | — | E12 |
 | D3 | Trabalham só à tração: desenhadas como cabo fino; marcadas como "só tração" nas propriedades. | visual | E10 |
 | D4 | Duas diagonais cruzadas no mesmo vão (X) são permitidas; elas não colidem entre si. | — | pranchas 2022 |
+| D5 | A diagonal liga duas esferas que já existem (não cria esfera na ponta). | bloqueia | implementação |
 
 ## 4. Ligações
 
@@ -62,6 +63,7 @@ No modo grade, as direções possíveis a partir de um nó são os múltiplos de
 | G3 | Duas GC não podem se sobrepor: distância entre centros ≥ `gc_diametro_mm`. | bloqueia | geometria |
 | G4 | A estrutura pode passar da borda da chapa (balanço); só os apoios precisam estar nela. | — | E18 |
 | G5 | A esfera da GC fica a `gc_centro_esfera_mm` acima da chapa. É o nível zero (PAV. TÉRREO) da estrutura. | geometria | pranchas 2022 |
+| G6 | Nada deitado no nível da chapa: barras, diagonais ou placas horizontais em y = 0 (por exemplo, barra entre duas GC). | bloqueia | equipe 08/10 |
 
 ## 7. Estoque
 
@@ -77,6 +79,16 @@ No modo grade, as direções possíveis a partir de um nó são os múltiplos de
 | C1 | Duas peças lineares não podem ocupar o mesmo segmento (sobreposição). | bloqueia | — |
 | C2 | Barra não atravessa placa. | bloqueia | — |
 | C3 | Barras que se cruzam sem nó em comum: aviso (no kit real colidem). Exceção: diagonais em X (D4). | avisa | — |
+
+## 9. Edição
+
+| # | Regra | Origem |
+|---|---|---|
+| E1 | **Mover uma peça** (M, botão Mover ou arrastar a peça selecionada): a peça sai do modelo e vira fantasma; Esc devolve ao lugar. A esfera que só servia a ela vai junto. | equipe 08/10 |
+| E2 | **Mover uma GC ou esfera** move a estrutura conectada inteira (barras, diagonais e placas ligam os nós). Vale o encaixe na grade; as GC precisam continuar na chapa e sem encostar em outras. | equipe 08/10 |
+| E3 | **Girar (R)**: durante o posicionamento, alterna as opções do ponto; numa barra/diagonal selecionada, a próxima direção livre em torno de uma ponta; numa placa, a próxima posição livre mais perto; numa ligação, o próximo canto livre; numa GC/esfera, a estrutura inteira 90° em torno do centro dela. | equipe 08/10 |
+| E4 | **Encaixe ligado**: pontos verdes nas posições válidas da peça escolhida e GC na grade. **Livre**: sem pontos, GC em qualquer ponto da chapa (as outras peças continuam encaixando nas esferas). | equipe 08/10 |
+| E5 | Sobre uma esfera, a barra sobe; puxando o cursor para um lado, a barra vai para aquele lado. | equipe 08/10 |
 
 ## Perguntas que ainda podem mudar estas regras
 

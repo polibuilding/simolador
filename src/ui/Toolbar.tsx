@@ -47,8 +47,8 @@ export function Toolbar() {
   const name = useApp((s) => s.name);
   const canUndo = useApp((s) => s.history.past.length > 0);
   const canRedo = useApp((s) => s.history.future.length > 0);
-  const gcMode = useApp((s) => s.gcMode);
-  const { setName, undo, redo, setGcMode, newProject, load, serialize } = useApp.getState();
+  const snap = useApp((s) => s.snap);
+  const { setName, undo, redo, setSnap, setSheetsOpen, newProject, load, serialize } = useApp.getState();
   const fileRef = useRef<HTMLInputElement>(null);
   const [stockOpen, setStockOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,14 +97,22 @@ export function Toolbar() {
         <button onClick={undo} disabled={!canUndo} title="Ctrl+Z">Desfazer</button>
         <button onClick={redo} disabled={!canRedo} title="Ctrl+Y">Refazer</button>
       </nav>
-      <div className="segmented" role="radiogroup" aria-label="Encaixe da ligação de base">
-        <span>Ligação de base</span>
-        {(["grade", "livre"] as const).map((m) => (
-          <button key={m} role="radio" aria-checked={gcMode === m} className={gcMode === m ? "on" : ""} onClick={() => setGcMode(m)}>
-            {m === "grade" ? "Na grade" : "Livre"}
+      <div className="segmented" role="radiogroup" aria-label="Encaixe">
+        <span>Encaixe</span>
+        {[true, false].map((v) => (
+          <button
+            key={String(v)}
+            role="radio"
+            aria-checked={snap === v}
+            className={snap === v ? "on" : ""}
+            onClick={() => setSnap(v)}
+            title={v ? "Pontos verdes nas posições possíveis; ligação de base na grade" : "Sem pontos; ligação de base em qualquer lugar da chapa"}
+          >
+            {v ? "Ligado" : "Livre"}
           </button>
         ))}
       </div>
+      <button className="primary" onClick={() => setSheetsOpen(true)}>Gerar pranchas</button>
       <div className="stock">
         <button onClick={() => setStockOpen((o) => !o)} aria-expanded={stockOpen}>Estoque</button>
         {stockOpen && <StockPanel onClose={() => setStockOpen(false)} />}

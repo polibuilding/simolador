@@ -1,67 +1,179 @@
-// Posicionar peças: clique na paleta (fica armado) ou arraste da paleta para a cena.
-// Barras: acha o nó mais próximo do cursor na tela e, entre as 6 direções, a ponta mais próxima do cursor.
-// GC: projeta o cursor na chapa e encaixa na grade (ou livre).
+// Posicionar e mover peças.
+// - Clique na paleta (fica armado) ou arraste da paleta para a cena.
+// - As posições válidas viram "pontos de encaixe": a ponta de uma barra, o centro de uma placa, a esfera de uma ligação.
+//   Passar o cursor perto de um ponto mostra a peça; R alterna entre as opções daquele ponto.
+// - Passar o cursor sobre uma esfera existente também vale: mostra as peças que saem dela (R gira a direção).
+// - Arrastar uma peça selecionada (ou M) a retira para mudar de lugar; uma GC ou esfera move a estrutura inteira.
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 import { catalog } from "../core/catalog";
-import { memberCandidates, supportCheck, supportPosition } from "../core/snapping";
-import { useApp } from "../ui/store";
-import { fromWorldOnPlate, toWorld } from "../render/units";
+import { moveGroup } from "../core/edit";
+import type { Model, Vec3 } from "../core/model";
+import {
+  allCandidates, anchorPos, markerPos, supportCandidate, supportPosition, type Candidate,
+} from "../core/snapping";
+import { useApp, workingModel } from "../ui/store";
+import { BASE_Y, M, toWorld } from "../render/units";
 
-const NODE_PICK_PX = 120;
+const SPOT_PX = 46;
 const CLICK_PX = 5;
+const DRAG_PX = 6;
+
+const key = (p: Vec3) => p.map((v) => v.toFixed(3)).join(",");
+
+/** Preferência de direção para barras que saem de uma esfera: para cima, depois na horizontal, por último para baixo. */
+function dirRank(model: Model, c: Candidate) {
+  const a = anchorPos(model, c);
+  if (!a || c.kind !== "member") return 0;
+  const dy = c.toPos[1] - a[1];
+  return dy > 0 ? 0 : dy === 0 ? 1 : 2;
+}
+
+interface Spot {
+  pos: Vec3;
+  ends: Candidate[]; // candidatas que terminam/ficam neste ponto
+  starts: Candidate[]; // barras/diagonais que saem deste ponto (esfera existente)
+}
+
+// cache das candidatas: recalcula só quando muda o modelo, a peça ou o estoque
+let cache: { model: Model; code: string; inv: unknown; cands: Candidate[]; spots: Map<string, Spot> } | null = null;
+export function candidatesFor(model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"]) {
+  if (cache && cache.model === model && cache.code === code && cache.inv === inv) return cache;
+  const cands = allCandidates(catalog, inv, model, code);
+  const spots = new Map<string, Spot>();
+  const get = (p: Vec3) => {
+    const k = key(p);
+    let s = spots.get(k);
+    if (!s) spots.set(k, (s = { pos: p, ends: [], starts: [] }));
+    return s;
+  };
+  for (const c of cands) {
+    get(markerPos(model, c)).ends.push(c);
+    const a = anchorPos(model, c);
+    if (a) get(a).starts.push(c);
+  }
+  cache = { model, code, inv, cands, spots };
+  return cache;
+}
 
 export function Placement() {
-  const { camera, gl } = useThree();
+  const { camera, gl, controls } = useThree();
   const down = useRef<{ x: number; y: number } | null>(null);
+  const lastSpot = useRef<string | null>(null);
+
+  // trava a câmera enquanto arrasta uma peça
+  useEffect(
+    () =>
+      useApp.subscribe((s) => {
+        const dragging = (s.tool.kind !== "select" && s.tool.viaDrag) || !!s.pendingDrag;
+        if (controls) (controls as unknown as { enabled: boolean }).enabled = !dragging;
+      }),
+    [controls],
+  );
 
   useEffect(() => {
     const el = gl.domElement;
     const raycaster = new THREE.Raycaster();
-    const plate = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
     const toScreen = (v: THREE.Vector3, rect: DOMRect) => {
       const p = v.clone().project(camera);
-      return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height };
+      return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height, z: p.z };
+    };
+    const insideOf = (ev: PointerEvent, rect: DOMRect) =>
+      ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom;
+    const planeHit = (ev: PointerEvent, rect: DOMRect, yMm: number) => {
+      const ndc = new THREE.Vector2(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
+      raycaster.setFromCamera(ndc, camera);
+      return raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -yMm), new THREE.Vector3());
     };
 
     const update = (ev: PointerEvent) => {
       const st = useApp.getState();
-      if (st.tool.kind !== "place") return;
       const rect = el.getBoundingClientRect();
-      const inside = ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom;
-      if (!inside) return st.setGhost(null, st.tool.viaDrag ? "Solte a peça sobre a cena." : null);
-      const code = st.tool.code;
-      const model = st.history.present;
 
-      if (code === "GC") {
-        const ndc = new THREE.Vector2(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
-        raycaster.setFromCamera(ndc, camera);
-        const hit = raycaster.ray.intersectPlane(plate, new THREE.Vector3());
+      // arrastar uma peça selecionada → começa a mover
+      if (st.tool.kind === "select" && st.pendingDrag) {
+        if (Math.hypot(ev.clientX - st.pendingDrag.x, ev.clientY - st.pendingDrag.y) > DRAG_PX) {
+          st.setPendingDrag(null);
+          st.startMove(true);
+        } else return;
+      }
+      const tool = useApp.getState().tool;
+      if (tool.kind === "select") return;
+      if (!insideOf(ev, rect)) return st.setGhost(null, tool.viaDrag ? "Solte a peça sobre a cena." : st.hint);
+      const model = workingModel(useApp.getState());
+
+      // ---- mover estrutura ----
+      if (tool.kind === "moveGroup") {
+        const node = st.history.present.nodes[tool.nodeId];
+        if (!node) return st.disarm();
+        const hit = planeHit(ev, rect, BASE_Y + node.pos[1] * M);
+        if (!hit) return;
+        const target = supportPosition(catalog, { x: hit.x / M, z: hit.z / M }, st.snap);
+        const delta: Vec3 = [target[0] - node.pos[0], 0, target[2] - node.pos[2]];
+        const r = moveGroup(catalog, st.history.present, tool.nodeId, delta, tool.turns);
+        return st.setGhost({ kind: "group", model: r.model, ids: r.ids, check: r.check }, r.check.errors[0] ?? null);
+      }
+
+      const code = tool.code;
+      const inv = tool.moving ? { ...st.inventory, unlimited: true } : st.inventory;
+
+      // ---- ligação de base ----
+      if (catalog.pieces[code]?.type === "support") {
+        const hit = planeHit(ev, rect, 0);
         if (!hit) return st.setGhost(null, "Aponte para a chapa.");
-        const pos = supportPosition(catalog, fromWorldOnPlate(hit), st.gcMode);
-        const check = supportCheck(catalog, st.inventory, model, pos);
-        return st.setGhost({ code, toPos: pos, check }, check.errors[0] ?? null);
+        const pos = supportPosition(catalog, { x: hit.x / M, z: hit.z / M }, st.snap);
+        const cand = supportCandidate(catalog, inv, model, pos);
+        return st.setGhost({ kind: "cand", cand }, cand.check.ok ? null : cand.check.errors[0]);
       }
 
-      // barra: de todos os nós, as 6 direções; vence a ponta cuja projeção fica mais perto do cursor.
-      // Candidatas válidas têm preferência (peso 1,35 nas inválidas).
-      const nodes = Object.values(model.nodes);
-      if (!nodes.length) return st.setGhost(null, "Comece por uma ligação de base: as barras saem das esferas.");
-      let pick: ReturnType<typeof memberCandidates>[number] | null = null;
-      let pickD = Infinity;
-      for (const n of nodes) {
-        for (const c of memberCandidates(catalog, st.inventory, model, code, n.id)) {
-          const sp = toScreen(toWorld(c.toPos), rect);
-          const d = Math.hypot(sp.x - ev.clientX, sp.y - ev.clientY) * (c.check.ok ? 1 : 1.35);
-          if (d < pickD) (pick = c), (pickD = d);
-        }
+      // ---- demais peças: ponto de encaixe mais próximo ----
+      const { spots } = candidatesFor(model, code, inv);
+      let best: { k: string; s: Spot; d: number } | null = null;
+      for (const [k, s] of spots) {
+        const valid = s.ends.some((c) => c.check.ok) || s.starts.some((c) => c.check.ok);
+        if (!valid) continue;
+        const sp = toScreen(toWorld(s.pos), rect);
+        if (sp.z > 1) continue;
+        const d = Math.hypot(sp.x - ev.clientX, sp.y - ev.clientY);
+        if (d < SPOT_PX && (!best || d < best.d)) best = { k, s, d };
       }
-      if (!pick || pickD > NODE_PICK_PX) {
-        return st.setGhost(null, "Leve o cursor até onde a barra deve terminar, perto de uma esfera.");
+      if (!best) {
+        const empty = !Object.keys(model.nodes).length;
+        return st.setGhost(
+          null,
+          empty
+            ? "Comece por uma ligação de base: as outras peças saem das esferas."
+            : "Leve o cursor até um ponto verde ou até uma esfera.",
+        );
       }
-      st.setGhost({ code, fromId: pick.fromId, toPos: pick.toPos, check: pick.check }, pick.check.errors[0] ?? null);
+      if (lastSpot.current !== best.k) {
+        lastSpot.current = best.k;
+        if (st.rotIndex) useApp.setState({ rotIndex: 0 });
+      }
+      // opções do ponto. Ordem padrão: subir a partir da esfera; depois fechar uma peça que termina nela; depois o resto.
+      const ends = best.s.ends.filter((c) => c.check.ok);
+      const starts = best.s.starts.filter((c) => c.check.ok).sort((a, b) => dirRank(model, a) - dirRank(model, b));
+      const up = starts.filter((c) => dirRank(model, c) === 0);
+      let options = [...up, ...ends, ...starts.filter((c) => !up.includes(c))];
+      // cursor deslocado do ponto: vence a opção que aponta para o lado do cursor (puxar a barra com o mouse)
+      const spot = toScreen(toWorld(best.s.pos), rect);
+      const off = [ev.clientX - spot.x, ev.clientY - spot.y];
+      const offLen = Math.hypot(off[0], off[1]);
+      if (offLen > 12 && options.length > 1) {
+        const score = (c: Candidate) => {
+          const other = c.kind === "member" ? (ends.includes(c) ? anchorPos(model, c)! : c.toPos) : markerPos(model, c);
+          const o = toScreen(toWorld(other), rect);
+          const v = [o.x - spot.x, o.y - spot.y];
+          const L = Math.hypot(v[0], v[1]) || 1;
+          return (v[0] * off[0] + v[1] * off[1]) / (L * offLen);
+        };
+        options = [...options].sort((a, b) => score(b) - score(a));
+      }
+      const cand = options[useApp.getState().rotIndex % options.length];
+      const n = options.length;
+      st.setGhost({ kind: "cand", cand }, n > 1 ? `${n} opções neste ponto: R alterna.` : null);
     };
 
     const onDown = (ev: PointerEvent) => {
@@ -69,12 +181,18 @@ export function Placement() {
     };
     const onUp = (ev: PointerEvent) => {
       const st = useApp.getState();
-      if (st.tool.kind !== "place") return;
+      if (st.pendingDrag) st.setPendingDrag(null);
+      if (st.tool.kind === "select") return;
       const rect = el.getBoundingClientRect();
-      const inside = ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom;
+      const inside = insideOf(ev, rect);
       if (st.tool.viaDrag) {
-        if (inside) st.commitGhost();
-        st.disarm();
+        update(ev);
+        const ok = inside && useApp.getState().commitGhost();
+        const now = useApp.getState();
+        if (!ok && (now.tool.kind === "moveGroup" || (now.tool.kind === "place" && now.tool.moving))) {
+          now.disarm(); // movimento cancelado: nada mudou
+          now.setGhost(null, "Movimento cancelado: o lugar não era válido.");
+        } else if (now.tool.kind !== "select") now.disarm();
         return;
       }
       const d = down.current;
@@ -82,21 +200,32 @@ export function Placement() {
       if (!inside || !d || Math.hypot(d.x - ev.clientX, d.y - ev.clientY) > CLICK_PX) return; // foi giro de câmera
       update(ev);
       useApp.getState().commitGhost();
+      // depois de colocar, recalcula o fantasma no mesmo lugar
+      update(ev);
     };
 
-    // Gancho de teste/depuração: projeta uma posição do modelo (módulos) para a tela.
+    // Gancho de teste/depuração: projeta posições do modelo (módulos) para a tela.
     (window as unknown as Record<string, unknown>).__simolador = {
       store: useApp,
-      project: (p: [number, number, number]) => toScreen(toWorld(p), el.getBoundingClientRect()),
-      projectPlate: (x: number, z: number) =>
-        toScreen(new THREE.Vector3(x * catalog.settings.modulo_mm, 0, z * catalog.settings.modulo_mm), el.getBoundingClientRect()),
+      project: (p: Vec3) => toScreen(toWorld(p), el.getBoundingClientRect()),
+      projectPlate: (x: number, z: number) => toScreen(new THREE.Vector3(x * M, 0, z * M), el.getBoundingClientRect()),
     };
 
-    window.addEventListener("pointermove", update);
+    // R também atualiza o fantasma sem mexer o mouse
+    let lastEv: PointerEvent | null = null;
+    const track = (ev: PointerEvent) => ((lastEv = ev), update(ev));
+    const unsub = useApp.subscribe((s, p) => {
+      if (lastEv && (s.rotIndex !== p.rotIndex || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
+        update(lastEv);
+      }
+    });
+
+    window.addEventListener("pointermove", track);
     window.addEventListener("pointerdown", onDown);
     window.addEventListener("pointerup", onUp);
     return () => {
-      window.removeEventListener("pointermove", update);
+      unsub();
+      window.removeEventListener("pointermove", track);
       window.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onUp);
     };

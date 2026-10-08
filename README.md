@@ -4,23 +4,27 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 
 **Versão em uso:** https://polibuilding.github.io/simolador/
 
-## O que já funciona (fase 1)
+## O que já funciona
 
-- Chapa de base 18 × 12 módulos, com a grade real.
-- Ligação de base (GC): na grade ou em posição livre; o centro precisa ficar dentro da chapa, e duas GC não podem encostar.
-- Barras B4, B6 e B12 nos eixos X, Y e Z, saindo das esferas. A esfera da ponta é criada sozinha.
-- Peça fantasma verde (encaixa) ou vermelha, com o motivo escrito no rodapé.
-- Estoque configurável: quantas caixas de cada kit vocês têm, ou sem limite.
-- Selecionar, remover, desfazer e refazer; salvar e abrir arquivos `.mola`; salvamento automático no navegador.
+- **Todas as peças dos Kits 1 e 2**: ligação de base, barras B4/B6/B12, diagonais D4x6/D6x6/D6x12, placas P6x6/P6x12 (laje ou parede), ligações RC90, CC e CC90.
+- **Encaixe**: pontos verdes mostram onde a peça escolhida entra. Sobre uma esfera, a barra sobe; puxando o cursor para um lado, ela vai para aquele lado; **R** alterna as opções.
+- **Regras do kit**: comprimentos, ângulo mínimo de 45° entre barras, nada deitado na chapa, diagonais só no vão nominal, placas presas em 4 esferas, ligações nos cantos certos, estoque. O motivo de cada bloqueio aparece no rodapé.
+- **Editar**: selecionar; **mover** (M, botão ou arrastar a peça); **girar** (R); remover; desfazer e refazer. Mover uma ligação de base leva a estrutura inteira.
+- **Câmera**: enquadrar (F), 3D, frente, lado e topo, sem limite de altura.
+- **Pranchas**: capa com isométrica e lista de peças, plantas por pavimento e vistas A–D no padrão do Desafio Poli-USP; escala automática; carimbo editável; **PDF**, **DXF** (camadas MOLA-*) e SVG.
+- Estoque configurável, arquivos `.mola`, salvamento automático no navegador.
 
-Próximas fases: diagonais, placas, ligações rígidas e contínuas (fase 2), pranchas em PDF, SVG e DXF (fase 3) e geometria livre para triângulos e geodésicas (fase 4). O plano completo está em [`docs/plano-simolador.md`](docs/plano-simolador.md), e as regras de montagem em [`docs/regras-de-encaixe.md`](docs/regras-de-encaixe.md).
+Exemplos em `examples/`: o pórtico simples e a **Estrutura 01 do Desafio 2022**, reconstruída a partir das pranchas originais.
+
+Próximos passos: medidas reais da CC e da CC90, geometria livre para triângulos e geodésicas (fase 4), app local (fase 5).
 
 ## Como usar
 
 1. Arraste uma **ligação de base** da paleta para a chapa.
-2. Clique numa barra (por exemplo, **B6**) e leve o cursor até onde ela deve terminar. Clique para encaixar.
-3. Esc para parar de colocar peças; Delete remove a peça selecionada; Ctrl+Z e Ctrl+Y desfazem e refazem.
+2. Clique numa barra (por exemplo, **B6**) e passe o cursor sobre uma esfera: a barra sobe. Puxe o cursor para o lado para fazer vigas, ou leve-o até um ponto verde. Clique para encaixar.
+3. **R** alterna as opções; **Esc** para de colocar peças; **M** move a peça selecionada; **Delete** remove; **Ctrl+Z / Ctrl+Y** desfazem e refazem; **F** enquadra.
 4. Na cena: botão esquerdo gira, botão direito move, a roda dá zoom.
+5. **Gerar pranchas** abre as folhas; dali saem o PDF e o DXF.
 
 ## Medidas e quantidades das peças
 

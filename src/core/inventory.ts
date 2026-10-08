@@ -28,6 +28,8 @@ export function usage(model: Model): Record<string, number> {
   const inc = (k: string) => (u[k] = (u[k] ?? 0) + 1);
   for (const n of Object.values(model.nodes)) inc(n.kind === "support" ? "GC" : "C");
   for (const m of Object.values(model.members)) inc(m.code);
+  for (const p of Object.values(model.plates)) inc(p.code);
+  for (const c of Object.values(model.connectors)) inc(c.code);
   return u;
 }
 

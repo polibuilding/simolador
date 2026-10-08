@@ -8,10 +8,10 @@ import { COLORS, PLATE_D, PLATE_W, M } from "../units";
 export type Look = "normal" | "valid" | "invalid" | "selected" | "hover";
 
 const s = catalog.settings;
-const SPHERE_R = s.esfera_diametro_mm / 2;
+export const SPHERE_R = s.esfera_diametro_mm / 2;
 const BAR_R = s.barra_diametro_mm / 2;
 
-function useMaterial(look: Look, base: string, metal: number, rough: number) {
+export function useMaterial(look: Look, base: string, metal: number, rough: number) {
   return useMemo(() => {
     const ghost = look === "valid" || look === "invalid";
     const color =
@@ -28,13 +28,15 @@ function useMaterial(look: Look, base: string, metal: number, rough: number) {
   }, [look, base, metal, rough]);
 }
 
-interface Pickable {
+export interface Pickable {
   onPick?: (e: ThreeEvent<MouseEvent>) => void;
   onHover?: (over: boolean) => void;
+  onDown?: (e: ThreeEvent<PointerEvent>) => void;
 }
 
-const pickProps = ({ onPick, onHover }: Pickable) => ({
+export const pickProps = ({ onPick, onHover, onDown }: Pickable) => ({
   onClick: onPick,
+  onPointerDown: onDown,
   onPointerOver: onHover ? (e: ThreeEvent<PointerEvent>) => (e.stopPropagation(), onHover(true)) : undefined,
   onPointerOut: onHover ? () => onHover(false) : undefined,
 });

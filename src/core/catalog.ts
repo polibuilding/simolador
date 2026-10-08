@@ -34,6 +34,17 @@ export interface Settings {
   max_membros_por_plano: number;
   tolerancia_encaixe_mm: number;
   gc_encaixe_padrao: string;
+  barra_desconto_mm: number;
+  diagonal_desconto_mm: number;
+  diagonal_terminal_mm: number;
+  cabo_diametro_mm: number;
+  placa_desconto_mm: number;
+  placa_espessura_mm: number;
+  rc90_cateto_mm: number;
+  rc90_espessura_mm: number;
+  prancha_escala: number | string;
+  prancha_formato: string;
+  prancha_projeto: string;
   [k: string]: number | string;
 }
 

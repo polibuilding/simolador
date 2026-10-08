@@ -1,9 +1,14 @@
 // Arquivo de projeto .mola (JSON com versão de esquema; A-CONFIRMAR Q05).
 import type { InventoryConfig } from "./inventory";
-import type { Model, MolaNode, Member } from "./model";
+import type { Connector, Member, Model, MolaNode, Plate, Vec3 } from "./model";
 
 export const FORMAT = "simolador";
-export const VERSION = 1;
+export const VERSION = 2;
+
+export interface SheetMeta {
+  line1: string; // ex.: MOLA STRUCTURAL MODEL
+  line2: string; // ex.: DESAFIO POLI-USP 2026
+}
 
 export interface MolaFile {
   format: typeof FORMAT;
@@ -12,11 +17,14 @@ export interface MolaFile {
   name: string;
   moduleMm: number;
   inventory: InventoryConfig;
+  sheet?: SheetMeta;
   nodes: MolaNode[];
   members: Member[];
+  plates: Plate[];
+  connectors: Connector[];
 }
 
-export function toFile(model: Model, inv: InventoryConfig, name: string, moduleMm: number): MolaFile {
+export function toFile(model: Model, inv: InventoryConfig, name: string, moduleMm: number, sheet?: SheetMeta): MolaFile {
   return {
     format: FORMAT,
     version: VERSION,
@@ -24,34 +32,55 @@ export function toFile(model: Model, inv: InventoryConfig, name: string, moduleM
     name,
     moduleMm,
     inventory: inv,
+    sheet,
     nodes: Object.values(model.nodes),
     members: Object.values(model.members),
+    plates: Object.values(model.plates),
+    connectors: Object.values(model.connectors),
   };
 }
 
 export class MolaFileError extends Error {}
 
-export function fromFile(raw: unknown): { model: Model; inventory: InventoryConfig; name: string } {
+const vec = (v: unknown): Vec3 | null =>
+  Array.isArray(v) && v.length === 3 && v.every((x) => typeof x === "number") ? [v[0], v[1], v[2]] : null;
+
+export function fromFile(raw: unknown): { model: Model; inventory: InventoryConfig; name: string; sheet?: SheetMeta } {
   const f = raw as Partial<MolaFile>;
   if (!f || f.format !== FORMAT) throw new MolaFileError("Este arquivo não é um projeto do siMOLAdor.");
-  if (typeof f.version !== "number" || f.version > VERSION) {
-    throw new MolaFileError("Arquivo de uma versão mais nova do siMOLAdor.");
-  }
+  if (typeof f.version !== "number" || f.version > VERSION) throw new MolaFileError("Arquivo de uma versão mais nova do siMOLAdor.");
   if (!Array.isArray(f.nodes) || !Array.isArray(f.members)) throw new MolaFileError("Arquivo incompleto.");
   const nodes: Model["nodes"] = {};
   for (const n of f.nodes) {
-    if (!n.id || !Array.isArray(n.pos) || n.pos.length !== 3) throw new MolaFileError("Nó inválido no arquivo.");
-    nodes[n.id] = { id: n.id, kind: n.kind === "support" ? "support" : "sphere", pos: [n.pos[0], n.pos[1], n.pos[2]] };
+    const pos = vec(n.pos);
+    if (!n.id || !pos) throw new MolaFileError("Nó inválido no arquivo.");
+    nodes[n.id] = { id: n.id, kind: n.kind === "support" ? "support" : "sphere", pos };
   }
   const members: Model["members"] = {};
   for (const m of f.members) {
-    if (!nodes[m.a] || !nodes[m.b]) throw new MolaFileError(`Barra ${m.id} liga um nó que não existe.`);
+    if (!nodes[m.a] || !nodes[m.b]) throw new MolaFileError(`Peça ${m.id} liga um nó que não existe.`);
     members[m.id] = { id: m.id, code: m.code, a: m.a, b: m.b };
   }
-  const maxId = Math.max(0, ...[...Object.keys(nodes), ...Object.keys(members)].map((k) => Number(k.slice(1)) || 0));
+  const plates: Model["plates"] = {};
+  for (const p of f.plates ?? []) {
+    if (!Array.isArray(p.corners) || p.corners.length !== 4 || p.corners.some((c) => !nodes[c])) {
+      throw new MolaFileError(`Placa ${p.id} com cantos inválidos.`);
+    }
+    plates[p.id] = { id: p.id, code: p.code, corners: [...p.corners] as Plate["corners"] };
+  }
+  const connectors: Model["connectors"] = {};
+  for (const c of f.connectors ?? []) {
+    if (!nodes[c.node]) throw new MolaFileError(`Ligação ${c.id} num nó que não existe.`);
+    const dirs = (c.dirs ?? []).map(vec);
+    if (dirs.some((d) => !d)) throw new MolaFileError(`Ligação ${c.id} inválida.`);
+    connectors[c.id] = { id: c.id, code: c.code, node: c.node, dirs: dirs as Vec3[], ...(c.base ? { base: true } : {}) };
+  }
+  const all = [...Object.keys(nodes), ...Object.keys(members), ...Object.keys(plates), ...Object.keys(connectors)];
+  const maxId = Math.max(0, ...all.map((k) => Number(k.slice(1)) || 0));
   return {
-    model: { nodes, members, nextId: maxId + 1 },
+    model: { nodes, members, plates, connectors, nextId: maxId + 1 },
     inventory: f.inventory ?? { kits: {}, unlimited: false },
     name: f.name ?? "Estrutura",
+    sheet: f.sheet,
   };
 }
