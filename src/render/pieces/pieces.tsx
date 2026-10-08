@@ -1,7 +1,7 @@
 // Peças em 3D. Medidas vêm do catálogo (mm). Esferas, molas, GC e chapa são gerados por código.
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import * as THREE from "three";
-import type { ThreeEvent } from "@react-three/fiber";
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { catalog } from "../../core/catalog";
 import { COLORS, PLATE_D, PLATE_W, M } from "../units";
 
@@ -142,11 +142,24 @@ export function GroundPlate() {
     g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
     return g;
   }, []);
+  // vista por baixo: a chapa fica translúcida para não esconder a estrutura
+  const mat = useRef<THREE.MeshStandardMaterial>(null);
+  useFrame(({ camera }) => {
+    const m = mat.current;
+    if (!m) return;
+    const below = camera.position.y < 0;
+    if (m.transparent !== below) {
+      m.transparent = below;
+      m.opacity = below ? 0.22 : 1;
+      m.depthWrite = !below;
+      m.needsUpdate = true;
+    }
+  });
   return (
     <group>
-      <mesh position={[PLATE_W / 2, -t / 2, PLATE_D / 2]} receiveShadow>
+      <mesh name="chapa" position={[PLATE_W / 2, -t / 2, PLATE_D / 2]} receiveShadow>
         <boxGeometry args={[PLATE_W, t, PLATE_D]} />
-        <meshStandardMaterial color={COLORS.plate} roughness={0.7} metalness={0.1} />
+        <meshStandardMaterial ref={mat} color={COLORS.plate} roughness={0.7} metalness={0.1} />
       </mesh>
       <lineSegments geometry={grid}>
         <lineBasicMaterial color={COLORS.grid} transparent opacity={0.55} />

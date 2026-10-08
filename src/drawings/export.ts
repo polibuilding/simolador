@@ -22,6 +22,8 @@ export function sheetToSvg(sheet: Sheet): string {
         }
         case "circle":
           return `<circle cx="${f(p.c[0])}" cy="${f(p.c[1])}" r="${f(p.r)}" fill="${fill}" ${common}/>`;
+        case "image":
+          return `<image x="${f(p.x)}" y="${f(p.y)}" width="${f(p.w)}" height="${f(p.h)}" preserveAspectRatio="xMidYMid meet" href="${p.href}" xlink:href="${p.href}"/>`;
         case "text": {
           const anchor = p.anchor ?? "start";
           const tr = p.rot ? ` transform="rotate(${p.rot} ${f(p.p[0])} ${f(p.p[1])})"` : "";
@@ -30,7 +32,7 @@ export function sheetToSvg(sheet: Sheet): string {
       }
     })
     .join("\n");
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${A3.w}mm" height="${A3.h}mm" viewBox="0 0 ${A3.w} ${A3.h}"><rect x="0" y="0" width="${A3.w}" height="${A3.h}" fill="#fff"/>\n${body}\n</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${A3.w}mm" height="${A3.h}mm" viewBox="0 0 ${A3.w} ${A3.h}"><rect x="0" y="0" width="${A3.w}" height="${A3.h}" fill="#fff"/>\n${body}\n</svg>`;
 }
 
 /** PDF com uma folha A3 paisagem por prancha (vetorial). */
@@ -101,6 +103,8 @@ export function sheetsToDxf(sheets: Sheet[]): string {
           for (const q of p.pts) (g(0, "VERTEX"), g(8, p.layer), g(10, X(q[0])), g(20, Y(q[1])), g(30, 0));
           g(0, "SEQEND"); g(8, p.layer);
           break;
+        case "image":
+          break; // DXF: a capa usa o desenho em linhas (buildSheets sem foto)
         case "text": {
           const h = p.size * 0.72; // altura de maiúscula ≈ 0,72 do corpo
           const just = p.anchor === "middle" ? 1 : p.anchor === "end" ? 2 : 0;

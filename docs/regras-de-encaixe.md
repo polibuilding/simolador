@@ -1,6 +1,6 @@
 # Regras de encaixe — siMOLAdor
 
-Versão 3.2 · 08/10/2026 (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
+Versão 3.3 · 08/10/2026 (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
 
 Uma regra **bloqueia** quando torna o encaixe inválido (fantasma vermelho, não deixa soltar). Uma regra **avisa** quando a montagem é possível, mas não é recomendada (fantasma verde, aviso na barra de status).
 
@@ -44,6 +44,7 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | L3 | Na **GC**, a RC90 vai entre a GC e o pilar. O usuário pode pôr uma, ou uma de cada lado do pilar (até 4, uma por lado). | — | E04 |
 | L4 | **CC** (forma 1, trapézio baixo) vai direto na esfera, ligando duas molas alinhadas (180°) e tornando-as contínuas. Não substitui a esfera. Uma CC por nó. | bloqueia sem duas barras alinhadas, ou se o nó já tem CC | E05, equipe 08/10 |
 | L5 | **CC90** (forma 2, chapéu alto) vai **por cima de uma CC** no mesmo nó, **do mesmo lado**, e enrijece um segundo par de molas alinhadas, perpendicular ao primeiro e no mesmo plano: o nó vira um X contínuo. Uma CC90 por nó. | bloqueia sem CC no nó, ou sem o segundo par alinhado a 90° | E06, equipe 08/10 |
+| L7 | **RC90 × diagonal**: a RC90 ocupa o canto entre as duas barras; se uma diagonal sai da esfera por dentro desse canto (no plano dele, com folga de 20°), a RC90 não cabe, e a diagonal não pode sair por um canto que já tem RC90. Vale também para a RC90 da base (GC–pilar). | bloqueia | equipe 08/10 |
 | L6 | **Lado da CC/CC90**: a peça pode ficar em qualquer um dos 4 lados da esfera perpendiculares às barras que ela une (para uma viga: em cima, embaixo e nos dois lados; para um pilar: nos 4 lados horizontais; para um par inclinado: a normal do plano e a perpendicular dentro dele), **menos** num lado onde chega uma barra transversal (viga ou pilar ligado nesse ponto). **R** alterna os lados livres. Depois de colocada a CC, não se pode encaixar barra no lado ocupado por ela. | bloqueia | equipe 08/10 |
 
 ## 5. Placas (P6x6, P6x12)
@@ -54,6 +55,7 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | P2 | A placa fica no plano dos centros dos nós, entre as barras e esferas, presa nas 4 esferas pelos chanfros com ímã. | geometria | E07 |
 | P3 | Sem as 4 barras do contorno a placa é aceita, mas com aviso ("placa sem barras no contorno: menos estável"). | avisa | E08 |
 | P4 | Uma placa por vão. | bloqueia | — |
+| P5 | **Placa × diagonal**: as duas encostam na esfera pelo mesmo ponto (rumo ao centro do vão). Não vale placa num vão com diagonal, nem diagonal num vão com placa, nem diagonal saindo de uma esfera a menos de 20° do ponto onde uma placa encosta. | bloqueia | equipe 08/10 |
 
 ## 6. Ligação de base (GC) e chapa
 
@@ -82,6 +84,7 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | C1 | Duas peças lineares não podem ocupar o mesmo segmento (sobreposição). | bloqueia | — |
 | C2 | Barra não atravessa placa. | bloqueia | — |
 | C3 | Barras que se cruzam sem nó em comum: aviso (no kit real colidem). Exceção: diagonais em X (D4). | avisa (a implementar) | — |
+| C2b | Implementado: barra que fura o miolo de uma placa é recusada (as do contorno valem). | bloqueia | equipe 08/10 |
 | C4 | A esfera nova na ponta de uma barra não pode cair em cima de outra: centros a menos de `esfera_diametro_mm`. Ou a barra chega **exatamente** na esfera (fecha nela), ou fica longe. A mensagem diz quanto faltou (ex.: "as esferas teriam de estar a 89,2 mm; estão a 86,7 mm"). | bloqueia | equipe 08/10 (defeito do triângulo) |
 | C5 | A peça não passa por dentro de uma esfera que não é dela: folga mínima = raio da esfera + raio da mola (ou do cabo). | bloqueia | equipe 08/10 |
 | C6 | Ao abrir um modelo feito antes de C4, as esferas sobrepostas são avisadas e já ficam selecionadas (Delete apaga a que sobrou, com a barra). | avisa | equipe 08/10 |
@@ -97,6 +100,9 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | E5 | Sobre uma esfera, a barra sobe; puxando o cursor para um lado, a barra vai para aquele lado. **Por padrão, só nos eixos** (botão "Barras: Nos eixos"), como num pórtico; o fechamento numa esfera existente à distância exata vale sempre. Para inclinar: **Shift** segurado (só enquanto estiver apertado), ou o botão "Inclinadas" / tecla **I**. Inclinada, o ângulo segue o cursor em passos de 15° e o rodapé mostra o ângulo ("30° com a horizontal", "30° em planta"); uma direção bloqueada aparece em vermelho com o motivo. | equipe 08/10 |
 | E6 | **Mouse**: botão esquerdo seleciona; botão direito gira a vista; Shift+direito ou botão do meio move a vista; roda dá zoom. | equipe 08/10 |
 | E7 | **Seleção por retângulo** (arrastar com o botão esquerdo no vazio): da esquerda para a direita (azul, janela) pega só o que fica inteiro dentro; da direita para a esquerda (verde tracejado, cruzamento) pega o que tocar. Shift soma à seleção; Shift+clique soma ou tira uma peça; Ctrl+A seleciona tudo; Esc limpa. Com várias peças selecionadas, o painel lista as quantidades por código e as medidas do conjunto, copia a lista e remove tudo de uma vez (Delete). | equipe 08/10 |
+| E9 | **R contínuo**: com uma peça selecionada, cada R gira para a próxima posição e a peça continua selecionada (R, R, R… até a posição certa; Esc termina). Os giros seguidos contam como um passo só no Desfazer. | equipe 08/10 |
+| E10 | **Espaço** repete a última peça colocada (arma de novo a peça da paleta). | equipe 08/10 |
+| E11 | **Câmera** gira livre, inclusive por baixo da chapa; vista de baixo deixa a chapa translúcida. | equipe 08/10 |
 | E8 | **Cubo de vistas** no canto da cena: clicar numa face dá a vista ortogonal, numa aresta ou canto, as vistas a 45° e isométricas. **Enquadrar** (F) fica ao lado. | equipe 08/10 |
 
 ## Perguntas que ainda podem mudar estas regras

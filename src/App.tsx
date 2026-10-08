@@ -57,6 +57,9 @@ function useShortcuts() {
         st.rotate();
       } else if (!mod && k === "m" && st.selection) {
         st.startMove(false);
+      } else if (!mod && e.key === " ") {
+        e.preventDefault();
+        st.repeatLast();
       } else if (!mod && k === "i") {
         st.setIncline(!st.incline);
       } else if (!mod && k === "f") {

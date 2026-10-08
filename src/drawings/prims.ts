@@ -19,7 +19,9 @@ export type Prim =
   | ({ t: "line"; a: Pt; b: Pt } & Style)
   | ({ t: "poly"; pts: Pt[]; closed: boolean } & Style)
   | ({ t: "circle"; c: Pt; r: number } & Style)
-  | ({ t: "text"; p: Pt; s: string; size: number; bold?: boolean; anchor?: "start" | "middle" | "end"; rot?: number } & Style);
+  | ({ t: "text"; p: Pt; s: string; size: number; bold?: boolean; anchor?: "start" | "middle" | "end"; rot?: number } & Style)
+  /** imagem (foto renderizada da capa); o DXF ignora */
+  | ({ t: "image"; x: number; y: number; w: number; h: number; href: string } & Style);
 
 export interface Sheet {
   number: number;

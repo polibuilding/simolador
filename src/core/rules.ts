@@ -143,6 +143,55 @@ export function inclinedPanel(model: Model, p: Vec3, q: Vec3, a: number, b: numb
   });
 }
 
+// ---------------- Conflitos entre peças na mesma esfera / no mesmo vão ----------------
+
+/** Ângulo (graus) abaixo do qual duas peças disputam o mesmo ponto de ligação na esfera. */
+const SAME_SPOT_DEG = 20;
+const sameSpot = (a: Vec3, b: Vec3) => dot(norm(a), norm(b)) > Math.cos((SAME_SPOT_DEG * Math.PI) / 180);
+
+/** A direção `c` (a partir da esfera) cai dentro do canto ocupado por uma RC90 (dirs = os dois lados do canto)? */
+export function inRc90Corner(dirs: Vec3[], c: Vec3): boolean {
+  if (dirs.length !== 2) return false;
+  const n = norm(cross(dirs[0], dirs[1]));
+  const u = norm(c);
+  return Math.abs(dot(u, n)) < Math.sin((SAME_SPOT_DEG * Math.PI) / 180) && dot(u, dirs[0]) > 1e-3 && dot(u, dirs[1]) > 1e-3;
+}
+
+/** Direção, a partir de cada canto, do ponto onde a placa encosta na esfera (rumo ao centro da placa). */
+function plateSpots(model: Model, cornerIds: string[]): Map<string, Vec3> {
+  const ps = cornerIds.map((id) => model.nodes[id].pos);
+  const c = scale(ps.reduce((acc, p) => add(acc, p), [0, 0, 0] as Vec3), 0.25);
+  return new Map(cornerIds.map((id, i) => [id, norm(sub(c, ps[i]))]));
+}
+
+/** O segmento a–b atravessa o miolo da placa (cantos em ordem)? Barras no contorno não contam. */
+export function segmentHitsPlate(a: Vec3, b: Vec3, corners: Vec3[]): boolean {
+  const [c0, c1, , c3] = corners;
+  const eu = sub(c1, c0);
+  const ev = sub(c3, c0);
+  const lu = len(eu);
+  const lv = len(ev);
+  const u = scale(eu, 1 / lu);
+  const v = scale(ev, 1 / lv);
+  const n = norm(cross(u, v));
+  const margin = 0.3;
+  const inside = (p: Vec3) => {
+    const w = sub(p, c0);
+    const x = dot(w, u);
+    const y = dot(w, v);
+    return x > margin && x < lu - margin && y > margin && y < lv - margin;
+  };
+  const da = dot(sub(a, c0), n);
+  const db = dot(sub(b, c0), n);
+  const tol = 1e-3;
+  if (Math.abs(da) < tol && Math.abs(db) < tol) {
+    // no plano da placa: passa pelo miolo?
+    return [0.25, 0.5, 0.75].some((t) => inside(add(a, scale(sub(b, a), t))));
+  }
+  if (da * db >= 0 || Math.abs(da) < tol || Math.abs(db) < tol) return false;
+  return inside(add(a, scale(sub(b, a), da / (da - db))));
+}
+
 /** G6: nada deitado no nível da chapa (barras, diagonais ou placas horizontais em y = 0). */
 const onGround = (...ps: Vec3[]) => ps.every((p) => Math.abs(p[1]) < EPS);
 
@@ -201,6 +250,28 @@ export function validateMember(
     Object.values(model.connectors).some((c) => c.node === nodeId && c.side && samePos(c.side, d, DIR_TOL));
   if (sideTaken(fromId, dir) || (target && sideTaken(target.id, scale(dir, -1)))) {
     errors.push("Esse lado da esfera está ocupado por uma ligação contínua.");
+  }
+
+  // placas: ninguém atravessa o miolo de uma placa (C2); a diagonal não usa o ponto da esfera onde a placa encosta (P5)
+  for (const p of Object.values(model.plates)) {
+    if (segmentHitsPlate(from.pos, toPos, p.corners.map((id) => model.nodes[id].pos))) {
+      errors.push(cable ? "Há uma placa nesse vão: placa e diagonal usam os mesmos pontos das esferas." : "A peça atravessaria uma placa.");
+      break;
+    }
+    if (cable) {
+      const spots = plateSpots(model, p.corners);
+      const at = (id: string | undefined, d: Vec3) => !!id && spots.has(id) && sameSpot(spots.get(id)!, d);
+      if (at(fromId, dir) || at(target?.id, scale(dir, -1))) {
+        errors.push("A diagonal usaria o mesmo ponto de ligação da placa na esfera.");
+        break;
+      }
+    }
+  }
+  // L7: a diagonal não sai pelo canto de uma RC90
+  if (cable) {
+    const blocked = (nodeId: string | undefined, d: Vec3) =>
+      !!nodeId && Object.values(model.connectors).some((c) => c.node === nodeId && c.code === "RC90" && inRc90Corner(c.dirs, d));
+    if (blocked(fromId, dir) || blocked(target?.id, scale(dir, -1))) errors.push("A diagonal sairia pelo canto de uma RC90: tire a RC90 ou use outro canto.");
   }
 
   errors.push(...stockErrors(cat, inv, model, code));
@@ -271,6 +342,25 @@ export function validatePlate(cat: Catalog, inv: InventoryConfig, model: Model, 
         break;
       }
     }
+    // C2 / P5: barra atravessando o vão; diagonal no vão ou no ponto da esfera onde a placa encosta
+    const ids0 = nodes.map((n) => n!.id);
+    const spots = plateSpots(model, ids0);
+    for (const m of Object.values(model.members)) {
+      const isCable = cat.pieces[m.code]?.type === "cable";
+      const pa = model.nodes[m.a].pos;
+      const pb = model.nodes[m.b].pos;
+      if (segmentHitsPlate(pa, pb, g.corners)) {
+        errors.push(isCable ? "Há uma diagonal nesse vão: placa e diagonal usam os mesmos pontos das esferas." : "Uma barra atravessa esse vão.");
+        break;
+      }
+      if (isCable) {
+        const d = norm(sub(pb, pa));
+        if ((spots.has(m.a) && sameSpot(spots.get(m.a)!, d)) || (spots.has(m.b) && sameSpot(spots.get(m.b)!, scale(d, -1)))) {
+          errors.push("Uma diagonal já usa o ponto da esfera onde a placa encostaria.");
+          break;
+        }
+      }
+    }
     // P3: barras do contorno recomendadas
     const ids = nodes.map((n) => n!.id);
     const edges = [0, 1, 2, 3].filter((i) => {
@@ -311,6 +401,11 @@ export function validateConnector(cat: Catalog, inv: InventoryConfig, model: Mod
     }
     if (existing.some((c) => c.code === "RC90" && !!c.base === !!spec.base && sameDirs(c.dirs, spec.dirs))) {
       errors.push("Esse canto já tem uma RC90."); // L2
+    }
+    // L7: canto por onde sai uma diagonal não recebe RC90
+    const cables = membersAt(model, spec.node).filter((m) => cat.pieces[m.code]?.type === "cable");
+    if (cables.some((m) => inRc90Corner(spec.dirs, directionFrom(model, m, spec.node)))) {
+      errors.push("Nesse canto sai uma diagonal: a RC90 não cabe.");
     }
   } else if (spec.code === "CC" || spec.code === "CC90") {
     const ax = spec.dirs[0];

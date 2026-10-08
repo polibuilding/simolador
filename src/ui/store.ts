@@ -1,7 +1,7 @@
 // Estado da aplicação (zustand). O modelo vive dentro de um histórico para desfazer/refazer.
 import { create } from "zustand";
 import { catalog } from "../core/catalog";
-import { codeOf, moveGroup, removeMany, removeSelection, rotateSelection, type Sel } from "../core/edit";
+import { codeOf, moveGroup, removeMany, removeSelection, rotateSelection, selAfter, type Sel } from "../core/edit";
 import { createHistory, push, redo, undo, type History } from "../core/history";
 import { defaultInventory, type InventoryConfig } from "../core/inventory";
 import { emptyModel, membersAt, type Model, type Vec3 } from "../core/model";
@@ -33,6 +33,10 @@ interface State {
   incline: boolean;
   /** Shift pressionado: inverte a inclinação enquanto estiver apertado */
   shiftHeld: boolean;
+  /** última peça colocada (Espaço repete) */
+  lastCode: string | null;
+  /** giros seguidos com R contam como um passo só no Desfazer */
+  rotChain: Model | null;
   ghost: Ghost | null;
   hint: string | null;
   rotIndex: number;
@@ -53,6 +57,8 @@ interface State {
   setGhost: (g: Ghost | null, hint?: string | null) => void;
   commitGhost: () => boolean;
   rotate: () => void;
+  /** Espaço: arma de novo a última peça colocada */
+  repeatLast: () => void;
   startMove: (viaDrag: boolean) => void;
   select: (s: Sel | null) => void;
   toggleMulti: (s: Sel) => void;
@@ -123,6 +129,8 @@ export const useApp = create<State>((set, get) => ({
   snap: catalog.settings.gc_encaixe_padrao !== "livre",
   incline: false,
   shiftHeld: false,
+  lastCode: null,
+  rotChain: null,
   ghost: null,
   hint: null,
   rotIndex: 0,
@@ -137,7 +145,14 @@ export const useApp = create<State>((set, get) => ({
   ...restore(),
 
   arm: (code, viaDrag = false) =>
-    set({ tool: { kind: "place", code, viaDrag }, selection: null, multi: [], ghost: null, rotIndex: 0, hint: null }),
+    set({ tool: { kind: "place", code, viaDrag }, lastCode: code, selection: null, multi: [], ghost: null, rotIndex: 0, hint: null }),
+  repeatLast: () => {
+    const s = get();
+    if (s.tool.kind !== "select") return;
+    if (!s.lastCode) return set({ hint: "Espaço repete a última peça colocada: escolha uma na paleta primeiro." });
+    s.arm(s.lastCode);
+    set({ hint: `${catalog.pieces[s.lastCode]?.name ?? s.lastCode} de novo. Esc para parar.` });
+  },
   disarm: () => set({ tool: { kind: "select" }, ghost: null, hint: null, pendingDrag: null }),
   setGhost: (ghost, hint = null) => set({ ghost, hint }),
 
@@ -166,9 +181,13 @@ export const useApp = create<State>((set, get) => ({
     if (s.tool.kind === "place") return set({ rotIndex: s.rotIndex + 1 });
     if (s.tool.kind === "moveGroup") return set({ tool: { ...s.tool, turns: s.tool.turns + 1 } });
     if (!s.selection) return set({ hint: "Selecione uma peça para girar, ou gire enquanto posiciona (R)." });
-    const r = rotateSelection(catalog, s.inventory, s.history.present, s.selection);
-    if (r.model) set({ history: push(s.history, r.model), selection: null, hint: "Peça girada. Ctrl+Z desfaz." });
-    else set({ hint: r.error ?? null });
+    const r = rotateSelection(catalog, s.inventory, s.history.present, s.selection, { inclined: inclineOn(s) });
+    if (!r.model) return set({ hint: r.error ?? null });
+    // R seguidos na mesma peça: a peça continua selecionada e os giros viram um passo só no Desfazer
+    const chain = s.rotChain === s.history.present;
+    const history = chain ? { ...s.history, present: r.model } : push(s.history, r.model);
+    const selection = selAfter(s.history.present, r.model, s.selection);
+    set({ history, selection, rotChain: r.model, hint: "Girada. R de novo continua girando; Esc termina. Ctrl+Z volta à posição inicial." });
   },
 
   startMove: (viaDrag) => {
@@ -248,7 +267,9 @@ export const useApp = create<State>((set, get) => ({
   setName: (name) => set({ name }),
   setSheet: (sheet) => set({ sheet }),
   setCamera: (view) => set((s) => ({ camera: { view, n: s.camera.n + 1 } })),
-  setSheetsOpen: (sheetsOpen) => set({ sheetsOpen, tool: { kind: "select" }, ghost: null }),
+  // abrir as pranchas limpa seleção e destaque (a foto da capa sai sem cores de seleção)
+  setSheetsOpen: (sheetsOpen) =>
+    set(sheetsOpen ? { sheetsOpen, tool: { kind: "select" }, ghost: null, selection: null, multi: [], hoverId: null } : { sheetsOpen }),
   newProject: () =>
     set((s) => ({ history: push(s.history, emptyModel()), selection: null, ghost: null, name: "Estrutura 01", tool: { kind: "select" } })),
 

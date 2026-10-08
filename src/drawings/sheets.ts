@@ -16,6 +16,8 @@ export interface SheetInput {
   meta: SheetMeta;
   scale?: number | "auto"; // n de 1:n
   date?: Date;
+  /** foto isométrica renderizada para a capa; sem ela, a capa usa o desenho em linhas */
+  isoImage?: { url: string; aspect: number } | null;
 }
 
 const SCALES = [1, 2, 2.5, 5, 10, 20];
@@ -362,20 +364,27 @@ function coverDrawing(input: SheetInput, n: number): Prim[] {
   const plate = [[0, 0, 0], [PW, 0, 0], [PW, 0, PD], [0, 0, PD]].map((w) => pr.p(w as [number, number, number])).map(([h, v]) => [h, v] as Pt);
   const b = bounds(items, plate);
   const cell = { x: AREA.x0 + 4, y: AREA.y0 + 26, w: 250, h: AREA.y1 - AREA.y0 - 34 };
+  const img = input.isoImage;
+  if (img) {
+    // foto renderizada, centrada na área da isométrica
+    const w = Math.min(cell.w, cell.h * img.aspect);
+    const h = w / img.aspect;
+    out.push({ t: "image", x: cell.x + (cell.w - w) / 2, y: cell.y + (cell.h - h) / 2, w, h, href: img.url, layer: "MOLA-BASE" });
+  }
   const fit = Math.max((b.x1 - b.x0) / cell.w, (b.y1 - b.y0) / cell.h);
   const P = place(b, cell, fit);
-  out.push({ t: "poly", pts: plate.map((q) => P.to(q as [number, number])), closed: true, fill: "#2b2b2b", stroke: "#000", pen: PEN.part, layer: "MOLA-BASE" });
-  for (let i = 0; i <= cat.settings.chapa_modulos_x; i += 1) {
+  if (!img) out.push({ t: "poly", pts: plate.map((q) => P.to(q as [number, number])), closed: true, fill: "#2b2b2b", stroke: "#000", pen: PEN.part, layer: "MOLA-BASE" });
+  for (let i = 0; i <= cat.settings.chapa_modulos_x && !img; i += 1) {
     const a = pr.p([i * W.M, 0, 0]);
     const c = pr.p([i * W.M, 0, PD]);
     out.push({ t: "line", a: P.to([a[0], a[1]]), b: P.to([c[0], c[1]]), stroke: "#666", pen: PEN.thin, layer: "MOLA-BASE" });
   }
-  for (let j = 0; j <= cat.settings.chapa_modulos_y; j += 1) {
+  for (let j = 0; j <= cat.settings.chapa_modulos_y && !img; j += 1) {
     const a = pr.p([0, 0, j * W.M]);
     const c = pr.p([PW, 0, j * W.M]);
     out.push({ t: "line", a: P.to([a[0], a[1]]), b: P.to([c[0], c[1]]), stroke: "#666", pen: PEN.thin, layer: "MOLA-BASE" });
   }
-  out.push(...paint(items, P));
+  if (!img) out.push(...paint(items, P));
   // título
   out.push(txt([AREA.x0 + 4, AREA.y0 + 10], input.name.toUpperCase(), 9, { bold: true }));
   out.push(txt([AREA.x0 + 4, AREA.y0 + 17], `${input.meta.line1}  |  ${input.meta.line2}`, 3));

@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { catalog } from "../core/catalog";
 import { buildSheets } from "../drawings/sheets";
 import { sheetToSvg, sheetsToDxf, sheetsToPdf } from "../drawings/export";
 import { useApp } from "./store";
+import { renderIso, type IsoImage } from "../render/snapshot";
 
 const SCALES = [1, 2, 2.5, 5, 10];
 
@@ -25,9 +26,27 @@ export function SheetsView() {
   const [scale, setScale] = useState<"auto" | number>("auto");
   const [busy, setBusy] = useState<string | null>(null);
 
+  // capa: foto 3D renderizada (padrão) ou o desenho em linhas
+  const [cover, setCover] = useState<"foto" | "desenho">("foto");
+  const [iso, setIso] = useState<IsoImage | null>(null);
+  useEffect(() => {
+    if (cover !== "foto") return;
+    let alive = true;
+    // espera a cena 3D tirar a seleção/destaques antes da foto
+    const id = requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        if (alive) setIso(renderIso(model));
+      }),
+    );
+    return () => {
+      alive = false;
+      cancelAnimationFrame(id);
+    };
+  }, [model, cover]);
+  const isoImage = cover === "foto" ? iso : null;
   const { sheets, scale: used } = useMemo(
-    () => buildSheets({ cat: catalog, model, inventory, name, meta, scale }),
-    [model, inventory, name, meta, scale],
+    () => buildSheets({ cat: catalog, model, inventory, name, meta, scale, isoImage }),
+    [model, inventory, name, meta, scale, isoImage],
   );
   const svgs = useMemo(() => sheets.map(sheetToSvg), [sheets]);
   const empty = Object.keys(model.nodes).length === 0;
@@ -53,6 +72,13 @@ export function SheetsView() {
           Linha 2
           <input value={meta.line2} onChange={(e) => setSheet({ ...meta, line2: e.target.value })} />
         </label>
+        <label>
+          Capa
+          <select value={cover} onChange={(e) => setCover(e.target.value as "foto" | "desenho")}>
+            <option value="foto">Isométrica renderizada</option>
+            <option value="desenho">Isométrica em linhas</option>
+          </select>
+        </label>
         <div className="sheets-actions">
           <button
             className="primary"
@@ -70,7 +96,11 @@ export function SheetsView() {
           </button>
           <button
             disabled={empty}
-            onClick={() => save(new Blob([sheetsToDxf(sheets)], { type: "application/dxf" }), `${fileBase(name)}-pranchas.dxf`)}
+            onClick={() => {
+              // DXF não leva imagem: a capa vai com a isométrica em linhas
+              const vector = buildSheets({ cat: catalog, model, inventory, name, meta, scale }).sheets;
+              save(new Blob([sheetsToDxf(vector)], { type: "application/dxf" }), `${fileBase(name)}-pranchas.dxf`);
+            }}
             title="Todas as folhas lado a lado, em mm de papel, com camadas MOLA-*"
           >
             Baixar DXF
