@@ -64,10 +64,10 @@ describe("regras", () => {
   });
   it("B1/B2: comprimento e direção", () => {
     const m = portico();
-    const g = Object.values(m.nodes).find((n) => n.kind === "support")!.id;
-    expect(validateMember(catalog, inv, m, "B6", g, [3, 0, 9]).ok).toBe(true);
-    expect(validateMember(catalog, inv, m, "B6", g, [3, 0, 8]).ok).toBe(false);
-    expect(validateMember(catalog, inv, m, "B6", g, [9, 6, 3]).ok).toBe(false);
+    const top = Object.values(m.nodes).find((n) => n.pos[0] === 3 && n.pos[1] === 6)!.id;
+    expect(validateMember(catalog, inv, m, "B6", top, [3, 6, 9]).ok).toBe(true);
+    expect(validateMember(catalog, inv, m, "B6", top, [3, 6, 8]).ok).toBe(false);
+    expect(validateMember(catalog, inv, m, "B6", top, [9, 12, 3]).ok).toBe(false);
   });
   it("C1: não sobrepõe nem atravessa", () => {
     const m = portico();
@@ -84,22 +84,22 @@ describe("regras", () => {
     const m = portico();
     const g = Object.values(m.nodes).find((n) => n.kind === "support")!.id;
     const semB6 = { kits: { "1": 0, "2": 0 }, unlimited: false };
-    expect(validateMember(catalog, semB6, m, "B6", g, [3, 0, 9]).errors.join()).toMatch(/Acabaram/);
+    expect(validateMember(catalog, semB6, m, "B6", g, [3, 6, 9]).errors.join()).toMatch(/Acabaram/);
   });
   it("candidatos: do topo do pilar, 6 direções, só as válidas passam", () => {
     const m = portico();
     const top = Object.values(m.nodes).find((n) => n.pos[0] === 3 && n.pos[1] === 6)!.id;
     const c = memberCandidates(catalog, inv, m, "B6", top);
     expect(c).toHaveLength(6);
-    const ok = c.filter((x) => x.check.ok).map((x) => x.toPos);
+    const ok = c.filter((x) => x.check.ok).map((x) => (x.kind === "member" ? x.toPos : null));
     expect(ok).toContainEqual([3, 12, 3] as Vec3);
     expect(ok).not.toContainEqual([9, 6, 3] as Vec3); // viga já existe
     expect(ok).not.toContainEqual([3, 0, 3] as Vec3); // pilar já existe
   });
   it("encaixe da GC: grade arredonda, livre não", () => {
-    expect(supportPosition(catalog, { x: 3.4, z: 2.6 }, "grade")).toEqual([3, 0, 3]);
-    expect(supportPosition(catalog, { x: 3.4, z: 2.6 }, "livre")).toEqual([3.4, 0, 2.6]);
-    expect(supportPosition(catalog, { x: 25, z: -2 }, "grade")).toEqual([18, 0, 0]);
+    expect(supportPosition(catalog, { x: 3.4, z: 2.6 }, true)).toEqual([3, 0, 3]);
+    expect(supportPosition(catalog, { x: 3.4, z: 2.6 }, false)).toEqual([3.4, 0, 2.6]);
+    expect(supportPosition(catalog, { x: 25, z: -2 }, true)).toEqual([18, 0, 0]);
   });
 });
 

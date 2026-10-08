@@ -2,11 +2,9 @@ import { catalog } from "../core/catalog";
 import { available, usage } from "../core/inventory";
 import { useApp, useModel } from "./store";
 
-const ACTIVE: { title: string; codes: string[] }[] = [
+const GROUPS: { title: string; codes: string[] }[] = [
   { title: "Apoio", codes: ["GC"] },
   { title: "Barras", codes: ["B4", "B6", "B12"] },
-];
-const NEXT: { title: string; codes: string[] }[] = [
   { title: "Diagonais", codes: ["D4x6", "D6x6", "D6x12"] },
   { title: "Placas", codes: ["P6x6", "P6x12"] },
   { title: "Ligações", codes: ["RC90", "CC", "CC90"] },
@@ -59,12 +57,27 @@ function Icon({ code }: { code: string }) {
       </svg>
     );
   }
+  if (code === "RC90") {
+    return (
+      <svg viewBox="0 0 48 24" aria-hidden>
+        <path d="M17 19 L17 9 L20 6 L31 19 Z" className="i-plastic" />
+      </svg>
+    );
+  }
+  const tall = code === "CC90";
   return (
     <svg viewBox="0 0 48 24" aria-hidden>
-      <path d="M14 18 L24 6 L34 18 Z" className="i-plastic" />
+      <path d={tall ? "M8 20 L14 8 L20 8 L20 13 L28 13 L28 8 L34 8 L40 20 Z" : "M8 18 L13 11 L21 11 L21 14 L27 14 L27 11 L35 11 L40 18 Z"} className="i-plastic" />
     </svg>
   );
 }
+
+const SHORT: Record<string, string> = {
+  GC: "Ligação de base",
+  RC90: "Rígida 90°",
+  CC: "Contínua",
+  CC90: "Contínua 90°",
+};
 
 function KitDots({ code }: { code: string }) {
   return (
@@ -85,11 +98,10 @@ export function Palette() {
 
   return (
     <aside className="palette" aria-label="Peças">
-      {ACTIVE.map((g) => (
+      {GROUPS.map((g) => (
         <section key={g.title}>
           <h2>{g.title}</h2>
           {g.codes.map((code) => {
-            const p = catalog.pieces[code];
             const total = available(catalog, inventory, code);
             const left = total - (used[code] ?? 0);
             const armed = tool.kind === "place" && tool.code === code;
@@ -113,7 +125,7 @@ export function Palette() {
               >
                 <Icon code={code} />
                 <span className="piece-name">
-                  <strong>{code}</strong> {p?.name.replace(code, "").replace("Barra", "").trim() || ""}
+                  <strong>{code}</strong> {SHORT[code] ?? ""}
                 </span>
                 <span className="piece-count">
                   {Number.isFinite(total) ? (
@@ -130,15 +142,6 @@ export function Palette() {
           })}
         </section>
       ))}
-      <section className="next">
-        <h2>Nas próximas versões</h2>
-        {NEXT.map((g) => (
-          <div key={g.title} className="next-group">
-            <span>{g.title}</span>
-            <span className="next-codes">{g.codes.join(", ")}</span>
-          </div>
-        ))}
-      </section>
     </aside>
   );
 }

@@ -1,6 +1,6 @@
 # SiMOLAdor — plano do programa
 
-Versão 0.3 · 08/10/2026 · Planejamento antes da implementação. Inclui as respostas da equipe em `A-CONFIRMAR.xlsx` (decisões Q, encaixes E, pranchas P). Regras de montagem detalhadas em `docs/regras-de-encaixe.md`. Peças: `docs/kit-mola-pecas.md`.
+Versão 0.4 · 08/10/2026 · Planejamento antes da implementação. Inclui as respostas da equipe em `A-CONFIRMAR.xlsx` (decisões Q, encaixes E, pranchas P). Regras de montagem detalhadas em `docs/regras-de-encaixe.md`. Peças: `docs/kit-mola-pecas.md`.
 
 ## 1. Objetivo
 
@@ -207,9 +207,9 @@ Referência: `siMOLAdor/sheets/Projeto_Desafio Poli USP_P01–P03.pdf` (AutoCAD 
 | Fase | Entrega | Critério de pronto |
 |---|---|---|
 | 0. Dados | `parametros.xlsx` → `catalog.json` e `kits.json` (feito); medições do kit | CC e CC90 medidas |
-| 1. Protótipo | chapa, esferas, GC (grade e livre), B6/B12 na grade; arrastar, encaixar, salvar/abrir; publicado no GitHub Pages | montar o pórtico simples do manual |
-| 2. Kits 1 e 2 completos | diagonais, placas, RC90, CC, B4; estoque configurável; regras | reproduzir 5 estruturas dos manuais com a contagem certa |
-| 3. Pranchas | capa, plantas por pavimento, 4 elevações, escala automática, carimbo editável, PDF, SVG e DXF | reproduzir as plantas e vistas da "Estrutura 01" do Desafio 2022 |
+| 1. Protótipo ✅ | chapa, esferas, GC (grade e livre), B6/B12 na grade; arrastar, encaixar, salvar/abrir; publicado no GitHub Pages | montar o pórtico simples do manual |
+| 2. Kits 1 e 2 completos ✅ | diagonais, placas, RC90, CC, CC90, B4; estoque configurável; regras; mover e girar; pontos de encaixe | Estrutura 01 do Desafio 2022 montada com a contagem certa (`examples/`) |
+| 3. Pranchas ✅ (1ª versão) | capa, plantas por pavimento, 4 elevações, escala automática, carimbo editável, PDF, SVG e DXF | plantas e vistas da "Estrutura 01" equivalentes às do Desafio 2022 |
 | 4. Geometria livre | triângulos e geodésicas (E19) | geodésica do manual do Kit 2 |
 | 5. App local + Kits 3/4 | empacotar com Tauri (Q01); cabos, arcos | — |
 

@@ -7,20 +7,27 @@ export function StatusBar() {
   const ghost = useApp((s) => s.ghost);
   const hint = useApp((s) => s.hint);
   const model = useModel();
-  const pieces = Object.keys(model.nodes).length + Object.keys(model.members).length;
+  const pieces =
+    Object.keys(model.nodes).length + Object.keys(model.members).length + Object.keys(model.plates).length + Object.keys(model.connectors).length;
 
   const toolText =
-    tool.kind === "select" ? "Selecionar" : `${catalog.pieces[tool.code]?.name ?? tool.code}${tool.viaDrag ? " (arrastando)" : ""}`;
-  const state = ghost ? (ghost.check.ok ? "ok" : "bad") : hint ? "info" : "idle";
+    tool.kind === "select"
+      ? "Selecionar"
+      : tool.kind === "moveGroup"
+        ? "Mover estrutura"
+        : `${tool.moving ? "Mover " : ""}${catalog.pieces[tool.code]?.name ?? tool.code}`;
+  const ok = ghost ? (ghost.kind === "group" ? ghost.check.ok : ghost.cand.check.ok) : null;
+  const state = ok === true ? "ok" : ok === false ? "bad" : hint ? "info" : "idle";
+  const dragging = tool.kind !== "select" && tool.viaDrag;
   const message =
     hint ??
-    (tool.kind === "place"
-      ? ghost?.check.ok
-        ? tool.viaDrag
+    (tool.kind === "select"
+      ? "Clique numa peça para ver os detalhes. Arraste a peça selecionada para mover; R gira; Delete remove."
+      : ok
+        ? dragging
           ? "Solte para encaixar."
-          : "Clique para encaixar. Esc para parar."
-        : "Leve a peça até a estrutura."
-      : "Clique numa peça para ver os detalhes. Delete remove.");
+          : "Clique para encaixar. R gira; Esc para parar."
+        : "Leve a peça até um ponto verde ou até uma esfera.");
 
   return (
     <footer className="statusbar">
