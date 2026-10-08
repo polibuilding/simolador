@@ -49,7 +49,7 @@ function nextOf(cands: Candidate[], isCurrent: (c: Candidate) => boolean): Candi
  * placa → próxima posição livre mais perto; ligação → próximo canto livre na mesma esfera;
  * nó (GC ou esfera) → a estrutura inteira 90° em torno dele.
  */
-export function rotateSelection(cat: Catalog, inv: InventoryConfig, model: Model, sel: Sel): EditResult {
+export function rotateSelection(cat: Catalog, inv: InventoryConfig, model: Model, sel: Sel, opts: { inclined?: boolean } = {}): EditResult {
   if (sel.kind === "node") return rotateGroup(cat, model, sel.id, 1);
   const inv2: InventoryConfig = { ...inv, unlimited: true }; // a peça já saiu do estoque
   if (sel.kind === "member") {
@@ -58,7 +58,7 @@ export function rotateSelection(cat: Catalog, inv: InventoryConfig, model: Model
     for (const anchor of [m.a, m.b]) {
       const base: Model = { ...model, members: without(model.members, m.id) };
       const otherPos = model.nodes[anchor === m.a ? m.b : m.a].pos;
-      const cands = memberCandidates(cat, inv2, base, m.code, anchor);
+      const cands = memberCandidates(cat, inv2, base, m.code, anchor, opts);
       const cur = (c: Candidate) => c.kind === "member" && samePos(c.toPos, otherPos);
       // a ponta livre (esfera que só servia a esta peça) vai junto
       const next = nextOf(cands, cur);
@@ -88,6 +88,14 @@ export function rotateSelection(cat: Catalog, inv: InventoryConfig, model: Model
     (!c.side || (!!x.spec.side && samePos(x.spec.side, c.side)));
   const next = nextOf(cands, cur);
   return next ? { model: applyCandidate(base, next) } : { error: "Esta ligação não tem outro canto livre nesta esfera." };
+}
+
+/** Depois de girar: a peça nova que ocupa o lugar da selecionada (para continuar girando com R). */
+export function selAfter(before: Model, after: Model, sel: Sel): Sel | null {
+  if (sel.kind === "node") return after.nodes[sel.id] ? sel : null;
+  const key = sel.kind === "member" ? "members" : sel.kind === "plate" ? "plates" : "connectors";
+  const id = Object.keys(after[key]).find((k) => !before[key][k]);
+  return id ? { kind: sel.kind, id } : null;
 }
 
 /** Gira a estrutura conectada ao nó em torno do centro dela (eixo vertical), `turns` × 90°. */

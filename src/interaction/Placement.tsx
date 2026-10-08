@@ -355,6 +355,7 @@ export function Placement() {
       store: useApp,
       project: (p: Vec3) => toScreen(toWorld(p), el.getBoundingClientRect()),
       projectPlate: (x: number, z: number) => toScreen(new THREE.Vector3(x * M, 0, z * M), el.getBoundingClientRect()),
+      cameraY: () => camera.position.y,
     };
 
     // R também atualiza o fantasma sem mexer o mouse

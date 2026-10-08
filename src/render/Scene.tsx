@@ -11,6 +11,7 @@ import type { Sel } from "../core/edit";
 import { Bar, GroundConnection, GroundPlate, Sphere, type Look } from "./pieces/pieces";
 import { Cable, ContinuousConnector, PlateMesh, RigidConnector } from "./pieces/more";
 import { COLORS, PLATE_D, PLATE_W, toWorld } from "./units";
+import { SnapshotHook } from "./snapshot";
 
 const typeOf = (code: string) => catalog.pieces[code]?.type;
 
@@ -277,6 +278,7 @@ export function Scene() {
       gl={{ preserveDrawingBuffer: true }}
     >
       <color attach="background" args={["#eef1f0"]} />
+      <SnapshotHook />
       <ambientLight intensity={0.35} />
       <directionalLight
         position={[PLATE_W / 2 + 150, 520, PLATE_D / 2 + 220]}
@@ -328,7 +330,9 @@ export function Scene() {
         // esquerdo = selecionar (clique ou retângulo); direito = girar; Shift+direito ou meio = mover; roda = zoom
         mouseButtons={{ LEFT: undefined as unknown as THREE.MOUSE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.ROTATE }}
         target={[PLATE_W / 2, 40, PLATE_D / 2]}
-        maxPolarAngle={Math.PI / 2 - 0.02}
+        // sem limite de ângulo: dá para olhar a estrutura por baixo (face BASE do cubo)
+        maxPolarAngle={Math.PI - 0.01}
+        minPolarAngle={0.01}
         minDistance={40}
         maxDistance={12000}
         screenSpacePanning
