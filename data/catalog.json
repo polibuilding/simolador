@@ -2,7 +2,7 @@
   "_meta": {
     "generatedBy": "scripts/gerar-dados.mjs",
     "source": "data/parametros.xlsx",
-    "generatedAt": "2026-10-08T16:55:20.038Z",
+    "generatedAt": "2026-10-08T19:50:51.155Z",
     "doNotEdit": "Arquivo gerado. Edite data/parametros.xlsx e rode npm run dados."
   },
   "schemaVersion": 2,
@@ -33,7 +33,8 @@
     "angulo_minimo_membros_graus": 45,
     "max_membros_por_plano": 8,
     "gc_encaixe_padrao": "grade",
-    "tolerancia_encaixe_mm": 0.5
+    "tolerancia_encaixe_mm": 0.5,
+    "passo_inclinacao_graus": 15
   },
   "pieces": [
     {

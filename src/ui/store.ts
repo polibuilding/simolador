@@ -1,7 +1,7 @@
 // Estado da aplicação (zustand). O modelo vive dentro de um histórico para desfazer/refazer.
 import { create } from "zustand";
 import { catalog } from "../core/catalog";
-import { codeOf, removeSelection, rotateSelection, type Sel } from "../core/edit";
+import { codeOf, removeMany, removeSelection, rotateSelection, type Sel } from "../core/edit";
 import { createHistory, push, redo, undo, type History } from "../core/history";
 import { defaultInventory, type InventoryConfig } from "../core/inventory";
 import { emptyModel, type Model } from "../core/model";
@@ -33,6 +33,12 @@ interface State {
   hint: string | null;
   rotIndex: number;
   selection: Sel | null;
+  /** seleção múltipla (retângulo, Shift+clique, Ctrl+A) */
+  multi: Sel[];
+  /** retângulo de seleção em andamento (coordenadas da tela) */
+  box: { x0: number; y0: number; x1: number; y1: number } | null;
+  /** momento em que um retângulo terminou: o clique que vem junto não limpa a seleção */
+  boxEndedAt: number;
   hoverId: string | null;
   pendingDrag: { x: number; y: number } | null;
   camera: { view: CameraView; n: number };
@@ -45,6 +51,10 @@ interface State {
   rotate: () => void;
   startMove: (viaDrag: boolean) => void;
   select: (s: Sel | null) => void;
+  toggleMulti: (s: Sel) => void;
+  setMulti: (list: Sel[], add?: boolean) => void;
+  selectAll: () => void;
+  setBox: (b: State["box"]) => void;
   setHover: (id: string | null) => void;
   setPendingDrag: (p: { x: number; y: number } | null) => void;
   removeSelected: () => void;
@@ -90,6 +100,9 @@ export const useApp = create<State>((set, get) => ({
   hint: null,
   rotIndex: 0,
   selection: null,
+  multi: [],
+  box: null,
+  boxEndedAt: 0,
   hoverId: null,
   pendingDrag: null,
   camera: { view: "iso", n: 0 },
@@ -97,7 +110,7 @@ export const useApp = create<State>((set, get) => ({
   ...restore(),
 
   arm: (code, viaDrag = false) =>
-    set({ tool: { kind: "place", code, viaDrag }, selection: null, ghost: null, rotIndex: 0, hint: null }),
+    set({ tool: { kind: "place", code, viaDrag }, selection: null, multi: [], ghost: null, rotIndex: 0, hint: null }),
   disarm: () => set({ tool: { kind: "select" }, ghost: null, hint: null, pendingDrag: null }),
   setGhost: (ghost, hint = null) => set({ ghost, hint }),
 
@@ -151,18 +164,45 @@ export const useApp = create<State>((set, get) => ({
     });
   },
 
-  select: (selection) => set({ selection, hint: null }),
+  select: (selection) => set({ selection, multi: [], hint: null }),
+  toggleMulti: (s) =>
+    set((st) => {
+      const list = st.multi.length ? st.multi : st.selection ? [st.selection] : [];
+      const has = list.some((x) => x.id === s.id);
+      const multi = has ? list.filter((x) => x.id !== s.id) : [...list, s];
+      return multi.length === 1 ? { selection: multi[0], multi: [] } : { selection: null, multi };
+    }),
+  setMulti: (list, addTo = false) =>
+    set((st) => {
+      const base = addTo ? (st.multi.length ? st.multi : st.selection ? [st.selection] : []) : [];
+      const seen = new Set(base.map((x) => x.id));
+      const multi = [...base, ...list.filter((x) => !seen.has(x.id))];
+      return multi.length === 1 ? { selection: multi[0], multi: [] } : { selection: null, multi };
+    }),
+  selectAll: () =>
+    set((st) => {
+      const m = st.history.present;
+      const multi: Sel[] = [
+        ...Object.keys(m.nodes).map((id) => ({ kind: "node" as const, id })),
+        ...Object.keys(m.members).map((id) => ({ kind: "member" as const, id })),
+        ...Object.keys(m.plates).map((id) => ({ kind: "plate" as const, id })),
+        ...Object.keys(m.connectors).map((id) => ({ kind: "connector" as const, id })),
+      ];
+      return { selection: null, multi };
+    }),
+  setBox: (box) => set(box ? { box } : { box: null, boxEndedAt: performance.now() }),
   setHover: (hoverId) => set({ hoverId }),
   setPendingDrag: (pendingDrag) => set({ pendingDrag }),
 
   removeSelected: () => {
-    const { selection, history } = get();
+    const { selection, multi, history } = get();
+    if (multi.length) return set({ history: push(history, removeMany(history.present, multi)), multi: [], selection: null });
     if (!selection) return;
     set({ history: push(history, removeSelection(history.present, selection)), selection: null });
   },
 
-  undo: () => set((s) => ({ history: undo(s.history), selection: null, ghost: null, tool: { kind: "select" } })),
-  redo: () => set((s) => ({ history: redo(s.history), selection: null, ghost: null, tool: { kind: "select" } })),
+  undo: () => set((s) => ({ history: undo(s.history), selection: null, multi: [], ghost: null, tool: { kind: "select" } })),
+  redo: () => set((s) => ({ history: redo(s.history), selection: null, multi: [], ghost: null, tool: { kind: "select" } })),
   setSnap: (snap) => set({ snap }),
   setInventory: (inventory) => set({ inventory }),
   setName: (name) => set({ name }),

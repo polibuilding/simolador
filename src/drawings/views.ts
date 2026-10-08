@@ -237,7 +237,7 @@ export function itemsFor(cat: Catalog, model: Model, pr: Projector): Item[] {
       }
     } else {
       const ax = cn.dirs[0];
-      const side: Vec3 = Math.abs(ax[1]) > 0.5 ? [1, 0, 0] : [0, 1, 0];
+      const side: Vec3 = cn.side ?? (Math.abs(ax[1]) > 0.5 ? [1, 0, 0] : [0, 1, 0]);
       n = norm(cross(ax, side));
       const Lc = R + 14;
       const tall = cn.code === "CC90";

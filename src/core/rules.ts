@@ -91,6 +91,24 @@ function collisionErrors(model: Model, a: Vec3, b: Vec3, fromId: string, targetI
   return [];
 }
 
+/** Passo de inclinação das barras (graus); 0 = só nos eixos. */
+export const inclineStep = (cat: Catalog) => {
+  const v = Number(cat.settings.passo_inclinacao_graus ?? 15);
+  return Number.isFinite(v) && v > 0 && v < 90 ? v : 0;
+};
+
+/** A direção está num plano da estrutura (uma componente nula) num ângulo múltiplo do passo? */
+export function inStepPlane(cat: Catalog, v: Vec3): boolean {
+  const zero = v.map((c) => Math.abs(c) < 1e-6);
+  if (zero.filter(Boolean).length !== 1) return zero.filter(Boolean).length === 2; // eixo
+  const [i, j] = [0, 1, 2].filter((k) => !zero[k]);
+  const ang = (Math.atan2(v[j], v[i]) * 180) / Math.PI;
+  const step = inclineStep(cat);
+  if (!step) return false;
+  const r = ((ang % step) + step) % step;
+  return Math.min(r, step - r) < 0.2;
+}
+
 /** G6: nada deitado no nível da chapa (barras, diagonais ou placas horizontais em y = 0). */
 const onGround = (...ps: Vec3[]) => ps.every((p) => Math.abs(p[1]) < EPS);
 
@@ -118,7 +136,10 @@ export function validateMember(
   if (!cable) {
     const span = piece.spanM?.[0] ?? 0;
     if (Math.abs(L - span) > tolM) errors.push(`A ${code} vence ${span} módulos; a distância é ${L.toFixed(2)}.`); // B1
-    if (nonZero.length !== 1) errors.push("Barras só nas direções dos eixos (X, Y ou Z)."); // B2
+    // B2: eixos, inclinação em passos (num plano da estrutura) ou fechando numa esfera existente
+    if (nonZero.length !== 1 && !findNodeAt(model, toPos) && !inStepPlane(cat, v)) {
+      errors.push(inclineStep(cat) ? `Barra inclinada só em passos de ${inclineStep(cat)}° nos planos da estrutura, ou fechando numa esfera.` : "Barra só na direção dos eixos, ou fechando numa esfera.");
+    }
   } else {
     // D1: só no vão nominal, num plano ortogonal
     const [a, b] = piece.spanM ?? [0, 0];
@@ -140,6 +161,12 @@ export function validateMember(
     if (!cable) errors.push(...angleErrors(cat, model, target.id, scale(dir, -1), "outra ponta"));
   }
   errors.push(...collisionErrors(model, from.pos, toPos, fromId, target?.id));
+  // lado de esfera ocupado por CC/CC90
+  const sideTaken = (nodeId: string, d: Vec3) =>
+    Object.values(model.connectors).some((c) => c.node === nodeId && c.side && samePos(c.side, d, 1e-6));
+  if (sideTaken(fromId, dir) || (target && sideTaken(target.id, scale(dir, -1)))) {
+    errors.push("Esse lado da esfera está ocupado por uma ligação contínua.");
+  }
 
   errors.push(...stockErrors(cat, inv, model, code));
   if (!target && remaining(cat, inv, model, "C") < 1) errors.push("Acabaram as esferas (C) do estoque.");
@@ -217,6 +244,7 @@ export interface ConnectorSpec {
   node: string;
   dirs: Vec3[];
   base?: boolean;
+  side?: Vec3;
 }
 
 const sameDirs = (a: Vec3[], b: Vec3[]) =>
@@ -240,10 +268,14 @@ export function validateConnector(cat: Catalog, inv: InventoryConfig, model: Mod
   } else if (spec.code === "CC" || spec.code === "CC90") {
     const ax = spec.dirs[0];
     if (!ax || !barAlong(ax) || !barAlong(scale(ax, -1))) errors.push(`A ${spec.code} precisa de duas barras alinhadas no nó.`);
+    const side = spec.side;
+    if (!side || Math.abs(dot(side, ax)) > EPS) errors.push("Escolha um lado da esfera perpendicular às barras.");
+    else if (barAlong(side)) errors.push("Esse lado tem uma barra transversal: a ligação não cabe."); // L6
     const cc = existing.filter((c) => c.code === "CC");
     if (spec.code === "CC" && cc.length) errors.push("Essa esfera já tem uma CC; para travar o outro par, use a CC90."); // L4
     if (spec.code === "CC90") {
-      if (!cc.some((c) => Math.abs(dot(c.dirs[0], ax)) < EPS)) errors.push("A CC90 vai por cima de uma CC, no par perpendicular."); // L5
+      const base = cc.find((c) => Math.abs(dot(c.dirs[0], ax)) < EPS && (!c.side || !side || samePos(c.side, side, 1e-6)));
+      if (!base) errors.push("A CC90 vai por cima de uma CC, no mesmo lado, travando o par perpendicular."); // L5
       if (existing.some((c) => c.code === "CC90")) errors.push("Essa esfera já tem uma CC90.");
     }
   } else {

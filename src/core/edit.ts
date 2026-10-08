@@ -84,7 +84,8 @@ export function rotateSelection(cat: Catalog, inv: InventoryConfig, model: Model
   const base: Model = { ...model, connectors: without(model.connectors, c.id) };
   const cands = connectorCandidates(cat, inv2, base, c.code, c.node);
   const cur = (x: Candidate) =>
-    x.kind === "connector" && !!x.spec.base === !!c.base && x.spec.dirs.every((d) => c.dirs.some((e) => samePos(d, e)));
+    x.kind === "connector" && !!x.spec.base === !!c.base && x.spec.dirs.every((d) => c.dirs.some((e) => samePos(d, e))) &&
+    (!c.side || (!!x.spec.side && samePos(x.spec.side, c.side)));
   const next = nextOf(cands, cur);
   return next ? { model: applyCandidate(base, next) } : { error: "Esta ligação não tem outro canto livre nesta esfera." };
 }
@@ -104,4 +105,17 @@ export function moveGroup(cat: Catalog, model: Model, nodeId: string, delta: Vec
   const pivot: Vec3 = [mid(0), 0, mid(2)];
   const next = transformNodes(model, ids, pivot, turns, delta);
   return { model: next, ids, check: validateMovedModel(cat, next, ids) };
+}
+
+/** Remove várias peças de uma vez (as que já sumiram junto com outras são ignoradas). */
+export function removeMany(model: Model, sels: Sel[]): Model {
+  // ligações e placas primeiro, depois membros, por último nós
+  const order = { connector: 0, plate: 1, member: 2, node: 3 } as const;
+  let m = model;
+  for (const s of [...sels].sort((a, b) => order[a.kind] - order[b.kind])) {
+    const exists =
+      s.kind === "node" ? m.nodes[s.id] : s.kind === "member" ? m.members[s.id] : s.kind === "plate" ? m.plates[s.id] : m.connectors[s.id];
+    if (exists) m = removeSelection(m, s);
+  }
+  return m;
 }

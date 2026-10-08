@@ -86,10 +86,10 @@ describe("regras", () => {
     const semB6 = { kits: { "1": 0, "2": 0 }, unlimited: false };
     expect(validateMember(catalog, semB6, m, "B6", g, [3, 6, 9]).errors.join()).toMatch(/Acabaram/);
   });
-  it("candidatos: do topo do pilar, 6 direções, só as válidas passam", () => {
+  it("candidatos: do topo do pilar, os 6 eixos (mais inclinadas), só as válidas passam", () => {
     const m = portico();
     const top = Object.values(m.nodes).find((n) => n.pos[0] === 3 && n.pos[1] === 6)!.id;
-    const c = memberCandidates(catalog, inv, m, "B6", top);
+    const c = memberCandidates(catalog, inv, m, "B6", top).filter((x) => !(x.kind === "member" && x.inclined));
     expect(c).toHaveLength(6);
     const ok = c.filter((x) => x.check.ok).map((x) => (x.kind === "member" ? x.toPos : null));
     expect(ok).toContainEqual([3, 12, 3] as Vec3);

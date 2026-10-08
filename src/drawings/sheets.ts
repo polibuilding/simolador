@@ -43,7 +43,18 @@ const letters = (i: number) => (i < 26 ? String.fromCharCode(65 + i) : `A${Strin
 
 export function levelsOf(model: Model, cat: Catalog) {
   const W = world(cat);
-  const ys = [...new Set(Object.values(model.nodes).map((n) => Math.round(W.pos(n.pos)[1] * 100) / 100))].sort((a, b) => a - b);
+  const r = (y: number) => Math.round(y * 100) / 100;
+  const Y = (id: string) => r(W.pos(model.nodes[id].pos)[1]);
+  // pavimento = nível com viga ou laje (nós soltos de barras inclinadas não viram planta); mais o térreo e o topo
+  const set = new Set<number>();
+  for (const m of Object.values(model.members)) if (cat.pieces[m.code]?.type === "bar" && Y(m.a) === Y(m.b)) set.add(Y(m.a));
+  for (const p of Object.values(model.plates)) {
+    const ys = p.corners.map(Y);
+    if (ys.every((y) => y === ys[0])) set.add(ys[0]);
+  }
+  const all = Object.values(model.nodes).map((n) => r(W.pos(n.pos)[1]));
+  if (all.length) (set.add(Math.min(...all)), set.add(Math.max(...all)));
+  const ys = [...set].sort((a, b) => a - b);
   return ys.map((y, i) => ({
     y,
     name: i === 0 ? "PAV. TÉRREO" : i === ys.length - 1 && ys.length > 1 ? "COBERTURA" : `${i}º PAVIMENTO`,
@@ -226,7 +237,7 @@ function planItems(cat: Catalog, model: Model, levelY: number, isGround: boolean
   return all.filter((it) => {
     if (it.kind === "base") return isGround;
     if (it.kind === "node") return near(it.level);
-    if (it.kind === "plate-h" || it.kind === "bar-h") return near(it.level);
+    if (it.kind === "plate-h" || it.kind === "bar-h" || it.kind === "bar-v") return near(it.level); // bar-v: só as inclinadas aparecem (pilares ficam de topo)
     if (it.kind === "plate-v" || it.kind === "cable") return near(it.level);
     if (it.kind === "rc90" || it.kind === "cc") return near(it.level);
     return false;

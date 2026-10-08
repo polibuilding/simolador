@@ -246,8 +246,8 @@ dl { margin: 0 0 16px; }
 .toolbar button.primary:hover { background: #000; }
 .view-controls {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 16px;
+  right: 186px;
   display: flex;
   gap: 0;
   background: var(--panel);
@@ -314,3 +314,19 @@ dl { margin: 0 0 16px; }
 .sheet figcaption { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; color: var(--graphite); }
 .sheet figcaption button { padding: 3px 10px; font-size: 12px; }
 .sheets-empty, .sheets-busy { margin: 40px auto; font-size: 16px; }
+
+/* ---------- fase 3 ---------- */
+.select-box {
+  position: fixed;
+  pointer-events: none;
+  z-index: 15;
+  border: 1px solid var(--focus);
+  background: rgba(37, 99, 235, 0.08);
+}
+.select-box.crossing {
+  border: 1px dashed var(--ok);
+  background: rgba(25, 169, 116, 0.08);
+}
+.props .multi-note { color: var(--graphite); margin: 0 0 12px; }
+.props .actions.multi { grid-template-columns: 1fr; }
+.mouse-help { margin: 14px 0 0; padding-left: 18px; color: var(--graphite); font-size: 12px; }

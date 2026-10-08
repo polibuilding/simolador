@@ -8,6 +8,24 @@ import { Toolbar } from "./ui/Toolbar";
 import { ViewControls } from "./ui/ViewControls";
 import { useApp } from "./ui/store";
 
+/** Retângulo de seleção: azul = só o que está inteiro dentro; verde tracejado = o que tocar. */
+function SelectBox() {
+  const box = useApp((s) => s.box);
+  if (!box) return null;
+  const crossing = box.x1 < box.x0;
+  return (
+    <div
+      className={`select-box${crossing ? " crossing" : ""}`}
+      style={{
+        left: Math.min(box.x0, box.x1),
+        top: Math.min(box.y0, box.y1),
+        width: Math.abs(box.x1 - box.x0),
+        height: Math.abs(box.y1 - box.y0),
+      }}
+    />
+  );
+}
+
 function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -22,8 +40,8 @@ function useShortcuts() {
       const k = e.key.toLowerCase();
       if (e.key === "Escape") {
         if (st.tool.kind !== "select") st.disarm();
-        else st.select(null);
-      } else if ((e.key === "Delete" || e.key === "Backspace") && st.selection) {
+        else st.select(null); // limpa também a seleção múltipla
+      } else if ((e.key === "Delete" || e.key === "Backspace") && (st.selection || st.multi.length)) {
         e.preventDefault();
         st.removeSelected();
       } else if (mod && k === "z" && !e.shiftKey) {
@@ -38,6 +56,9 @@ function useShortcuts() {
         st.startMove(false);
       } else if (!mod && k === "f") {
         st.setCamera("fit");
+      } else if (mod && k === "a") {
+        e.preventDefault();
+        st.selectAll();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -59,6 +80,7 @@ export default function App() {
       </main>
       <PropertiesPanel />
       <StatusBar />
+      <SelectBox />
       {sheetsOpen && <SheetsView />}
     </div>
   );

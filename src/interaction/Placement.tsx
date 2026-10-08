@@ -9,7 +9,8 @@ import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 import { catalog } from "../core/catalog";
 import { moveGroup } from "../core/edit";
-import type { Model, Vec3 } from "../core/model";
+import { findNodeAt, type Model, type Vec3 } from "../core/model";
+import type { Sel } from "../core/edit";
 import {
   allCandidates, anchorPos, markerPos, supportCandidate, supportPosition, type Candidate,
 } from "../core/snapping";
@@ -19,6 +20,8 @@ import { BASE_Y, M, toWorld } from "../render/units";
 const SPOT_PX = 46;
 const CLICK_PX = 5;
 const DRAG_PX = 6;
+/** canto superior direito da cena ocupado pelo cubo de visualização */
+const GIZMO_PX = 175;
 
 const key = (p: Vec3) => p.map((v) => v.toFixed(3)).join(",");
 
@@ -49,7 +52,9 @@ export function candidatesFor(model: Model, code: string, inv: ReturnType<typeof
     return s;
   };
   for (const c of cands) {
-    get(markerPos(model, c)).ends.push(c);
+    // inclinada até um ponto novo: não vira ponto de encaixe (apareceria em toda parte); surge ao puxar o cursor da esfera
+    const free = c.kind === "member" && c.inclined && !findNodeAt(model, c.toPos);
+    if (!free) get(markerPos(model, c)).ends.push(c);
     const a = anchorPos(model, c);
     if (a) get(a).starts.push(c);
   }
@@ -88,9 +93,43 @@ export function Placement() {
       return raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -yMm), new THREE.Vector3());
     };
 
+    const inGizmo = (ev: PointerEvent, rect: DOMRect) => ev.clientX > rect.right - GIZMO_PX && ev.clientY < rect.top + GIZMO_PX;
+
+    // ---- seleção por retângulo ----
+    let boxStart: { x: number; y: number; shift: boolean } | null = null;
+    const boxSelect = (b: { x0: number; y0: number; x1: number; y1: number }, add: boolean) => {
+      const rect = el.getBoundingClientRect();
+      const model = useApp.getState().history.present;
+      const crossing = b.x1 < b.x0; // da direita para a esquerda: o que tocar; da esquerda para a direita: só o que está inteiro dentro
+      const [x0, x1] = [Math.min(b.x0, b.x1), Math.max(b.x0, b.x1)];
+      const [y0, y1] = [Math.min(b.y0, b.y1), Math.max(b.y0, b.y1)];
+      const inside = (p: Vec3) => {
+        const s = toScreen(toWorld(p), rect);
+        return s.z < 1 && s.x >= x0 && s.x <= x1 && s.y >= y0 && s.y <= y1;
+      };
+      const along = (a: Vec3, c: Vec3, n = 8) => Array.from({ length: n + 1 }, (_, i) => [0, 1, 2].map((k) => a[k] + ((c[k] - a[k]) * i) / n) as Vec3);
+      const test = (pts: Vec3[]) => (crossing ? pts.some(inside) : pts.every(inside));
+      const out: Sel[] = [];
+      for (const n of Object.values(model.nodes)) if (test([n.pos])) out.push({ kind: "node", id: n.id });
+      for (const m of Object.values(model.members)) if (test(along(model.nodes[m.a].pos, model.nodes[m.b].pos))) out.push({ kind: "member", id: m.id });
+      for (const p of Object.values(model.plates)) {
+        const c = p.corners.map((id) => model.nodes[id].pos);
+        if (test([...c, ...along(c[0], c[2], 4), ...along(c[1], c[3], 4)])) out.push({ kind: "plate", id: p.id });
+      }
+      for (const c of Object.values(model.connectors)) if (test([model.nodes[c.node].pos])) out.push({ kind: "connector", id: c.id });
+      useApp.getState().setMulti(out, add);
+      useApp.setState({ hint: out.length ? `${out.length} peças selecionadas.` : "Nenhuma peça no retângulo." });
+    };
+
     const update = (ev: PointerEvent) => {
       const st = useApp.getState();
       const rect = el.getBoundingClientRect();
+      if (boxStart && st.tool.kind === "select") {
+        if (st.box || Math.hypot(ev.clientX - boxStart.x, ev.clientY - boxStart.y) > DRAG_PX) {
+          st.setBox({ x0: boxStart.x, y0: boxStart.y, x1: ev.clientX, y1: ev.clientY });
+        }
+        return;
+      }
 
       // arrastar uma peça selecionada → começa a mover
       if (st.tool.kind === "select" && st.pendingDrag) {
@@ -148,6 +187,19 @@ export function Placement() {
             : "Leve o cursor até um ponto verde ou até uma esfera.",
         );
       }
+      // Ponto sem esfera que é só a ponta de uma peça saindo de uma esfera próxima: vale a esfera (puxar a barra a partir dela).
+      // Evita que, numa vista de frente, a ponta de uma viga que vai "para dentro" da tela roube o gesto.
+      if (!best.s.starts.length) {
+        const owners = new Set(best.s.ends.map((c) => (c.kind === "member" ? key(model.nodes[c.fromId].pos) : "")));
+        let near: { k: string; s: Spot; d: number } | null = null;
+        for (const [k, s] of spots) {
+          if (!owners.has(k) || !s.starts.some((c) => c.check.ok)) continue;
+          const sp = toScreen(toWorld(s.pos), rect);
+          const d = Math.hypot(sp.x - ev.clientX, sp.y - ev.clientY);
+          if (d < 70 && (!near || d < near.d)) near = { k, s, d };
+        }
+        if (near) best = near;
+      }
       if (lastSpot.current !== best.k) {
         lastSpot.current = best.k;
         if (st.rotIndex) useApp.setState({ rotIndex: 0 });
@@ -162,12 +214,19 @@ export function Placement() {
       const off = [ev.clientX - spot.x, ev.clientY - spot.y];
       const offLen = Math.hypot(off[0], off[1]);
       if (offLen > 12 && options.length > 1) {
-        const score = (c: Candidate) => {
+        const proj = new Map<Candidate, { v: number[]; L: number }>();
+        for (const c of options) {
           const other = c.kind === "member" ? (ends.includes(c) ? anchorPos(model, c)! : c.toPos) : markerPos(model, c);
           const o = toScreen(toWorld(other), rect);
           const v = [o.x - spot.x, o.y - spot.y];
-          const L = Math.hypot(v[0], v[1]) || 1;
-          return (v[0] * off[0] + v[1] * off[1]) / (L * offLen);
+          proj.set(c, { v, L: Math.hypot(v[0], v[1]) || 1 });
+        }
+        const maxL = Math.max(...[...proj.values()].map((p) => p.L));
+        // alinhamento com o cursor, preferindo peças que aparecem inteiras na tela (no plano da vista)
+        const score = (c: Candidate) => {
+          const { v, L } = proj.get(c)!;
+          const cos = (v[0] * off[0] + v[1] * off[1]) / (L * offLen);
+          return cos * (0.55 + 0.45 * Math.min(1, L / maxL));
         };
         options = [...options].sort((a, b) => score(b) - score(a));
       }
@@ -177,13 +236,30 @@ export function Placement() {
     };
 
     const onDown = (ev: PointerEvent) => {
-      if (ev.target === el) down.current = { x: ev.clientX, y: ev.clientY };
+      if (ev.target !== el) return;
+      down.current = { x: ev.clientX, y: ev.clientY };
+      const st = useApp.getState();
+      // botão esquerdo em modo seleção: começa um retângulo (a não ser que esteja arrastando uma peça selecionada)
+      if (ev.button === 0 && st.tool.kind === "select" && !st.pendingDrag && !inGizmo(ev, el.getBoundingClientRect())) {
+        boxStart = { x: ev.clientX, y: ev.clientY, shift: ev.shiftKey };
+      }
     };
     const onUp = (ev: PointerEvent) => {
       const st = useApp.getState();
       if (st.pendingDrag) st.setPendingDrag(null);
+      if (boxStart) {
+        const b = st.box;
+        const shift = boxStart.shift;
+        boxStart = null;
+        if (b) {
+          st.setBox(null);
+          boxSelect(b, shift);
+        }
+        return;
+      }
       if (st.tool.kind === "select") return;
       const rect = el.getBoundingClientRect();
+      if (inGizmo(ev, rect) && !st.tool.viaDrag) return; // clique no cubo de visualização
       const inside = insideOf(ev, rect);
       if (st.tool.viaDrag) {
         update(ev);
