@@ -85,7 +85,14 @@ export function inclinedDirs(stepDeg: number): Vec3[] {
   return out;
 }
 
-export function memberCandidates(cat: Catalog, inv: InventoryConfig, model: Model, code: string, fromId: string): Candidate[] {
+export interface CandidateOptions {
+  /** oferecer barras inclinadas até pontos novos (passos de 15°); o fechamento entre esferas existentes vale sempre */
+  inclined?: boolean;
+}
+
+export function memberCandidates(
+  cat: Catalog, inv: InventoryConfig, model: Model, code: string, fromId: string, opts: CandidateOptions = {},
+): Candidate[] {
   const piece = cat.pieces[code];
   const from = model.nodes[fromId];
   if (!piece || !from || !piece.spanM) return [];
@@ -107,6 +114,7 @@ export function memberCandidates(cat: Catalog, inv: InventoryConfig, model: Mode
     }
   }
   // inclinadas até um ponto novo
+  if (opts.inclined === false) return out;
   for (const d of inclinedDirs(inclineStep(cat))) {
     const p = add(from.pos, scale(d, span)).map((x) => Math.round(x * 1e4) / 1e4 + 0) as Vec3;
     if (seen.has(p.join(",")) || findNodeAt(model, p)) continue;
@@ -196,7 +204,7 @@ export function supportCandidate(cat: Catalog, inv: InventoryConfig, model: Mode
 }
 
 /** Todas as candidatas de uma peça (para os marcadores verdes). GC: os cruzamentos da grade. */
-export function allCandidates(cat: Catalog, inv: InventoryConfig, model: Model, code: string): Candidate[] {
+export function allCandidates(cat: Catalog, inv: InventoryConfig, model: Model, code: string, opts: CandidateOptions = {}): Candidate[] {
   const t = cat.pieces[code]?.type;
   if (t === "support") {
     const out: Candidate[] = [];
@@ -208,5 +216,5 @@ export function allCandidates(cat: Catalog, inv: InventoryConfig, model: Model, 
   if (t === "plate") return plateCandidates(cat, inv, model, code);
   const ids = Object.keys(model.nodes);
   if (t === "connector") return ids.flatMap((id) => connectorCandidates(cat, inv, model, code, id));
-  return ids.flatMap((id) => memberCandidates(cat, inv, model, code, id));
+  return ids.flatMap((id) => memberCandidates(cat, inv, model, code, id, opts));
 }

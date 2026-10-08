@@ -9,12 +9,12 @@ import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 import { catalog } from "../core/catalog";
 import { moveGroup } from "../core/edit";
-import { findNodeAt, type Model, type Vec3 } from "../core/model";
+import { findNodeAt, len, sub, type Model, type Vec3 } from "../core/model";
 import type { Sel } from "../core/edit";
 import {
   allCandidates, anchorPos, markerPos, supportCandidate, supportPosition, type Candidate,
 } from "../core/snapping";
-import { useApp, workingModel } from "../ui/store";
+import { inclineOn, useApp, workingModel } from "../ui/store";
 import { BASE_Y, M, toWorld } from "../render/units";
 
 const SPOT_PX = 46;
@@ -33,6 +33,17 @@ function dirRank(model: Model, c: Candidate) {
   return dy > 0 ? 0 : dy === 0 ? 1 : 2;
 }
 
+/** Ângulo de uma barra inclinada, em palavras ("30° com a horizontal", "30° em planta"); null se estiver num eixo. */
+function angleText(model: Model, c: Candidate): string | null {
+  if (c.kind !== "member" || catalog.pieces[c.code]?.type !== "bar") return null;
+  const v = sub(c.toPos, model.nodes[c.fromId].pos);
+  const L = len(v);
+  if (v.filter((x) => Math.abs(x) > 1e-6).length < 2) return null;
+  const deg = (r: number) => Math.round((r * 180) / Math.PI);
+  if (Math.abs(v[1]) < 1e-6) return `${deg(Math.atan2(Math.abs(v[2]), Math.abs(v[0])))}° em planta (a partir de X)`;
+  return `${deg(Math.asin(Math.abs(v[1]) / L))}° com a horizontal`;
+}
+
 interface Spot {
   pos: Vec3;
   ends: Candidate[]; // candidatas que terminam/ficam neste ponto
@@ -40,10 +51,10 @@ interface Spot {
 }
 
 // cache das candidatas: recalcula só quando muda o modelo, a peça ou o estoque
-let cache: { model: Model; code: string; inv: unknown; cands: Candidate[]; spots: Map<string, Spot> } | null = null;
-export function candidatesFor(model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"]) {
-  if (cache && cache.model === model && cache.code === code && cache.inv === inv) return cache;
-  const cands = allCandidates(catalog, inv, model, code);
+let cache: { model: Model; code: string; inv: unknown; inclined: boolean; cands: Candidate[]; spots: Map<string, Spot> } | null = null;
+export function candidatesFor(model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"], inclined = false) {
+  if (cache && cache.model === model && cache.code === code && cache.inv === inv && cache.inclined === inclined) return cache;
+  const cands = allCandidates(catalog, inv, model, code, { inclined });
   const spots = new Map<string, Spot>();
   const get = (p: Vec3) => {
     const k = key(p);
@@ -58,7 +69,7 @@ export function candidatesFor(model: Model, code: string, inv: ReturnType<typeof
     const a = anchorPos(model, c);
     if (a) get(a).starts.push(c);
   }
-  cache = { model, code, inv, cands, spots };
+  cache = { model, code, inv, inclined, cands, spots };
   return cache;
 }
 
@@ -168,15 +179,28 @@ export function Placement() {
       }
 
       // ---- demais peças: ponto de encaixe mais próximo ----
-      const { spots } = candidatesFor(model, code, inv);
-      let best: { k: string; s: Spot; d: number } | null = null;
+      const inclined = inclineOn(st);
+      const { spots } = candidatesFor(model, code, inv, inclined);
+      let best: { k: string; s: Spot; d: number; z?: number } | null = null;
       for (const [k, s] of spots) {
         const valid = s.ends.some((c) => c.check.ok) || s.starts.some((c) => c.check.ok);
         if (!valid) continue;
         const sp = toScreen(toWorld(s.pos), rect);
         if (sp.z > 1) continue;
         const d = Math.hypot(sp.x - ev.clientX, sp.y - ev.clientY);
-        if (d < SPOT_PX && (!best || d < best.d)) best = { k, s, d };
+        if (d >= SPOT_PX) continue;
+        if (!best || d < best.d) best = { k, s, d, z: sp.z };
+      }
+      // pontos quase sobrepostos na tela (ex.: topo do pilar e GC na vista de topo): vale o mais perto da câmera
+      if (best) {
+        const b0 = toScreen(toWorld(best.s.pos), rect);
+        for (const [k, s] of spots) {
+          if (k === best.k || !(s.ends.some((c) => c.check.ok) || s.starts.some((c) => c.check.ok))) continue;
+          const sp = toScreen(toWorld(s.pos), rect);
+          if (sp.z < best.z! && Math.hypot(sp.x - b0.x, sp.y - b0.y) < 14) {
+            best = { k, s, d: Math.hypot(sp.x - ev.clientX, sp.y - ev.clientY), z: sp.z };
+          }
+        }
       }
       if (!best) {
         const empty = !Object.keys(model.nodes).length;
@@ -213,9 +237,12 @@ export function Placement() {
       const spot = toScreen(toWorld(best.s.pos), rect);
       const off = [ev.clientX - spot.x, ev.clientY - spot.y];
       const offLen = Math.hypot(off[0], off[1]);
-      if (offLen > 12 && options.length > 1) {
+      // com inclinação ligada, direções bloqueadas também concorrem: o usuário vê em vermelho por que não dá
+      const blocked = inclined ? best.s.starts.filter((c) => !c.check.ok && c.kind === "member" && c.inclined) : [];
+      let shown: Candidate | null = null;
+      if (offLen > 12 && options.length + blocked.length > 1) {
         const proj = new Map<Candidate, { v: number[]; L: number }>();
-        for (const c of options) {
+        for (const c of [...options, ...blocked]) {
           const other = c.kind === "member" ? (ends.includes(c) ? anchorPos(model, c)! : c.toPos) : markerPos(model, c);
           const o = toScreen(toWorld(other), rect);
           const v = [o.x - spot.x, o.y - spot.y];
@@ -229,10 +256,23 @@ export function Placement() {
           return cos * (0.55 + 0.45 * Math.min(1, L / maxL));
         };
         options = [...options].sort((a, b) => score(b) - score(a));
+        const worst = blocked.sort((a, b) => score(b) - score(a))[0];
+        if (worst && st.rotIndex === 0 && (!options.length || score(worst) > score(options[0]) + 0.01)) shown = worst;
       }
+      if (shown) return st.setGhost({ kind: "cand", cand: shown }, [angleText(model, shown), shown.check.errors[0]].filter(Boolean).join(": "));
+      if (!options.length) return st.setGhost(null, "Nenhuma posição válida neste ponto.");
       const cand = options[useApp.getState().rotIndex % options.length];
       const n = options.length;
-      st.setGhost({ kind: "cand", cand }, n > 1 ? `${n} opções neste ponto: R alterna.` : null);
+      const ang = angleText(model, cand);
+      const bar = catalog.pieces[code]?.type === "bar";
+      st.setGhost(
+        { kind: "cand", cand },
+        inclined && bar
+          ? `${ang ? `Inclinada a ${ang}` : "Na direção do eixo"}. Puxe o cursor para mudar o ângulo${useApp.getState().incline ? "" : "; solte o Shift para voltar aos eixos"}.`
+          : n > 1
+            ? `${n} opções neste ponto: R alterna.${bar ? " Shift: barra inclinada." : ""}`
+            : null,
+      );
     };
 
     const onDown = (ev: PointerEvent) => {
@@ -291,7 +331,7 @@ export function Placement() {
     let lastEv: PointerEvent | null = null;
     const track = (ev: PointerEvent) => ((lastEv = ev), update(ev));
     const unsub = useApp.subscribe((s, p) => {
-      if (lastEv && (s.rotIndex !== p.rotIndex || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
+      if (lastEv && (s.rotIndex !== p.rotIndex || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
         update(lastEv);
       }
     });

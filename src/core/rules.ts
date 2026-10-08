@@ -66,7 +66,8 @@ function angleErrors(cat: Catalog, model: Model, nodeId: string, dir: Vec3, wher
 }
 
 /** C1: o segmento não pode sobrepor um membro colinear nem atravessar um nó. */
-function collisionErrors(model: Model, a: Vec3, b: Vec3, fromId: string, targetId?: string): string[] {
+function collisionErrors(cat: Catalog, model: Model, a: Vec3, b: Vec3, fromId: string, targetId?: string, cable = false): string[] {
+  const s = cat.settings;
   const d = sub(b, a);
   const L = len(d);
   const u = scale(d, 1 / L);
@@ -75,10 +76,27 @@ function collisionErrors(model: Model, a: Vec3, b: Vec3, fromId: string, targetI
     const t = dot(w, u);
     return { t, perp: len(sub(w, scale(u, t))) };
   };
+  const mm = (v: number) => (v * s.modulo_mm).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+  // C4: a esfera nova da ponta não pode cair em cima de outra (centros a menos de um diâmetro)
+  if (!targetId) {
+    const minD = s.esfera_diametro_mm / s.modulo_mm;
+    for (const n of Object.values(model.nodes)) {
+      if (n.id === fromId) continue;
+      const gap = len(sub(n.pos, b));
+      if (gap < minD) {
+        const reach = len(sub(n.pos, a));
+        return [
+          `A ponta cairia a ${mm(gap)} mm de outra esfera. Para ligar nela, as esferas teriam de estar a ${mm(L)} mm; estão a ${mm(reach)} mm.`,
+        ];
+      }
+    }
+  }
+  // C5: a peça não passa por dentro de uma esfera (folga = raio da esfera + raio da mola ou do cabo)
+  const clear = (s.esfera_diametro_mm / 2 + (cable ? s.cabo_diametro_mm : s.barra_diametro_mm) / 2) / s.modulo_mm;
   for (const n of Object.values(model.nodes)) {
     if (n.id === fromId || n.id === targetId) continue;
     const { t, perp } = onSegment(n.pos);
-    if (perp < 1e-3 && t > EPS && t < L - EPS) return ["A peça atravessaria uma esfera."];
+    if (perp < clear && t > EPS && t < L - EPS) return ["A peça atravessaria uma esfera."];
   }
   for (const m of Object.values(model.members)) {
     const sp = onSegment(model.nodes[m.a].pos);
@@ -160,7 +178,7 @@ export function validateMember(
     if (target.id === fromId) errors.push("As duas pontas estão no mesmo nó.");
     if (!cable) errors.push(...angleErrors(cat, model, target.id, scale(dir, -1), "outra ponta"));
   }
-  errors.push(...collisionErrors(model, from.pos, toPos, fromId, target?.id));
+  errors.push(...collisionErrors(cat, model, from.pos, toPos, fromId, target?.id, cable));
   // lado de esfera ocupado por CC/CC90
   const sideTaken = (nodeId: string, d: Vec3) =>
     Object.values(model.connectors).some((c) => c.node === nodeId && c.side && samePos(c.side, d, 1e-6));
@@ -296,7 +314,9 @@ export function validateMovedModel(cat: Catalog, model: Model, moved: Set<string
       errors.push(...c.errors);
     }
     for (const o of Object.values(model.nodes)) {
-      if (o.id !== id && !moved.has(o.id) && samePos(o.pos, n.pos)) errors.push("Bateria em outra esfera.");
+      if (o.id !== id && !moved.has(o.id) && len(sub(o.pos, n.pos)) < cat.settings.esfera_diametro_mm / cat.settings.modulo_mm) {
+        errors.push("Bateria em outra esfera.");
+      }
     }
   }
   for (const m of Object.values(model.members)) {
@@ -305,7 +325,18 @@ export function validateMovedModel(cat: Catalog, model: Model, moved: Set<string
     const b = model.nodes[m.b].pos;
     if (onGround(a, b)) errors.push("Uma peça ficaria deitada na chapa.");
     const others = { ...model, members: Object.fromEntries(Object.entries(model.members).filter(([k]) => k !== m.id)) };
-    errors.push(...collisionErrors(others, a, b, m.a, m.b));
+    errors.push(...collisionErrors(cat, others, a, b, m.a, m.b, cat.pieces[m.code]?.type === "cable"));
   }
   return result([...new Set(errors)]);
+}
+
+/** Pares de esferas sobrepostas (centros a menos de um diâmetro): defeito de modelos feitos antes da regra C4. */
+export function overlappingNodes(cat: Catalog, model: Model): [string, string][] {
+  const minD = cat.settings.esfera_diametro_mm / cat.settings.modulo_mm;
+  const ns = Object.values(model.nodes);
+  const out: [string, string][] = [];
+  for (let i = 0; i < ns.length; i++) {
+    for (let j = i + 1; j < ns.length; j++) if (len(sub(ns[i].pos, ns[j].pos)) < minD) out.push([ns[i].id, ns[j].id]);
+  }
+  return out;
 }

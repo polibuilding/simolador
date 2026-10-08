@@ -6,7 +6,7 @@ import { catalog } from "../core/catalog";
 import type { Model, Vec3 } from "../core/model";
 import { markerPos, type Candidate } from "../core/snapping";
 import { candidatesFor, Placement } from "../interaction/Placement";
-import { useApp, useModel, workingModel } from "../ui/store";
+import { useApp, useModel, inclineOn, workingModel } from "../ui/store";
 import type { Sel } from "../core/edit";
 import { Bar, GroundConnection, GroundPlate, Sphere, type Look } from "./pieces/pieces";
 import { Cable, ContinuousConnector, PlateMesh, RigidConnector } from "./pieces/more";
@@ -145,6 +145,7 @@ function Markers() {
   const tool = useApp((s) => s.tool);
   const snap = useApp((s) => s.snap);
   const inventory = useApp((s) => s.inventory);
+  const inclined = useApp(inclineOn);
   const model = useApp((s) => workingModel(s));
   const ref = useRef<THREE.InstancedMesh>(null);
   const ringRef = useRef<THREE.InstancedMesh>(null);
@@ -152,7 +153,7 @@ function Markers() {
   const { dots, rings } = useMemo(() => {
     if (!code || !snap) return { dots: [] as THREE.Vector3[], rings: [] as THREE.Vector3[] };
     const inv = tool.kind === "place" && tool.moving ? { ...inventory, unlimited: true } : inventory;
-    const { cands } = candidatesFor(model, code, inv);
+    const { cands } = candidatesFor(model, code, inv, inclined);
     const occupied = new Set(Object.values(model.nodes).map((n) => n.pos.join(",")));
     const seen = new Set<string>();
     const dots: THREE.Vector3[] = [];
@@ -169,7 +170,7 @@ function Markers() {
       (occupied.has(k) ? rings : dots).push(w);
     }
     return { dots, rings };
-  }, [code, snap, model, inventory, tool]);
+  }, [code, snap, model, inventory, tool, inclined]);
 
   useEffect(() => {
     const m = new THREE.Matrix4();

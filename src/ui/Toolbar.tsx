@@ -48,7 +48,8 @@ export function Toolbar() {
   const canUndo = useApp((s) => s.history.past.length > 0);
   const canRedo = useApp((s) => s.history.future.length > 0);
   const snap = useApp((s) => s.snap);
-  const { setName, undo, redo, setSnap, setSheetsOpen, newProject, load, serialize } = useApp.getState();
+  const incline = useApp((s) => s.incline);
+  const { setName, undo, redo, setSnap, setIncline, setSheetsOpen, newProject, load, serialize } = useApp.getState();
   const fileRef = useRef<HTMLInputElement>(null);
   const [stockOpen, setStockOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,6 +110,25 @@ export function Toolbar() {
             title={v ? "Pontos verdes nas posições possíveis; ligação de base na grade" : "Sem pontos; ligação de base em qualquer lugar da chapa"}
           >
             {v ? "Ligado" : "Livre"}
+          </button>
+        ))}
+      </div>
+      <div className="segmented" role="radiogroup" aria-label="Barras">
+        <span>Barras</span>
+        {[false, true].map((v) => (
+          <button
+            key={String(v)}
+            role="radio"
+            aria-checked={incline === v}
+            className={incline === v ? "on" : ""}
+            onClick={() => setIncline(v)}
+            title={
+              v
+                ? `Barras inclinadas em passos de ${catalog.settings.passo_inclinacao_graus ?? 15}°: puxe o cursor para escolher o ângulo (I alterna; Shift inverte enquanto pressionado)`
+                : "Barras só nos eixos, como num pórtico; segure Shift para inclinar uma barra (I alterna)"
+            }
+          >
+            {v ? "Inclinadas" : "Nos eixos"}
           </button>
         ))}
       </div>
