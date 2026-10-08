@@ -4,8 +4,8 @@ import { catalog } from "../core/catalog";
 import { codeOf, removeMany, removeSelection, rotateSelection, type Sel } from "../core/edit";
 import { createHistory, push, redo, undo, type History } from "../core/history";
 import { defaultInventory, type InventoryConfig } from "../core/inventory";
-import { emptyModel, type Model } from "../core/model";
-import { type Check } from "../core/rules";
+import { emptyModel, membersAt, type Model } from "../core/model";
+import { overlappingNodes, type Check } from "../core/rules";
 import { fromFile, toFile, type SheetMeta } from "../core/serialization";
 import { applyCandidate, type Candidate } from "../core/snapping";
 
@@ -29,6 +29,10 @@ interface State {
   sheet: SheetMeta;
   tool: Tool;
   snap: boolean;
+  /** barras inclinadas ligadas (botão na barra de ferramentas ou tecla I) */
+  incline: boolean;
+  /** Shift pressionado: inverte a inclinação enquanto estiver apertado */
+  shiftHeld: boolean;
   ghost: Ghost | null;
   hint: string | null;
   rotIndex: number;
@@ -61,6 +65,8 @@ interface State {
   undo: () => void;
   redo: () => void;
   setSnap: (v: boolean) => void;
+  setIncline: (v: boolean) => void;
+  setShiftHeld: (v: boolean) => void;
   setInventory: (inv: InventoryConfig) => void;
   setName: (n: string) => void;
   setSheet: (s: SheetMeta) => void;
@@ -73,12 +79,29 @@ interface State {
 
 const STORAGE_KEY = "simolador:autosave";
 
-function restore(): Partial<Pick<State, "history" | "inventory" | "name" | "sheet">> {
+/** Esferas sobrepostas (modelos de antes da regra C4): seleciona a de cada par que está sobrando, para apagar com Delete. */
+function overlapReport(model: Model): Partial<Pick<State, "multi" | "hint">> {
+  const pairs = overlappingNodes(catalog, model);
+  if (!pairs.length) return {};
+  // fica a GC, depois a esfera na grade, depois a mais ligada, depois a mais antiga; sai a outra
+  const keep = (id: string) => {
+    const n = model.nodes[id];
+    return [n.kind === "support" ? 1 : 0, n.pos.every((v) => Number.isInteger(v)) ? 1 : 0, membersAt(model, id).length, -Number(id.replace(/\D/g, "") || 0)];
+  };
+  const before = (a: number[], b: number[]) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] > b[i]; return false; };
+  const extra = [...new Set(pairs.map(([a, b]) => (before(keep(a), keep(b)) ? b : a)))];
+  return {
+    multi: extra.map((id) => ({ kind: "node" as const, id })),
+    hint: `Este modelo tem ${extra.length} ${extra.length === 1 ? "esfera sobreposta" : "esferas sobrepostas"} a outra (barra que não chegou na esfera). Já está selecionada: Delete apaga junto com a barra.`,
+  };
+}
+
+function restore(): Partial<Pick<State, "history" | "inventory" | "name" | "sheet" | "multi" | "hint">> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
     const f = fromFile(JSON.parse(raw));
-    return { history: createHistory(f.model), inventory: f.inventory, name: f.name, ...(f.sheet ? { sheet: f.sheet } : {}) };
+    return { history: createHistory(f.model), inventory: f.inventory, name: f.name, ...(f.sheet ? { sheet: f.sheet } : {}), ...overlapReport(f.model) };
   } catch {
     return {};
   }
@@ -96,6 +119,8 @@ export const useApp = create<State>((set, get) => ({
   sheet: { line1: "MOLA STRUCTURAL MODEL", line2: String(catalog.settings.prancha_projeto ?? "") },
   tool: { kind: "select" },
   snap: catalog.settings.gc_encaixe_padrao !== "livre",
+  incline: false,
+  shiftHeld: false,
   ghost: null,
   hint: null,
   rotIndex: 0,
@@ -204,6 +229,8 @@ export const useApp = create<State>((set, get) => ({
   undo: () => set((s) => ({ history: undo(s.history), selection: null, multi: [], ghost: null, tool: { kind: "select" } })),
   redo: () => set((s) => ({ history: redo(s.history), selection: null, multi: [], ghost: null, tool: { kind: "select" } })),
   setSnap: (snap) => set({ snap }),
+  setIncline: (incline) => set({ incline, rotIndex: 0 }),
+  setShiftHeld: (shiftHeld) => (get().shiftHeld === shiftHeld ? undefined : set({ shiftHeld, rotIndex: 0 })),
   setInventory: (inventory) => set({ inventory }),
   setName: (name) => set({ name }),
   setSheet: (sheet) => set({ sheet }),
@@ -220,9 +247,12 @@ export const useApp = create<State>((set, get) => ({
       name: f.name,
       sheet: f.sheet ?? s.sheet,
       selection: null,
+      multi: [],
+      hint: null,
       ghost: null,
       tool: { kind: "select" },
       camera: { view: "fit", n: s.camera.n + 1 },
+      ...overlapReport(f.model),
     }));
   },
 
@@ -241,6 +271,9 @@ useApp.subscribe((s, prev) => {
     /* armazenamento indisponível: ignora */
   }
 });
+
+/** Inclinação efetiva: o botão, invertido enquanto Shift estiver pressionado. */
+export const inclineOn = (s: Pick<State, "incline" | "shiftHeld">) => s.incline !== s.shiftHeld;
 
 /** Modelo para exibir: durante um movimento, o modelo sem a peça retirada. */
 export const useModel = () => useApp((s) => workingModel(s));

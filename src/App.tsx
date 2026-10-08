@@ -28,7 +28,10 @@ function SelectBox() {
 
 function useShortcuts() {
   useEffect(() => {
+    const onShift = (e: KeyboardEvent) => useApp.getState().setShiftHeld(e.shiftKey);
+    const onBlur = () => useApp.getState().setShiftHeld(false);
     const onKey = (e: KeyboardEvent) => {
+      onShift(e);
       const t = e.target as HTMLElement;
       if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT") return;
       const st = useApp.getState();
@@ -54,6 +57,8 @@ function useShortcuts() {
         st.rotate();
       } else if (!mod && k === "m" && st.selection) {
         st.startMove(false);
+      } else if (!mod && k === "i") {
+        st.setIncline(!st.incline);
       } else if (!mod && k === "f") {
         st.setCamera("fit");
       } else if (mod && k === "a") {
@@ -62,7 +67,13 @@ function useShortcuts() {
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keyup", onShift);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onShift);
+      window.removeEventListener("blur", onBlur);
+    };
   }, []);
 }
 

@@ -26,7 +26,7 @@ export function StatusBar() {
       : ok
         ? dragging
           ? "Solte para encaixar."
-          : "Clique para encaixar. R gira; Esc para parar."
+          : `Clique para encaixar. R gira;${tool.kind === "place" && catalog.pieces[tool.code]?.type === "bar" ? " Shift inclina a barra;" : ""} Esc para parar.`
         : "Leve a peça até um ponto verde ou até uma esfera.");
 
   return (

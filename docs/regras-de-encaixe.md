@@ -1,6 +1,6 @@
 # Regras de encaixe — siMOLAdor
 
-Versão 3 · 08/10/2026 (fase 3 implementada: barras inclinadas, CC em 4 lados, seleção por retângulo). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
+Versão 3.1 · 08/10/2026 (fase 3 implementada: barras inclinadas, CC em 4 lados, seleção por retângulo; inclinação sob demanda e folga das esferas). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
 
 Uma regra **bloqueia** quando torna o encaixe inválido (fantasma vermelho, não deixa soltar). Uma regra **avisa** quando a montagem é possível, mas não é recomendada (fantasma verde, aviso na barra de status).
 
@@ -79,7 +79,10 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 |---|---|---|---|
 | C1 | Duas peças lineares não podem ocupar o mesmo segmento (sobreposição). | bloqueia | — |
 | C2 | Barra não atravessa placa. | bloqueia | — |
-| C3 | Barras que se cruzam sem nó em comum: aviso (no kit real colidem). Exceção: diagonais em X (D4). | avisa | — |
+| C3 | Barras que se cruzam sem nó em comum: aviso (no kit real colidem). Exceção: diagonais em X (D4). | avisa (a implementar) | — |
+| C4 | A esfera nova na ponta de uma barra não pode cair em cima de outra: centros a menos de `esfera_diametro_mm`. Ou a barra chega **exatamente** na esfera (fecha nela), ou fica longe. A mensagem diz quanto faltou (ex.: "as esferas teriam de estar a 89,2 mm; estão a 86,7 mm"). | bloqueia | equipe 08/10 (defeito do triângulo) |
+| C5 | A peça não passa por dentro de uma esfera que não é dela: folga mínima = raio da esfera + raio da mola (ou do cabo). | bloqueia | equipe 08/10 |
+| C6 | Ao abrir um modelo feito antes de C4, as esferas sobrepostas são avisadas e já ficam selecionadas (Delete apaga a que sobrou, com a barra). | avisa | equipe 08/10 |
 
 ## 9. Edição
 
@@ -89,7 +92,7 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | E2 | **Mover uma GC ou esfera** move a estrutura conectada inteira (barras, diagonais e placas ligam os nós). Vale o encaixe na grade; as GC precisam continuar na chapa e sem encostar em outras. | equipe 08/10 |
 | E3 | **Girar (R)**: durante o posicionamento, alterna as opções do ponto; numa barra/diagonal selecionada, a próxima direção livre em torno de uma ponta; numa placa, a próxima posição livre mais perto; numa ligação, o próximo canto livre; numa GC/esfera, a estrutura inteira 90° em torno do centro dela. | equipe 08/10 |
 | E4 | **Encaixe ligado**: pontos verdes nas posições válidas da peça escolhida e GC na grade. **Livre**: sem pontos, GC em qualquer ponto da chapa (as outras peças continuam encaixando nas esferas). | equipe 08/10 |
-| E5 | Sobre uma esfera, a barra sobe; puxando o cursor para um lado, a barra vai para aquele lado, inclusive inclinada (o ângulo é arredondado ao passo de 15°). | equipe 08/10 |
+| E5 | Sobre uma esfera, a barra sobe; puxando o cursor para um lado, a barra vai para aquele lado. **Por padrão, só nos eixos** (botão "Barras: Nos eixos"), como num pórtico; o fechamento numa esfera existente à distância exata vale sempre. Para inclinar: **Shift** segurado (só enquanto estiver apertado), ou o botão "Inclinadas" / tecla **I**. Inclinada, o ângulo segue o cursor em passos de 15° e o rodapé mostra o ângulo ("30° com a horizontal", "30° em planta"); uma direção bloqueada aparece em vermelho com o motivo. | equipe 08/10 |
 | E6 | **Mouse**: botão esquerdo seleciona; botão direito gira a vista; Shift+direito ou botão do meio move a vista; roda dá zoom. | equipe 08/10 |
 | E7 | **Seleção por retângulo** (arrastar com o botão esquerdo no vazio): da esquerda para a direita (azul, janela) pega só o que fica inteiro dentro; da direita para a esquerda (verde tracejado, cruzamento) pega o que tocar. Shift soma à seleção; Shift+clique soma ou tira uma peça; Ctrl+A seleciona tudo; Esc limpa. Com várias peças selecionadas, o painel lista as quantidades por código e as medidas do conjunto, copia a lista e remove tudo de uma vez (Delete). | equipe 08/10 |
 | E8 | **Cubo de vistas** no canto da cena: clicar numa face dá a vista ortogonal, numa aresta ou canto, as vistas a 45° e isométricas. **Enquadrar** (F) fica ao lado. | equipe 08/10 |
