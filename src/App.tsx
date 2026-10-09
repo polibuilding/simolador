@@ -57,6 +57,10 @@ function useShortcuts() {
         st.rotate();
       } else if (!mod && k === "m" && st.selection) {
         st.startMove(false);
+      } else if (e.key === "Tab" && !mod && (st.tool.kind === "moveGroup" || (st.tool.kind === "place" && st.tool.code === "GC"))) {
+        // pontos de encaixe sobrepostos perto do cursor: Tab escolhe o próximo
+        e.preventDefault();
+        useApp.setState({ snapCycle: st.snapCycle + 1 });
       } else if (!mod && e.key === " ") {
         e.preventDefault();
         st.repeatLast();

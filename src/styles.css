@@ -81,7 +81,7 @@ button { font: inherit; color: inherit; }
 }
 .toolbar button:hover:not(:disabled) { border-color: var(--ink); }
 .toolbar button:disabled { opacity: 0.4; cursor: default; }
-.segmented { display: flex; align-items: center; gap: 0; margin-left: auto; }
+.segmented { display: flex; align-items: center; gap: 0; }
 .segmented > span { color: var(--graphite); margin-right: 8px; }
 .segmented button { border-radius: 0; margin-left: -1px; }
 .segmented button:first-of-type { border-radius: 3px 0 0 3px; }
@@ -346,3 +346,26 @@ dl { margin: 0 0 16px; }
 .bom.dist { margin-bottom: 16px; font-size: 12px; }
 .bom.dist td:first-child { font-weight: 400; }
 .bom.dist tr.match td { color: #1f5fbf; font-weight: 700; }
+
+.palette-empty { margin: 16px; color: var(--graphite); font-size: 13px; }
+
+/* ---------- liga/desliga dos pontos de encaixe ---------- */
+.snap-chips { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.snap-chips > span { color: var(--graphite); margin-right: 4px; }
+.toolbar .snap-chips button { display: inline-flex; align-items: center; gap: 6px; color: var(--graphite); }
+.toolbar .snap-chips button.on { color: var(--ink); border-color: var(--ink); font-weight: 600; background: #fff; }
+.snap-chips button:not(.on) .dot { opacity: 0.25; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+.dot.green { background: #19a974; }
+.dot.blue { background: #3d8bff; }
+.dot.yellow { background: #ffc21a; box-shadow: inset 0 0 0 1px #b38600; }
+
+/* barra de cima compacta: nada quebra linha */
+.toolbar { gap: 12px; }
+.toolbar button { white-space: nowrap; }
+.project-name { min-width: 90px; width: 12vw; max-width: 180px; }
+@media (max-width: 1560px) {
+  .toolbar { gap: 8px; }
+  .snap-chips > span, .segmented > span { display: none; }
+  .toolbar button { padding: 5px 8px; }
+}

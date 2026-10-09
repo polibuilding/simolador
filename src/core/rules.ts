@@ -413,12 +413,19 @@ export function validateConnector(cat: Catalog, inv: InventoryConfig, model: Mod
     const side = spec.side;
     if (!side || Math.abs(dot(side, ax)) > DIR_TOL) errors.push("Escolha um lado da esfera perpendicular às barras.");
     else if (barAlong(side)) errors.push("Esse lado tem uma barra transversal: a ligação não cabe."); // L6
+    // L4: uma peça por lado da esfera; o mesmo par pode ter CC em vários lados
+    const onSide = (c: { side?: Vec3 }) => !!side && !!c.side && samePos(c.side, side, DIR_TOL);
     const cc = existing.filter((c) => c.code === "CC");
-    if (spec.code === "CC" && cc.length) errors.push("Essa esfera já tem uma CC; para travar o outro par, use a CC90."); // L4
+    if (spec.code === "CC" && side) {
+      const same = cc.find(onSide);
+      if (same) {
+        errors.push(Math.abs(dot(same.dirs[0], ax)) > 1 - DIR_TOL ? "Esse lado já tem uma CC." : "Nesse lado já há uma CC no outro par: use a CC90 por cima dela.");
+      }
+    }
     if (spec.code === "CC90") {
-      const base = cc.find((c) => Math.abs(dot(c.dirs[0], ax)) < DIR_TOL && (!c.side || !side || samePos(c.side, side, DIR_TOL)));
+      const base = cc.find((c) => Math.abs(dot(c.dirs[0], ax)) < DIR_TOL && onSide(c));
       if (!base) errors.push("A CC90 vai por cima de uma CC, no mesmo lado, travando o par perpendicular."); // L5
-      if (existing.some((c) => c.code === "CC90")) errors.push("Essa esfera já tem uma CC90.");
+      if (existing.some((c) => c.code === "CC90" && onSide(c))) errors.push("Esse lado já tem uma CC90.");
     }
   } else {
     errors.push(`${spec.code} não é uma ligação.`);

@@ -96,9 +96,14 @@ export function Palette() {
   const { arm, disarm } = useApp.getState();
   const used = usage(model);
 
+  // só as peças que existem nos kits escolhidos (ou que já estão no modelo); "sem limite" mostra todas
+  const shown = (code: string) => available(catalog, inventory, code) > 0 || (used[code] ?? 0) > 0;
+  const groups = GROUPS.map((g) => ({ ...g, codes: g.codes.filter(shown) })).filter((g) => g.codes.length);
+
   return (
     <aside className="palette" aria-label="Peças">
-      {GROUPS.map((g) => (
+      {!groups.length && <p className="palette-empty">Nenhum kit no estoque. Escolha as caixas em <strong>Estoque</strong>, no alto à direita.</p>}
+      {groups.map((g) => (
         <section key={g.title}>
           <h2>{g.title}</h2>
           {g.codes.map((code) => {

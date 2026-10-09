@@ -80,3 +80,25 @@ describe("R contínuo", () => {
     void beam;
   });
 });
+
+import { addConnector as addC } from "../../src/core/model";
+import { connectorCandidates } from "../../src/core/snapping";
+describe("CC em vários lados", () => {
+  it("viga contínua sobre pilar: CC em cima e nos dois lados ao mesmo tempo; embaixo não (pilar)", () => {
+    let m = emptyModel();
+    m = addSupport(m, [6, 0, 3]).model;
+    m = addMember(m, "B6", id(m, [6, 0, 3]), [6, 6, 3]).model;
+    m = addMember(m, "B6", id(m, [6, 6, 3]), [0, 6, 3]).model;
+    m = addMember(m, "B6", id(m, [6, 6, 3]), [12, 6, 3]).model;
+    const n = id(m, [6, 6, 3]);
+    for (const side of [[0, 1, 0], [0, 0, 1], [0, 0, -1]] as Vec3[]) {
+      const c = connectorCandidates(catalog, inv, m, "CC", n).find((x) => x.kind === "connector" && x.spec.side!.join() === side.join());
+      expect(c?.check.ok).toBe(true);
+      if (c?.kind !== "connector") throw new Error("sem CC");
+      m = addC(m, c.spec).model;
+    }
+    expect(Object.keys(m.connectors).length).toBe(3);
+    const left = connectorCandidates(catalog, inv, m, "CC", n).filter((x) => x.check.ok);
+    expect(left.length).toBe(0); // os três lados ocupados; o de baixo tem o pilar
+  });
+});
