@@ -35,10 +35,6 @@ Próximos passos: medidas reais da CC e da CC90, mover várias peças juntas, ge
 4. Na cena: botão **esquerdo** seleciona (arrastando, faz um retângulo de seleção); botão **direito** gira a vista; **Shift+direito** ou botão do meio move a vista; a roda dá zoom. O cubo no canto leva às vistas e isométricas. Shift+clique soma peças à seleção; Ctrl+A seleciona tudo.
 5. **Gerar pranchas** abre as folhas; dali saem o PDF e o DXF.
 
-## Logos do carimbo
-
-Coloque até duas imagens em `public/logos/`: `logo-mola.png` (à esquerda) e `logo-grupo.png` (à direita); também valem `.svg` e `.jpg`. Elas aparecem no canto inferior esquerdo de todas as pranchas (tela, PDF e SVG). Sem arquivos, fica o hexágono provisório.
-
 ## Medidas e quantidades das peças
 
 Tudo sai de **`data/parametros.xlsx`**. Para mudar uma medida ou uma quantidade:
