@@ -1,6 +1,6 @@
 # Regras de encaixe — siMOLAdor
 
-Versão 3.8 · 09/10/2026 (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
+Versão 3.9 · 09/10/2026 (siMOLAdor 1.5) (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
 
 Uma regra **bloqueia** quando torna o encaixe inválido (fantasma vermelho, não deixa soltar). Uma regra **avisa** quando a montagem é possível, mas não é recomendada (fantasma verde, aviso na barra de status).
 
@@ -45,6 +45,7 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | L4 | **CC** (forma 1, trapézio baixo) vai direto na esfera, ligando duas molas alinhadas (180°) e tornando-as contínuas. Não substitui a esfera. **Uma peça por lado da esfera**: o mesmo par mola–bola–mola pode levar CC em vários lados (ex.: em cima e nos dois lados de uma viga), desde que o lado esteja livre. | bloqueia sem duas barras alinhadas, ou se o lado já tem CC | E05, equipe 08/10 |
 | L5 | **CC90** (forma 2, chapéu alto) vai **por cima de uma CC** no mesmo nó, **do mesmo lado**, e enrijece um segundo par de molas alinhadas, perpendicular ao primeiro e no mesmo plano: o nó vira um X contínuo. Uma CC90 por lado. | bloqueia sem CC no nó, ou sem o segundo par alinhado a 90° | E06, equipe 08/10 |
 | L7 | **RC90 × diagonal**: a RC90 ocupa o canto entre as duas barras; se uma diagonal sai da esfera por dentro desse canto (no plano dele, com folga de 20°), a RC90 não cabe, e a diagonal não pode sair por um canto que já tem RC90. Vale também para a RC90 da base (GC–pilar). | bloqueia | equipe 08/10 |
+| L8 | **Ligação × placa**: a RC90 não vai no canto onde uma placa encosta na esfera (no plano do canto), e a placa não entra num canto que já tem RC90. A CC/CC90 não vai do lado em que a placa está no plano do par de barras (a ponte passaria dentro da placa); os outros lados continuam livres. | bloqueia | equipe 09/10 |
 | L6 | **Lado da CC/CC90**: a peça pode ficar em qualquer um dos 4 lados da esfera perpendiculares às barras que ela une (para uma viga: em cima, embaixo e nos dois lados; para um pilar: nos 4 lados horizontais; para um par inclinado: a normal do plano e a perpendicular dentro dele), **menos** num lado onde chega uma barra transversal (viga ou pilar ligado nesse ponto). **R** alterna os lados livres. Depois de colocada a CC, não se pode encaixar barra no lado ocupado por ela. | bloqueia | equipe 08/10 |
 
 ## 5. Placas (P6x6, P6x12)

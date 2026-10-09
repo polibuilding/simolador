@@ -218,6 +218,16 @@ Referência: `siMOLAdor/sheets/Projeto_Desafio Poli USP_P01–P03.pdf` (AutoCAD 
 
 Análise estrutural: fora do escopo (Q09).
 
+## 7b. Versões do programa
+
+O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0`, `v1.1`…).
+
+- **1.x — geométrica** (atual: 1.5): montar com as peças e regras reais do kit e gerar as pranchas.
+- **2.x — arquitetônica**: o módulo extra ajustável.
+- **3.x — de engenharia**: deformação, estaticidade e estabilidade.
+
+O número depois do ponto sobe com uma mudança grande ou com um conjunto de mudanças menores.
+
 ## 8. Pendências
 
 Decisões registradas (A-CONFIRMAR, aba Decisões): navegador agora, app local depois (Q01); Kits 1 e 2 (Q02); estoque configurável (Q03); português (Q04); arquivo `.mola` em JSON (Q05); código no GitHub (Q06), publicado no GitHub Pages (Q07); só montar e desenhar (Q09).
