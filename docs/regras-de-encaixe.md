@@ -1,6 +1,6 @@
 # Regras de encaixe — siMOLAdor
 
-Versão 3.7 · 09/10/2026 (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
+Versão 3.8 · 09/10/2026 (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
 
 Uma regra **bloqueia** quando torna o encaixe inválido (fantasma vermelho, não deixa soltar). Uma regra **avisa** quando a montagem é possível, mas não é recomendada (fantasma verde, aviso na barra de status).
 
@@ -62,7 +62,7 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | # | Regra | Tipo | Origem |
 |---|---|---|---|
 | G1 | A GC fica sobre uma chapa, com o centro dentro do retângulo de alguma chapa, borda inclusive. | bloqueia | E18 |
-| G11 | **Várias chapas**: passando o mouse numa chapa aparecem + discretos nos lados livres (acrescentam uma chapa encostada) e um menu na borda da frente: distância até a chapa de referência (0, 4, 6, 12 módulos ou livre; a estrutura de cima vai junto), Selecionar, Exportar .mola (a estrutura da chapa, com a chapa no canto 0, 0), Importar .mola (põe um arquivo em cima da chapa), Pranchas (só desta chapa) e Apagar. Cada chapa tem a grade a partir do próprio canto. Estruturas de chapas diferentes podem se ligar (ex.: viga de B6 entre pilares de chapas a 6 módulos); aí a distância e o apagar ficam travados até a ligação sair. | — | equipe 09/10 |
+| G11 | **Várias chapas**: passando o mouse numa chapa aparecem + discretos nos lados livres (acrescentam uma chapa encostada) e um menu na borda da frente: distância até a chapa de referência (0, 4, 6, 12 módulos ou livre; a estrutura de cima vai junto), Selecionar, Exportar .mola (a estrutura da chapa, com a chapa no canto 0, 0), Importar .mola (põe um arquivo em cima da chapa), Pranchas (só desta chapa) e Apagar. **Clicar na chapa vazia seleciona a chapa** (contorno azul): o menu fica fixo até Esc, o painel mostra a chapa e **Delete** apaga (pede confirmação se houver peças em cima). Cada chapa tem a grade a partir do próprio canto. Estruturas de chapas diferentes podem se ligar (ex.: viga de B6 entre pilares de chapas a 6 módulos); aí a distância e o apagar ficam travados até a ligação sair. | — | equipe 09/10 |
 | G2 | Dois modos, alternados pelo usuário: **grade** (centro nos cruzamentos da chapa, 0…`chapa_modulos_x` × 0…`chapa_modulos_y`) e **livre** (qualquer ponto que respeite G1). Padrão: `gc_encaixe_padrao`. | — | E16 |
 | G3 | Duas GC não podem se sobrepor: distância entre centros ≥ `gc_diametro_mm`. | bloqueia | geometria |
 | G4 | A estrutura pode passar da borda da chapa (balanço); só os apoios precisam estar nela. | — | E18 |

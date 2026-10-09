@@ -193,7 +193,7 @@ dl { margin: 0 0 16px; }
 .statusbar {
   grid-area: foot;
   display: grid;
-  grid-template-columns: 52px 1fr auto auto auto;
+  grid-template-columns: auto 1fr auto auto auto;
   background: var(--panel);
   border-top: 2px solid var(--rule-strong);
 }
@@ -208,7 +208,8 @@ dl { margin: 0 0 16px; }
 }
 .statusbar .cell:first-child { border-left: 0; }
 .statusbar small { font-size: 10px; font-weight: 400; color: var(--graphite); }
-.statusbar .logo { align-items: center; color: var(--ink); }
+.statusbar .logo { flex-direction: row; align-items: center; gap: 8px; color: var(--ink); padding: 3px 12px; }
+.statusbar .logo img { height: 34px; width: auto; display: block; }
 .statusbar .logo svg { width: 22px; height: 22px; }
 .statusbar .message { font-weight: 500; white-space: normal; overflow: hidden; }
 .statusbar .message.ok { color: var(--ok); }
