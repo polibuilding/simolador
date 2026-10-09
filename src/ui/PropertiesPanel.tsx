@@ -285,6 +285,45 @@ function Summary() {
   );
 }
 
+/** Repetir a seleção N vezes com um deslocamento (módulos). Padrão: um vão ao lado, em X. */
+function Repeat({ size }: { size: Vec3 }) {
+  const multiCount = useApp((s) => s.multi.length);
+  const [d, setD] = useState<[string, string, string]>([fieldText(Math.round(size[0]) || 6), "0", "0"]);
+  const [times, setTimes] = useState("1");
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => setErr(null), [multiCount]);
+  const apply = () => {
+    const v = d.map(parseCoord);
+    const n = Number(times);
+    if (v.some((x) => x === null) || !Number.isFinite(n) || n < 1) return setErr("Use números: deslocamento em módulos (ou mm) e vezes ≥ 1.");
+    setErr(useApp.getState().repeatSelection(v as Vec3, n));
+  };
+  const field = (i: 0 | 1 | 2, label: string) => (
+    <label className="coord">
+      <span>{label}</span>
+      <input value={d[i]} inputMode="decimal" onChange={(e) => setD((o) => { const c = [...o] as typeof o; c[i] = e.target.value; return c; })}
+        onKeyDown={(e) => e.key === "Enter" && apply()} aria-label={`Deslocamento em ${label}`} />
+    </label>
+  );
+  return (
+    <div className="repeat">
+      <h3>Repetir</h3>
+      <div className="coords-row four">
+        {field(0, "X")}
+        {field(1, "Y")}
+        {field(2, "Z")}
+        <label className="coord">
+          <span>Vezes</span>
+          <input value={times} inputMode="numeric" onChange={(e) => setTimes(e.target.value)} onKeyDown={(e) => e.key === "Enter" && apply()} aria-label="Quantas cópias" />
+        </label>
+      </div>
+      <button onClick={apply} className="repeat-go">Criar cópias</button>
+      <p className="coords-help">Cada cópia anda X, Y, Z módulos da anterior. Esferas no mesmo lugar viram uma só: um vão repetido com X = largura dele divide os pilares.</p>
+      {err && <p className="coords-err" role="alert">{err}</p>}
+    </div>
+  );
+}
+
 /** Várias peças selecionadas: lista por código e medidas do conjunto. */
 function MultiSelected() {
   const model = useModel();
@@ -350,6 +389,11 @@ function MultiSelected() {
           ))}
         </tbody>
       </table>
+      <div className="actions" style={{ marginTop: 14 }}>
+        <button onClick={() => useApp.getState().copySelection()} title="Ctrl+C; depois Ctrl+V cola (R gira, X/Z espelha, ↑/↓ altura)">Copiar peças</button>
+        <button onClick={() => useApp.getState().startMoveSelection()} title="M ou Ctrl+X: leva as peças para outro lugar">Mover</button>
+      </div>
+      <Repeat size={[span(0) / M, span(1) / M, span(2) / M]} />
       <div className="actions multi" style={{ marginTop: 14 }}>
         <button onClick={() => navigator.clipboard?.writeText(text).then(() => useApp.setState({ hint: "Lista copiada." }), () => undefined)}>
           Copiar lista

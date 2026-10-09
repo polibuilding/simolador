@@ -211,6 +211,7 @@ Referência: `siMOLAdor/sheets/Projeto_Desafio Poli USP_P01–P03.pdf` (AutoCAD 
 | 2. Kits 1 e 2 completos ✅ | diagonais, placas, RC90, CC, CC90, B4; estoque configurável; regras; mover e girar; pontos de encaixe | Estrutura 01 do Desafio 2022 montada com a contagem certa (`examples/`) |
 | 3. Pranchas ✅ (1ª versão) | capa, plantas por pavimento, 4 elevações, escala automática, carimbo editável, PDF, SVG e DXF | plantas e vistas da "Estrutura 01" equivalentes às do Desafio 2022 |
 | 3b. Edição avançada ✅ | barras inclinadas sob demanda (Shift ou botão; passos de 15° nos planos ortogonais e fechamento entre esferas), com folga entre esferas (C4, C5); placas, diagonais e ligações em planos inclinados; guias azuis/amarelos e coordenadas da GC; cubo de vistas; CC/CC90 nos 4 lados; seleção por retângulo (janela e cruzamento); botão esquerdo seleciona, direito gira | triângulo de B6 sobre o pórtico; isométrica pelo cubo; trecho da Estrutura 01 selecionado e apagado |
+| 3c. Produtividade e pranchas ✅ | copiar/colar, mover várias peças, espelhar, repetir; cotas entre eixos, totais e níveis; etiquetas arrastáveis; logos no carimbo | dois pavimentos empilhados com Ctrl+C/V; pranchas da Estrutura 01 com cotas |
 | 4. Geometria livre | geodésicas e barras fora dos planos ortogonais (E19); mover várias peças juntas | geodésica do manual do Kit 2 |
 | 5. App local + Kits 3/4 | empacotar com Tauri (Q01); cabos, arcos | — |
 

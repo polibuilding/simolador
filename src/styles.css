@@ -369,3 +369,10 @@ dl { margin: 0 0 16px; }
   .snap-chips > span, .segmented > span { display: none; }
   .toolbar button { padding: 5px 8px; }
 }
+
+.repeat { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.repeat h3 { font-size: 13px; margin: 0 0 8px; }
+.coords-row.four { grid-template-columns: repeat(4, 1fr); }
+.props .repeat-go { width: 100%; margin-top: 6px; padding: 7px; }
+.sheets-tip { margin: 10px auto 0; max-width: 1180px; color: var(--graphite); font-size: 12px; }
+.sheets-bar .sheets-reset { align-self: flex-end; }

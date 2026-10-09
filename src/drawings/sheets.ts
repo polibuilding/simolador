@@ -18,6 +18,8 @@ export interface SheetInput {
   date?: Date;
   /** foto isométrica renderizada para a capa; sem ela, a capa usa o desenho em linhas */
   isoImage?: { url: string; aspect: number } | null;
+  /** logos do carimbo (Mola e equipe), lado a lado no canto inferior esquerdo; sem elas, o hexágono */
+  logos?: { url: string; aspect: number }[];
 }
 
 const SCALES = [1, 2, 2.5, 5, 10, 20];
@@ -111,8 +113,47 @@ function bubble(c: Pt, label: string): Prim[] {
 
 const axisLine = (a: Pt, b: Pt): Prim => ({ t: "line", a, b, stroke: "#8a8a8a", pen: PEN.thin, dash: "center", layer: "MOLA-EIXO" });
 
+// ---------------- cotas ----------------
+const mmText = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const tick = (c: Pt): Prim => ({ t: "line", a: [c[0] - 0.9, c[1] + 0.9], b: [c[0] + 0.9, c[1] - 0.9], stroke: "#000", pen: PEN.part, layer: "MOLA-COTA" });
+/** Corrente de cotas horizontal na altura y (papel): pontos em x (papel) e valores reais entre eles (mm). */
+function dimChainH(xs: Pt[], y: number, values: number[], below = false): Prim[] {
+  if (xs.length < 2) return [];
+  const out: Prim[] = [{ t: "line", a: [xs[0][0] - 1.2, y], b: [xs[xs.length - 1][0] + 1.2, y], stroke: "#000", pen: PEN.thin, layer: "MOLA-COTA" }];
+  xs.forEach((p) => {
+    out.push(tick([p[0], y]));
+    out.push({ t: "line", a: [p[0], y - 1.4], b: [p[0], y + 1.4], stroke: "#000", pen: PEN.thin, layer: "MOLA-COTA" });
+  });
+  for (let i = 0; i < xs.length - 1; i++) {
+    const w = xs[i + 1][0] - xs[i][0];
+    if (w < 7.5) continue; // vão estreito demais para o número
+    out.push(txt([(xs[i][0] + xs[i + 1][0]) / 2, below ? y + 2.8 : y - 0.8], mmText(values[i]), 2, { anchor: "middle", layer: "MOLA-COTA" }));
+  }
+  return out;
+}
+/** Corrente de cotas vertical em x (papel). `ys` em ordem de cima para baixo na folha. */
+function dimChainV(ys: number[], x: number, values: number[], right = false): Prim[] {
+  if (ys.length < 2) return [];
+  const out: Prim[] = [{ t: "line", a: [x, ys[0] - 1.2], b: [x, ys[ys.length - 1] + 1.2], stroke: "#000", pen: PEN.thin, layer: "MOLA-COTA" }];
+  ys.forEach((y) => {
+    out.push(tick([x, y]));
+    out.push({ t: "line", a: [x - 1.4, y], b: [x + 1.4, y], stroke: "#000", pen: PEN.thin, layer: "MOLA-COTA" });
+  });
+  for (let i = 0; i < ys.length - 1; i++) {
+    const h = ys[i + 1] - ys[i];
+    if (h < 7.5) continue;
+    const ty = (ys[i] + ys[i + 1]) / 2;
+    const tx = right ? x + 2.6 : x - 0.8;
+    out.push(txt([tx, ty], mmText(values[i]), 2, { anchor: "middle", rot: right ? 90 : -90, layer: "MOLA-COTA" }));
+  }
+  return out;
+}
+
 /** Chamadas: uma por tipo de peça, com linha até a coluna de textos à direita. */
-function callouts(items: Item[], kinds: Item["kind"][], P: Placed, colX: number, yMin: number, yMax: number): Prim[] {
+function callouts(
+  items: Item[], kinds: Item["kind"][], P: Placed, colX: number, yMin: number, yMax: number,
+  key = "", moved: Record<string, [number, number]> = {},
+): Prim[] {
   const picks: { label: string; at: Pt }[] = [];
   for (const k of kinds) {
     const cand = items.filter((i) => i.kind === k);
@@ -129,12 +170,16 @@ function callouts(items: Item[], kinds: Item["kind"][], P: Placed, colX: number,
   if (over > 0) for (let i = ys.length - 1; i >= 0; i--) ys[i] = Math.min(ys[i] - (i === ys.length - 1 ? over : 0), i < ys.length - 1 ? ys[i + 1] - GAP : Infinity);
   const out: Prim[] = [];
   picks.forEach((p, i) => {
-    const y = ys[i];
-    const elbow: Pt = [colX - 8, y];
+    // etiqueta arrastada na tela: desloca o texto e o cotovelo; a ponta continua na peça
+    const tag = `${key}|${p.label}`;
+    const [dx, dy] = moved[tag] ?? [0, 0];
+    const y = ys[i] + dy;
+    const cx = colX + dx;
+    const elbow: Pt = [cx - 8, y];
     out.push({ t: "line", a: p.at, b: elbow, stroke: "#000", pen: PEN.thin, layer: "MOLA-TEXTO" });
-    out.push({ t: "line", a: elbow, b: [colX, y], stroke: "#000", pen: PEN.thin, layer: "MOLA-TEXTO" });
+    out.push({ t: "line", a: elbow, b: [cx, y], stroke: "#000", pen: PEN.thin, layer: "MOLA-TEXTO" });
     out.push({ t: "circle", c: p.at, r: 0.45, fill: "#000", stroke: null, layer: "MOLA-TEXTO" });
-    out.push(txt([colX + 1.5, y + 0.8], p.label, 2.2, { bold: true }));
+    out.push(txt([cx + 1.5, y + 0.8], p.label, 2.2, { bold: true, tag }));
   });
   return out;
 }
@@ -172,18 +217,31 @@ function titleBlock(input: SheetInput, n: number, number: number, total: number,
   const y0 = A3.h - MARGIN - TB_H;
   const y1 = A3.h - MARGIN;
   const ym = (y0 + y1) / 2;
-  const cols = [MARGIN, 26, 104, 170, 252, 330, A3.w - MARGIN];
+  const cols = [MARGIN, 46, 118, 176, 252, 330, A3.w - MARGIN];
   const out: Prim[] = [
     { t: "poly", pts: [[MARGIN, y0], [A3.w - MARGIN, y0], [A3.w - MARGIN, y1], [MARGIN, y1]], closed: true, fill: null, stroke: "#000", pen: PEN.frame, layer: "MOLA-CARIMBO" },
   ];
   for (const x of cols.slice(1, -1)) out.push({ t: "line", a: [x, y0], b: [x, y1], stroke: "#000", pen: PEN.part, layer: "MOLA-CARIMBO" });
-  // logo da equipe (marca provisória: hexágono com diagonais; trocar por assets/logo/logo.svg)
-  const c: Pt = [(cols[0] + cols[1]) / 2, ym];
-  const hex: Pt[] = Array.from({ length: 6 }, (_, i) => [c[0] + 5 * Math.sin((i * Math.PI) / 3), c[1] - 5 * Math.cos((i * Math.PI) / 3)]);
-  out.push({ t: "poly", pts: hex, closed: true, fill: null, stroke: "#000", pen: PEN.base, layer: "MOLA-CARIMBO" });
-  out.push({ t: "line", a: hex[0], b: hex[3], stroke: "#000", pen: PEN.part, layer: "MOLA-CARIMBO" });
-  out.push({ t: "line", a: hex[1], b: hex[4], stroke: "#000", pen: PEN.part, layer: "MOLA-CARIMBO" });
-  out.push({ t: "line", a: hex[2], b: hex[5], stroke: "#000", pen: PEN.part, layer: "MOLA-CARIMBO" });
+  // logos (public/logos: Mola e equipe, lado a lado); sem arquivos, a marca provisória (hexágono)
+  const logos = (input.logos ?? []).slice(0, 2);
+  if (logos.length) {
+    const pad = 1.6;
+    const slotW = (cols[1] - cols[0] - pad * (logos.length + 1)) / logos.length;
+    const slotH = TB_H - 2 * pad;
+    logos.forEach((lg, i) => {
+      const w = Math.min(slotW, slotH * lg.aspect);
+      const h = w / lg.aspect;
+      const x = cols[0] + pad + i * (slotW + pad) + (slotW - w) / 2;
+      out.push({ t: "image", x, y: ym - h / 2, w, h, href: lg.url, layer: "MOLA-CARIMBO" });
+    });
+  } else {
+    const c: Pt = [(cols[0] + cols[1]) / 2, ym];
+    const hex: Pt[] = Array.from({ length: 6 }, (_, i) => [c[0] + 5 * Math.sin((i * Math.PI) / 3), c[1] - 5 * Math.cos((i * Math.PI) / 3)]);
+    out.push({ t: "poly", pts: hex, closed: true, fill: null, stroke: "#000", pen: PEN.base, layer: "MOLA-CARIMBO" });
+    out.push({ t: "line", a: hex[0], b: hex[3], stroke: "#000", pen: PEN.part, layer: "MOLA-CARIMBO" });
+    out.push({ t: "line", a: hex[1], b: hex[4], stroke: "#000", pen: PEN.part, layer: "MOLA-CARIMBO" });
+    out.push({ t: "line", a: hex[2], b: hex[5], stroke: "#000", pen: PEN.part, layer: "MOLA-CARIMBO" });
+  }
   const T = (p: Pt, s: string, size: number, bold = false, anchor: "start" | "middle" | "end" = "start") =>
     txt(p, s, size, { bold, anchor, layer: "MOLA-CARIMBO" });
   out.push(T([cols[1] + 4, ym - 1.8], input.meta.line1, 2.1));
@@ -307,6 +365,20 @@ function planDrawing(input: SheetInput, n: number, lv: ReturnType<typeof levelsO
     out.push(axisLine([left + 2.4, y], [right, y]), ...bubble([left, y], a.label));
   }
   out.push(...paint(items, P));
+  // cotas entre eixos (em cima e à esquerda, junto das bolinhas) e totais (embaixo e à direita)
+  if (xs.length > 1) {
+    const px = xs.map((a) => P.to([a.x, 0]));
+    const vals = xs.slice(1).map((a, i) => a.x - xs[i].x);
+    out.push(...dimChainH(px, P.box.y0 - 3.2, vals));
+    // total só quando há mais de um vão (com um só, repetiria o número); texto acima da linha, longe do marcador A
+    if (vals.length > 1) out.push(...dimChainH([px[0], px[px.length - 1]], P.box.y1 + 5.5, [xs[xs.length - 1].x - xs[0].x]));
+  }
+  if (zs.length > 1) {
+    const py = zs.map((a) => P.to([0, -a.z])[1]);
+    const vals = zs.slice(1).map((a, i) => a.z - zs[i].z);
+    out.push(...dimChainV(py, P.box.x0 - 3.2, vals));
+    if (vals.length > 1) out.push(...dimChainV([py[0], py[py.length - 1]], P.box.x1 + 4, [zs[zs.length - 1].z - zs[0].z], true));
+  }
   // marcadores de vista
   const mx = (P.box.x0 + P.box.x1) / 2;
   const my = (P.box.y0 + P.box.y1) / 2;
@@ -314,7 +386,7 @@ function planDrawing(input: SheetInput, n: number, lv: ReturnType<typeof levelsO
   out.push(...viewMarker([mx, P.box.y0 - 13], "down", "C"));
   out.push(...viewMarker([P.box.x0 - 13, my], "right", "B"));
   out.push(...viewMarker([cell.x + cell.w - 4, my], "left", "D"));
-  out.push(...callouts(items, PLAN_LABELS, P, P.box.x1 + 12, P.box.y0, P.box.y1));
+  out.push(...callouts(items, PLAN_LABELS, P, P.box.x1 + 12, P.box.y0, P.box.y1, `planta ${lv.planTitle.join(" ")}`, input.meta.labels));
   out.push(...viewTitle([cell.x + 2, cell.y + cell.h - 13], lv.planTitle[0], lv.planTitle[1], n));
   return out;
 }
@@ -329,10 +401,19 @@ function elevationDrawing(input: SheetInput, n: number, view: ViewId, cell: Retu
   const x0 = P.box.x0 - 10;
   const x1 = P.box.x1 + 6;
   // níveis
-  for (const lv of levelsOf(model, cat)) {
+  const levels = levelsOf(model, cat);
+  for (const lv of levels) {
     const y = P.to([0, lv.y])[1];
     out.push(axisLine([x0 - 2, y], [x1, y]));
     out.push(txt([cell.x + 3, y + 0.8], lv.name, 2.3));
+    out.push(txt([cell.x + 3, y + 3.6], `+${mmText(lv.y)}`, 1.9, { layer: "MOLA-COTA" }));
+  }
+  // cotas de altura: do topo da chapa a cada nível (à direita da estrutura)
+  {
+    const hs = [0, ...levels.map((l) => l.y)].filter((v, i, a) => i === 0 || v > a[i - 1] + 0.01);
+    const ys = hs.map((h) => P.to([0, h])[1]).reverse();
+    const vals = hs.slice(1).map((h, i) => h - hs[i]).reverse();
+    out.push(...dimChainV(ys, P.box.x1 + 8, vals, true));
   }
   // eixos
   const { xs, zs } = axesOf(model, cat);
@@ -342,11 +423,19 @@ function elevationDrawing(input: SheetInput, n: number, view: ViewId, cell: Retu
     const x = P.to([a.h, 0])[0];
     out.push(axisLine([x, top + 2.4], [x, P.box.y1 + 8]), ...bubble([x, top], a.label));
   }
+  // cotas entre eixos (entre as bolinhas e a estrutura) e total (abaixo da chapa)
+  const sorted = [...axes].sort((p, q) => P.to([p.h, 0])[0] - P.to([q.h, 0])[0]);
+  if (sorted.length > 1) {
+    const px = sorted.map((a) => P.to([a.h, 0]));
+    const vals = sorted.slice(1).map((a, i) => Math.abs(a.h - sorted[i].h));
+    out.push(...dimChainH(px, P.box.y0 - 7, vals));
+    if (vals.length > 1) out.push(...dimChainH([px[0], px[px.length - 1]], P.to([0, 0])[1] + 6, [Math.abs(sorted[sorted.length - 1].h - sorted[0].h)], true));
+  }
   out.push(...paint(items, P));
   // terreno (topo da chapa)
   const gy = P.to([0, 0])[1];
   out.push({ t: "line", a: [x0, gy], b: [x1 + 4, gy], stroke: "#000", pen: PEN.ground, layer: "MOLA-BASE" });
-  out.push(...callouts(items, ELEV_LABELS, P, P.box.x1 + 20, P.box.y0, P.box.y1));
+  out.push(...callouts(items, ELEV_LABELS, P, P.box.x1 + 20, P.box.y0, P.box.y1, `vista ${view}`, input.meta.labels));
   out.push(...viewTitle([cell.x + ELEV_PAD.left, cell.y + cell.h - 24], `VISTA - ${view}`, input.name.toUpperCase(), n));
   return out;
 }
