@@ -47,6 +47,9 @@ function useShortcuts() {
       } else if ((e.key === "Delete" || e.key === "Backspace") && (st.selection || st.multi.length)) {
         e.preventDefault();
         st.removeSelected();
+      } else if ((e.key === "Delete" || e.key === "Backspace") && st.selectedBoard) {
+        e.preventDefault();
+        st.removeSelectedBoard();
       } else if (mod && k === "c") {
         st.copySelection();
       } else if (mod && k === "x" && (st.selection || st.multi.length)) {

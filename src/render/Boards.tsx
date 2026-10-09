@@ -114,6 +114,7 @@ function BoardOverlay({ model, b, keep, leave }: { model: Model; b: Board; keep:
 /** Todas as chapas; a que está sob o mouse ganha os + e o menu (só no modo Selecionar). */
 export function Boards({ model }: { model: Model }) {
   const hover = useApp((s) => s.hoverBoard);
+  const pinned = useApp((s) => s.selectedBoard);
   const selecting = useApp((s) => s.tool.kind === "select" && !s.sheetsOpen);
   const timer = useRef<number | null>(null);
   const keep = () => {
@@ -130,20 +131,26 @@ export function Boards({ model }: { model: Model }) {
     keep();
     useApp.getState().setHoverBoard(id);
   };
-  const onClick = (e: ThreeEvent<MouseEvent>) => {
+  const onClick = (id: string) => (e: ThreeEvent<MouseEvent>) => {
     // clique na chapa vazia = clique no vazio: limpa a seleção (o retângulo que acabou de terminar não conta)
     const st = useApp.getState();
-    if (st.tool.kind !== "select" || performance.now() - st.boxEndedAt < 250) return;
-    if (!(e.nativeEvent.shiftKey || e.nativeEvent.ctrlKey || e.nativeEvent.metaKey)) st.select(null);
+    if (st.tool.kind !== "select" || performance.now() - st.boxEndedAt < 250 || e.delta > 5) return;
+    if (e.nativeEvent.shiftKey || e.nativeEvent.ctrlKey || e.nativeEvent.metaKey) return;
+    // clique na chapa vazia: seleciona a chapa (menu fixo até Esc); o que estava selecionado sai
+    st.pinBoard(id);
   };
   const boards = boardsOf(model);
   return (
     <>
       {boards.map((b) => (
         <GroundPlate key={b.id} id={b.id} x={b.x} z={b.z} highlight={selecting && hover === b.id && boards.length > 1}
-          onPointerMove={onMove(b.id)} onPointerOut={leave} onClick={onClick} />
+          selected={pinned === b.id} onPointerMove={onMove(b.id)} onPointerOut={leave} onClick={onClick(b.id)} />
       ))}
-      {selecting && hover && boards.some((b) => b.id === hover) && (
+      {/* chapa selecionada: menu fixo; a do mouse (se for outra), menu enquanto o mouse estiver nela */}
+      {selecting && pinned && boards.some((b) => b.id === pinned) && (
+        <BoardOverlay key={`p-${pinned}`} model={model} b={boards.find((b) => b.id === pinned)!} keep={keep} leave={() => undefined} />
+      )}
+      {selecting && hover && hover !== pinned && boards.some((b) => b.id === hover) && (
         <BoardOverlay key={hover} model={model} b={boards.find((b) => b.id === hover)!} keep={keep} leave={leave} />
       )}
     </>

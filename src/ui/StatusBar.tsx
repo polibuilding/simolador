@@ -1,4 +1,5 @@
 import { catalog } from "../core/catalog";
+import { useState } from "react";
 import { useApp, useModel } from "./store";
 
 // Rodapé no formato do carimbo das pranchas.
@@ -7,6 +8,7 @@ export function StatusBar() {
   const ghost = useApp((s) => s.ghost);
   const hint = useApp((s) => s.hint);
   const model = useModel();
+  const [logoOk, setLogoOk] = useState(true);
   const pieces =
     Object.keys(model.nodes).length + Object.keys(model.members).length + Object.keys(model.plates).length + Object.keys(model.connectors).length;
 
@@ -35,13 +37,20 @@ export function StatusBar() {
 
   return (
     <footer className="statusbar">
-      <div className="cell logo" aria-hidden>
-        <svg viewBox="0 0 32 32">
-          <g fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M16 3 27 9.5v13L16 29 5 22.5v-13z" />
-            <path d="M5 9.5 27 22.5M27 9.5 5 22.5M16 3v26" />
-          </g>
-        </svg>
+      <div className="cell logo">
+        {/* logos do Mola e da equipe (public/logos); se faltarem, a marca provisória */}
+        {logoOk ? (
+          ["logo-mola", "logo-grupo"].map((n) => (
+            <img key={n} src={`${import.meta.env.BASE_URL}logos/${n}.png`} alt={n === "logo-mola" ? "Mola" : "Poli Building"} onError={() => setLogoOk(false)} />
+          ))
+        ) : (
+          <svg viewBox="0 0 32 32" aria-hidden>
+            <g fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M16 3 27 9.5v13L16 29 5 22.5v-13z" />
+              <path d="M5 9.5 27 22.5M27 9.5 5 22.5M16 3v26" />
+            </g>
+          </svg>
+        )}
       </div>
       <div className={`cell message ${state}`} role="status" aria-live="polite">
         {message}

@@ -88,6 +88,10 @@ interface State {
   /** chapa sob o mouse (mostra os + e o menu) */
   hoverBoard: string | null;
   setHoverBoard: (id: string | null) => void;
+  /** chapa selecionada (clique na chapa vazia): menu fixo até Esc; Delete apaga */
+  selectedBoard: string | null;
+  pinBoard: (id: string | null) => void;
+  removeSelectedBoard: () => void;
   addBoardAt: (fromId: string, side: Side) => void;
   removeBoardId: (id: string) => string | null;
   setBoardGapOf: (id: string, gap: number) => string | null;
@@ -279,6 +283,17 @@ export const useApp = create<State>((set, get) => ({
       },
     });
   },
+  selectedBoard: null,
+  pinBoard: (selectedBoard) => set({ selectedBoard, selection: null, multi: [], hint: selectedBoard ? `Chapa ${selectedBoard.slice(1)} selecionada: Delete apaga, Esc solta.` : null }),
+  removeSelectedBoard: () => {
+    const s = get();
+    const id = s.selectedBoard;
+    if (!id) return;
+    const pieces = boardSelection(catalog, s.history.present, id).length;
+    if (pieces && !window.confirm(`Apagar a chapa ${id.slice(1)} e as ${pieces} peças que estão só nela?`)) return;
+    const err = s.removeBoardId(id);
+    if (err) set({ hint: err });
+  },
   hoverBoard: null,
   setHoverBoard: (hoverBoard) => (get().hoverBoard === hoverBoard ? undefined : set({ hoverBoard })),
   addBoardAt: (fromId, side) => {
@@ -291,7 +306,7 @@ export const useApp = create<State>((set, get) => ({
     const s = get();
     const r = removeBoard(catalog, s.history.present, id);
     if (!r.model) return r.error ?? null;
-    set({ history: push(s.history, r.model), hoverBoard: null, selection: null, multi: [], hint: "Chapa apagada. Ctrl+Z desfaz." });
+    set({ history: push(s.history, r.model), hoverBoard: null, selectedBoard: null, selection: null, multi: [], hint: "Chapa apagada. Ctrl+Z desfaz." });
     return null;
   },
   setBoardGapOf: (id, gap) => {
@@ -368,20 +383,20 @@ export const useApp = create<State>((set, get) => ({
     });
   },
 
-  select: (selection) => set({ selection, multi: [], hint: null }),
+  select: (selection) => set({ selection, multi: [], hint: null, selectedBoard: null }),
   toggleMulti: (s) =>
     set((st) => {
       const list = st.multi.length ? st.multi : st.selection ? [st.selection] : [];
       const has = list.some((x) => x.id === s.id);
       const multi = has ? list.filter((x) => x.id !== s.id) : [...list, s];
-      return multi.length === 1 ? { selection: multi[0], multi: [] } : { selection: null, multi };
+      return multi.length === 1 ? { selection: multi[0], multi: [], selectedBoard: null } : { selection: null, multi, selectedBoard: null };
     }),
   setMulti: (list, addTo = false) =>
     set((st) => {
       const base = addTo ? (st.multi.length ? st.multi : st.selection ? [st.selection] : []) : [];
       const seen = new Set(base.map((x) => x.id));
       const multi = [...base, ...list.filter((x) => !seen.has(x.id))];
-      return multi.length === 1 ? { selection: multi[0], multi: [] } : { selection: null, multi };
+      return multi.length === 1 ? { selection: multi[0], multi: [], selectedBoard: null } : { selection: null, multi, selectedBoard: null };
     }),
   selectAll: () =>
     set((st) => {
@@ -405,8 +420,8 @@ export const useApp = create<State>((set, get) => ({
     set({ history: push(history, removeSelection(history.present, selection)), selection: null });
   },
 
-  undo: () => set((s) => ({ history: undo(s.history), selection: null, multi: [], ghost: null, tool: { kind: "select" } })),
-  redo: () => set((s) => ({ history: redo(s.history), selection: null, multi: [], ghost: null, tool: { kind: "select" } })),
+  undo: () => set((s) => ({ history: undo(s.history), selection: null, multi: [], selectedBoard: null, ghost: null, tool: { kind: "select" } })),
+  redo: () => set((s) => ({ history: redo(s.history), selection: null, multi: [], selectedBoard: null, ghost: null, tool: { kind: "select" } })),
   setSnap: (snap) => set({ snap }),
   setGuides: (guides) => set({ guides }),
   moveNodeTo: (nodeId, target) => {
