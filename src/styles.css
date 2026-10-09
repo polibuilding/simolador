@@ -246,23 +246,22 @@ dl { margin: 0 0 16px; }
 .toolbar button.primary:hover { background: #000; }
 .view-controls {
   position: absolute;
-  top: 16px;
-  right: 186px;
-  display: flex;
-  gap: 0;
-  background: var(--panel);
-  border: 1px solid var(--ink);
-  border-radius: 3px;
+  top: 178px;
+  right: 46px;
 }
 .view-controls button {
-  background: transparent;
-  border: 0;
-  border-left: 1px solid var(--rule);
-  padding: 5px 10px;
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(251, 252, 251, 0.55);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 3px 7px;
+  color: var(--graphite);
+  font-size: 12px;
   cursor: pointer;
+  opacity: 0.75;
 }
-.view-controls button:first-child { border-left: 0; font-weight: 600; }
-.view-controls button:hover { background: var(--paper); }
+.view-controls button svg { width: 13px; height: 13px; }
+.view-controls button:hover { opacity: 1; border-color: var(--rule); background: var(--panel); color: var(--ink); }
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .actions .danger { grid-column: 1 / -1; }
 .props .actions button:not(.danger) { padding: 8px; }
@@ -376,3 +375,35 @@ dl { margin: 0 0 16px; }
 .props .repeat-go { width: 100%; margin-top: 6px; padding: 7px; }
 .sheets-tip { margin: 10px auto 0; max-width: 1180px; color: var(--graphite); font-size: 12px; }
 .sheets-bar .sheets-reset { align-self: flex-end; }
+
+.sheets-bar label.check { flex-direction: row; align-items: center; gap: 6px; align-self: flex-end; padding-bottom: 6px; font-size: 13px; color: var(--ink); }
+
+/* ---------- chapas ---------- */
+.sheet-boards { display: flex; align-items: center; gap: 4px; align-self: flex-end; padding-bottom: 2px; }
+.sheet-boards > span { font-size: 12px; color: var(--graphite); margin-right: 2px; }
+.sheet-boards button { min-width: 30px; padding: 4px 8px; border: 1px solid var(--rule); background: transparent; border-radius: 3px; cursor: pointer; color: var(--graphite); }
+.sheet-boards button.on { border-color: var(--ink); color: var(--ink); font-weight: 600; background: #fff; }
+.board-plus {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 1px solid rgba(29, 36, 34, 0.35); background: rgba(251, 252, 251, 0.6);
+  color: var(--graphite); font: 600 16px/1 var(--font); cursor: pointer; padding: 0;
+}
+.board-plus:hover { background: #fff; color: var(--ink); border-color: var(--ink); }
+.board-menu {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; white-space: nowrap;
+  transform: translate(0, 14px);
+  background: rgba(251, 252, 251, 0.92); border: 1px solid var(--rule); border-radius: 4px;
+  padding: 4px 6px; font-size: 12px; color: var(--graphite);
+  box-shadow: 0 2px 6px rgba(29, 36, 34, 0.08);
+}
+.board-menu strong { color: var(--ink); margin-right: 4px; }
+.board-menu button { font: inherit; padding: 3px 7px; border: 1px solid transparent; border-radius: 3px; background: transparent; cursor: pointer; color: var(--ink); }
+.board-menu button:hover { border-color: var(--rule); background: #fff; }
+.board-menu button.danger { color: var(--bad); }
+.board-gap { display: inline-flex; align-items: center; gap: 2px; padding: 0 6px; border-left: 1px solid var(--rule); border-right: 1px solid var(--rule); margin: 0 2px; }
+.board-gap button { min-width: 24px; padding: 2px 5px; }
+.board-gap button.on { border-color: var(--ink); font-weight: 700; background: #fff; }
+.board-gap input { width: 46px; font: inherit; padding: 2px 4px; border: 1px solid var(--rule); border-radius: 3px; }
+
+.board-menu-head, .board-menu-actions { display: flex; align-items: center; gap: 2px; }
+.board-menu-head .board-gap { border-right: 0; }

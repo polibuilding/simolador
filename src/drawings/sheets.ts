@@ -3,7 +3,7 @@
 import type { Catalog } from "../core/catalog";
 import type { InventoryConfig } from "../core/inventory";
 import { usage } from "../core/inventory";
-import type { Model } from "../core/model";
+import { boardsOf, type Model } from "../core/model";
 import type { SheetMeta } from "../core/serialization";
 import { A3, GRAY, PEN, type Prim, type Pt, type Sheet } from "./prims";
 import { bounds, itemsFor, projector, world, type Item, type ViewId } from "./views";
@@ -18,6 +18,8 @@ export interface SheetInput {
   date?: Date;
   /** foto isométrica renderizada para a capa; sem ela, a capa usa o desenho em linhas */
   isoImage?: { url: string; aspect: number } | null;
+  /** cotas (entre eixos, totais, alturas e cota dos níveis); padrão: ligadas */
+  dims?: boolean;
   /** logos do carimbo (Mola e equipe), lado a lado no canto inferior esquerdo; sem elas, o hexágono */
   logos?: { url: string; aspect: number }[];
 }
@@ -64,6 +66,18 @@ export function levelsOf(model: Model, cat: Catalog) {
     name: i === 0 ? "PAV. TÉRREO" : i === ys.length - 1 && ys.length > 1 ? "COBERTURA" : `${i}º PAVIMENTO`,
     planTitle: i === ys.length - 1 && ys.length > 1 ? ["PLANTA DE", "COBERTURA"] : ["PLANTA BAIXA", i === 0 ? "PAV. TÉRREO" : `${i}º PAVIMENTO`],
   }));
+}
+
+/** Contorno de cada chapa em planta (mm, h = x, v = −z). */
+function boardFrames(model: Model, cat: Catalog): Pt[][] {
+  const W = world(cat);
+  const PW = cat.settings.chapa_modulos_x * W.M;
+  const PD = cat.settings.chapa_modulos_y * W.M;
+  return boardsOf(model).map((b) => {
+    const x = b.x * W.M;
+    const z = b.z * W.M;
+    return [[x, -z], [x + PW, -z], [x + PW, -z - PD], [x, -z - PD]] as Pt[];
+  });
 }
 
 function axesOf(model: Model, cat: Catalog) {
@@ -312,8 +326,8 @@ function computeScale(input: SheetInput): number {
   if (typeof fixed === "number" && fixed > 0) return fixed;
   const { cat, model } = input;
   const W = world(cat);
-  const plateBox = { x0: 0, x1: cat.settings.chapa_modulos_x * W.M, y0: -cat.settings.chapa_modulos_y * W.M, y1: 0 };
-  const plan = bounds(itemsFor(cat, model, projector("plan")), [[plateBox.x0, plateBox.y0], [plateBox.x1, plateBox.y1]]);
+  void W;
+  const plan = bounds(itemsFor(cat, model, projector("plan")), boardFrames(model, cat).flat());
   const pc = planCells()[0];
   const ec = elevCells()[0];
   const elev = (["A", "B"] as ViewId[]).map((v) => withGround(bounds(itemsFor(cat, model, projector(v)))));
@@ -333,15 +347,15 @@ function inner(cell: { x: number; y: number; w: number; h: number }, pad: typeof
 function planDrawing(input: SheetInput, n: number, lv: ReturnType<typeof levelsOf>[number], isGround: boolean, cell: ReturnType<typeof planCells>[number]): Prim[] {
   const { cat, model } = input;
   const W = world(cat);
-  const PW = cat.settings.chapa_modulos_x * W.M;
-  const PD = cat.settings.chapa_modulos_y * W.M;
   const items = planItems(cat, model, lv.y, isGround);
-  const frame: Pt[] = [[0, 0], [PW, 0], [PW, -PD], [0, -PD]];
-  const b = bounds([], frame);
+  const frames = boardFrames(model, cat);
+  const b = bounds([], frames.flat());
   const P = place(b, inner(cell, PLAN_PAD), n);
   const out: Prim[] = [];
-  // contorno da chapa: grosso no térreo, fino nas outras plantas
-  out.push({ t: "poly", pts: frame.map((q) => P.to(q as [number, number])), closed: true, fill: null, stroke: isGround ? "#000" : GRAY.faint, pen: isGround ? PEN.ground : PEN.thin, layer: "MOLA-BASE" });
+  // contorno de cada chapa: grosso no térreo, fino nas outras plantas
+  for (const frame of frames) {
+    out.push({ t: "poly", pts: frame.map((q) => P.to(q)), closed: true, fill: null, stroke: isGround ? "#000" : GRAY.faint, pen: isGround ? PEN.ground : PEN.thin, layer: "MOLA-BASE" });
+  }
   // ligações de base apagadas nas plantas de cima
   if (!isGround) {
     for (const nd of Object.values(model.nodes)) {
@@ -366,14 +380,14 @@ function planDrawing(input: SheetInput, n: number, lv: ReturnType<typeof levelsO
   }
   out.push(...paint(items, P));
   // cotas entre eixos (em cima e à esquerda, junto das bolinhas) e totais (embaixo e à direita)
-  if (xs.length > 1) {
+  if (input.dims !== false && xs.length > 1) {
     const px = xs.map((a) => P.to([a.x, 0]));
     const vals = xs.slice(1).map((a, i) => a.x - xs[i].x);
     out.push(...dimChainH(px, P.box.y0 - 3.2, vals));
     // total só quando há mais de um vão (com um só, repetiria o número); texto acima da linha, longe do marcador A
     if (vals.length > 1) out.push(...dimChainH([px[0], px[px.length - 1]], P.box.y1 + 5.5, [xs[xs.length - 1].x - xs[0].x]));
   }
-  if (zs.length > 1) {
+  if (input.dims !== false && zs.length > 1) {
     const py = zs.map((a) => P.to([0, -a.z])[1]);
     const vals = zs.slice(1).map((a, i) => a.z - zs[i].z);
     out.push(...dimChainV(py, P.box.x0 - 3.2, vals));
@@ -406,10 +420,10 @@ function elevationDrawing(input: SheetInput, n: number, view: ViewId, cell: Retu
     const y = P.to([0, lv.y])[1];
     out.push(axisLine([x0 - 2, y], [x1, y]));
     out.push(txt([cell.x + 3, y + 0.8], lv.name, 2.3));
-    out.push(txt([cell.x + 3, y + 3.6], `+${mmText(lv.y)}`, 1.9, { layer: "MOLA-COTA" }));
+    if (input.dims !== false) out.push(txt([cell.x + 3, y + 3.6], `+${mmText(lv.y)}`, 1.9, { layer: "MOLA-COTA" }));
   }
   // cotas de altura: do topo da chapa a cada nível (à direita da estrutura)
-  {
+  if (input.dims !== false) {
     const hs = [0, ...levels.map((l) => l.y)].filter((v, i, a) => i === 0 || v > a[i - 1] + 0.01);
     const ys = hs.map((h) => P.to([0, h])[1]).reverse();
     const vals = hs.slice(1).map((h, i) => h - hs[i]).reverse();
@@ -425,7 +439,7 @@ function elevationDrawing(input: SheetInput, n: number, view: ViewId, cell: Retu
   }
   // cotas entre eixos (entre as bolinhas e a estrutura) e total (abaixo da chapa)
   const sorted = [...axes].sort((p, q) => P.to([p.h, 0])[0] - P.to([q.h, 0])[0]);
-  if (sorted.length > 1) {
+  if (input.dims !== false && sorted.length > 1) {
     const px = sorted.map((a) => P.to([a.h, 0]));
     const vals = sorted.slice(1).map((a, i) => Math.abs(a.h - sorted[i].h));
     out.push(...dimChainH(px, P.box.y0 - 7, vals));
@@ -450,8 +464,12 @@ function coverDrawing(input: SheetInput, n: number): Prim[] {
   // chapa
   const PW = cat.settings.chapa_modulos_x * W.M;
   const PD = cat.settings.chapa_modulos_y * W.M;
-  const plate = [[0, 0, 0], [PW, 0, 0], [PW, 0, PD], [0, 0, PD]].map((w) => pr.p(w as [number, number, number])).map(([h, v]) => [h, v] as Pt);
-  const b = bounds(items, plate);
+  const plates = boardsOf(model).map((bd) => {
+    const x = bd.x * W.M;
+    const z = bd.z * W.M;
+    return { x, z, pts: [[x, 0, z], [x + PW, 0, z], [x + PW, 0, z + PD], [x, 0, z + PD]].map((w) => pr.p(w as [number, number, number])).map(([h, v]) => [h, v] as Pt) };
+  });
+  const b = bounds(items, plates.flatMap((p) => p.pts));
   const cell = { x: AREA.x0 + 4, y: AREA.y0 + 26, w: 250, h: AREA.y1 - AREA.y0 - 34 };
   const img = input.isoImage;
   if (img) {
@@ -462,16 +480,18 @@ function coverDrawing(input: SheetInput, n: number): Prim[] {
   }
   const fit = Math.max((b.x1 - b.x0) / cell.w, (b.y1 - b.y0) / cell.h);
   const P = place(b, cell, fit);
-  if (!img) out.push({ t: "poly", pts: plate.map((q) => P.to(q as [number, number])), closed: true, fill: "#2b2b2b", stroke: "#000", pen: PEN.part, layer: "MOLA-BASE" });
-  for (let i = 0; i <= cat.settings.chapa_modulos_x && !img; i += 1) {
-    const a = pr.p([i * W.M, 0, 0]);
-    const c = pr.p([i * W.M, 0, PD]);
-    out.push({ t: "line", a: P.to([a[0], a[1]]), b: P.to([c[0], c[1]]), stroke: "#666", pen: PEN.thin, layer: "MOLA-BASE" });
-  }
-  for (let j = 0; j <= cat.settings.chapa_modulos_y && !img; j += 1) {
-    const a = pr.p([0, 0, j * W.M]);
-    const c = pr.p([PW, 0, j * W.M]);
-    out.push({ t: "line", a: P.to([a[0], a[1]]), b: P.to([c[0], c[1]]), stroke: "#666", pen: PEN.thin, layer: "MOLA-BASE" });
+  for (const pl of img ? [] : plates) {
+    out.push({ t: "poly", pts: pl.pts.map((q) => P.to(q)), closed: true, fill: "#2b2b2b", stroke: "#000", pen: PEN.part, layer: "MOLA-BASE" });
+    for (let i = 0; i <= cat.settings.chapa_modulos_x; i += 1) {
+      const a = pr.p([pl.x + i * W.M, 0, pl.z]);
+      const c = pr.p([pl.x + i * W.M, 0, pl.z + PD]);
+      out.push({ t: "line", a: P.to([a[0], a[1]]), b: P.to([c[0], c[1]]), stroke: "#666", pen: PEN.thin, layer: "MOLA-BASE" });
+    }
+    for (let j = 0; j <= cat.settings.chapa_modulos_y; j += 1) {
+      const a = pr.p([pl.x, 0, pl.z + j * W.M]);
+      const c = pr.p([pl.x + PW, 0, pl.z + j * W.M]);
+      out.push({ t: "line", a: P.to([a[0], a[1]]), b: P.to([c[0], c[1]]), stroke: "#666", pen: PEN.thin, layer: "MOLA-BASE" });
+    }
   }
   if (!img) out.push(...paint(items, P));
   // título

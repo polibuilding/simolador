@@ -3,6 +3,8 @@ import { catalog } from "../core/catalog";
 import { buildSheets } from "../drawings/sheets";
 import { sheetToSvg, sheetsToDxf, sheetsToPdf } from "../drawings/export";
 import { useApp } from "./store";
+import { boardsOf } from "../core/model";
+import { filterByBoards } from "../core/boards";
 import { renderIso, type IsoImage } from "../render/snapshot";
 import { loadLogos, type Logo } from "./logos";
 
@@ -19,7 +21,17 @@ const fileBase = (name: string) => name.replace(/[^\p{L}\p{N} _-]/gu, "").trim()
 
 /** Pranchas: capa, plantas por pavimento e vistas A–D, no padrão do Desafio 2022. */
 export function SheetsView() {
-  const model = useApp((s) => s.history.present);
+  const fullModel = useApp((s) => s.history.present);
+  const sheetBoards = useApp((s) => s.sheetBoards);
+  const allBoards = boardsOf(fullModel);
+  // chapas escolhidas (null = todas): as pranchas mostram só elas, na posição em que estão
+  const model = useMemo(() => (sheetBoards ? filterByBoards(catalog, fullModel, sheetBoards) : fullModel), [fullModel, sheetBoards]);
+  const toggleBoard = (id: string) => {
+    const cur = sheetBoards ?? allBoards.map((b) => b.id);
+    const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
+    if (!next.length) return;
+    useApp.getState().setSheetBoards(next.length === allBoards.length ? null : allBoards.map((b) => b.id).filter((x) => next.includes(x)));
+  };
   const inventory = useApp((s) => s.inventory);
   const name = useApp((s) => s.name);
   const meta = useApp((s) => s.sheet);
@@ -29,6 +41,7 @@ export function SheetsView() {
 
   // capa: foto 3D renderizada (padrão) ou o desenho em linhas
   const [cover, setCover] = useState<"foto" | "desenho">("foto");
+  const [dims, setDims] = useState(true);
   const [iso, setIso] = useState<IsoImage | null>(null);
   useEffect(() => {
     if (cover !== "foto") return;
@@ -55,8 +68,8 @@ export function SheetsView() {
     };
   }, []);
   const { sheets, scale: used } = useMemo(
-    () => buildSheets({ cat: catalog, model, inventory, name, meta, scale, isoImage, logos }),
-    [model, inventory, name, meta, scale, isoImage, logos],
+    () => buildSheets({ cat: catalog, model, inventory, name, meta, scale, isoImage, logos, dims }),
+    [model, inventory, name, meta, scale, isoImage, logos, dims],
   );
   const svgs = useMemo(() => sheets.map(sheetToSvg), [sheets]);
 
@@ -116,6 +129,21 @@ export function SheetsView() {
             <option value="desenho">Isométrica em linhas</option>
           </select>
         </label>
+        {allBoards.length > 1 && (
+          <div className="sheet-boards" role="group" aria-label="Chapas nas pranchas">
+            <span>Chapas</span>
+            <button className={!sheetBoards ? "on" : ""} onClick={() => useApp.getState().setSheetBoards(null)}>Todas</button>
+            {allBoards.map((b) => (
+              <button key={b.id} className={!sheetBoards || sheetBoards.includes(b.id) ? "on" : ""} onClick={() => toggleBoard(b.id)}>
+                {b.id.slice(1)}
+              </button>
+            ))}
+          </div>
+        )}
+        <label className="check">
+          <input type="checkbox" checked={dims} onChange={(e) => setDims(e.target.checked)} />
+          Cotas
+        </label>
         {moved > 0 && (
           <button className="sheets-reset" onClick={() => setSheet({ ...meta, labels: {} })} title="Volta as etiquetas arrastadas para a posição automática">
             Etiquetas no automático
@@ -140,7 +168,7 @@ export function SheetsView() {
             disabled={empty}
             onClick={() => {
               // DXF não leva imagem: a capa vai com a isométrica em linhas
-              const vector = buildSheets({ cat: catalog, model, inventory, name, meta, scale }).sheets;
+              const vector = buildSheets({ cat: catalog, model, inventory, name, meta, scale, dims }).sheets;
               save(new Blob([sheetsToDxf(vector)], { type: "application/dxf" }), `${fileBase(name)}-pranchas.dxf`);
             }}
             title="Todas as folhas lado a lado, em mm de papel, com camadas MOLA-*"

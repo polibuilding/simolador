@@ -2,8 +2,8 @@
 import { useThree } from "@react-three/fiber";
 import { useEffect } from "react";
 import * as THREE from "three";
-import type { Model } from "../core/model";
-import { PLATE_D, PLATE_W, toWorld } from "./units";
+import { boardsOf, type Model } from "../core/model";
+import { M, PLATE_D, PLATE_W, toWorld } from "./units";
 
 let ctx: { gl: THREE.WebGLRenderer; scene: THREE.Scene } | null = null;
 
@@ -35,9 +35,12 @@ export function renderIso(model: Model, widthPx = 2600): IsoImage | null {
   const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), ISO_DIR).normalize();
   const up = new THREE.Vector3().crossVectors(ISO_DIR, right);
   // limites na tela: a chapa inteira e as esferas (com folga do raio)
-  const pts: THREE.Vector3[] = [
-    new THREE.Vector3(0, 0, 0), new THREE.Vector3(PLATE_W, 0, 0), new THREE.Vector3(0, 0, PLATE_D), new THREE.Vector3(PLATE_W, 0, PLATE_D),
-  ];
+  const pts: THREE.Vector3[] = [];
+  for (const b of boardsOf(model)) {
+    const x = b.x * M;
+    const z = b.z * M;
+    pts.push(new THREE.Vector3(x, 0, z), new THREE.Vector3(x + PLATE_W, 0, z), new THREE.Vector3(x, 0, z + PLATE_D), new THREE.Vector3(x + PLATE_W, 0, z + PLATE_D));
+  }
   for (const n of Object.values(model.nodes)) pts.push(toWorld(n.pos));
   let h0 = Infinity, h1 = -Infinity, v0 = Infinity, v1 = -Infinity;
   for (const p of pts) {
@@ -65,12 +68,14 @@ export function renderIso(model: Model, widthPx = 2600): IsoImage | null {
   const size = gl.getSize(new THREE.Vector2());
   const ratio = gl.getPixelRatio();
   const bg = scene.background;
-  const plate = scene.getObjectByName("chapa") as THREE.Mesh | undefined;
-  const pm = plate?.material as THREE.MeshStandardMaterial | undefined;
-  const pmState = pm && { transparent: pm.transparent, opacity: pm.opacity, depthWrite: pm.depthWrite };
+  const mats: THREE.MeshStandardMaterial[] = [];
+  scene.traverse((o) => {
+    if (o.name.startsWith("chapa") && (o as THREE.Mesh).material) mats.push((o as THREE.Mesh).material as THREE.MeshStandardMaterial);
+  });
+  const saved = mats.map((m) => ({ transparent: m.transparent, opacity: m.opacity, depthWrite: m.depthWrite }));
   try {
     scene.background = new THREE.Color("#ffffff");
-    if (pm) (pm.transparent = false, pm.opacity = 1, pm.depthWrite = true, (pm.needsUpdate = true));
+    for (const m of mats) (m.transparent = false, m.opacity = 1, m.depthWrite = true, (m.needsUpdate = true));
     gl.setPixelRatio(1);
     gl.setSize(W, H, false);
     gl.render(scene, cam);
@@ -78,7 +83,7 @@ export function renderIso(model: Model, widthPx = 2600): IsoImage | null {
     return { url, aspect: W / H };
   } finally {
     scene.background = bg;
-    if (pm && pmState) Object.assign(pm, pmState, { needsUpdate: true });
+    mats.forEach((m, i) => Object.assign(m, saved[i], { needsUpdate: true }));
     gl.setPixelRatio(ratio);
     gl.setSize(size.x, size.y, false);
   }

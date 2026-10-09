@@ -85,7 +85,7 @@ const without = <T,>(rec: Record<string, T>, id: string) => Object.fromEntries(O
 export function pasteClip(cat: Catalog, inv: InventoryConfig, model: Model, clip: Clip, target: Vec3): PasteResult {
   const m: Model = {
     nodes: { ...model.nodes }, members: { ...model.members }, plates: { ...model.plates }, connectors: { ...model.connectors },
-    nextId: model.nextId,
+    nextId: model.nextId, boards: model.boards,
   };
   const id = (prefix: string) => `${prefix}${m.nextId++}`;
   const map = new Map<string, string>();

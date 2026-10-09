@@ -44,13 +44,26 @@ export interface Connector {
   side?: Vec3;
 }
 
+/** Chapa de base (18 × 12 módulos), com o canto (x, z) em módulos. `attach`: chapa ao lado da qual foi criada. */
+export interface Board {
+  id: string;
+  x: number;
+  z: number;
+  attach?: { to: string; side: "+x" | "-x" | "+z" | "-z" };
+}
+
 export interface Model {
   nodes: Record<string, MolaNode>;
   members: Record<string, Member>;
   plates: Record<string, Plate>;
   connectors: Record<string, Connector>;
   nextId: number;
+  /** chapas de base; sem a lista, uma chapa só no canto (0, 0) */
+  boards?: Board[];
 }
+
+export const DEFAULT_BOARD: Board = { id: "b1", x: 0, z: 0 };
+export const boardsOf = (model: Model): Board[] => (model.boards?.length ? model.boards : [DEFAULT_BOARD]);
 
 export const emptyModel = (): Model => ({ nodes: {}, members: {}, plates: {}, connectors: {}, nextId: 1 });
 
