@@ -14,6 +14,9 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## Próxima versão (já publicada, sem número próprio)
+- **Tab nos pontos amarelos e laranja**: com uma barra na mão e a esfera de partida escolhida, Tab percorre os pontos dela, do mais perto do cursor ao mais longe (Shift+Tab volta), sem precisar mirar; o rodapé diz "ponto 3 de 31". Mexer o cursor ou colocar a peça volta ao normal.
+
 ## 1.8 — Chapas giradas, cruzamentos e atalhos · 09/10/2026
 - **Regras novas**: barras não se cruzam (nem barra com diagonal; duas diagonais em X podem); a esfera nova não cai em cima de uma barra ("mola não cruza bola"); RC90 não se cruzam e nenhuma peça passa por dentro de uma RC90. Valem ao colocar, mover, colar e girar chapas; os exemplos continuam válidos.
 - **Amarelo × laranja**: nos pontos de triângulo das barras, amarelo = duas barras chegam no ponto; laranja = três ou mais (pirâmides, treliças).

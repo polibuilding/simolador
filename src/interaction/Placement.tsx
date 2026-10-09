@@ -110,6 +110,8 @@ function newPart(base: Model, full: Model): { part: Model; ids: Set<string> } {
 /** distância na tela (px) para "pegar" um ponto amarelo de barra e para adotar a esfera de partida */
 const TRI_PX = 14;
 const TRI_ANCHOR_PX = 22;
+/** depois do Tab, o cursor pode andar até aqui sem perder o ponto escolhido */
+const TAB_PX = 40;
 
 // colar: recalcula só quando muda a posição na grade, o giro, o espelho ou a altura
 let pasteCache: { base: Model; clip: Clip; key: string; r: PasteResult } | null = null;
@@ -321,6 +323,7 @@ export function Placement() {
     // ---- pontos amarelos de barras: vértices de triângulos com esferas vizinhas (botão Triângulo) ----
     // A esfera sob o cursor vira a partida e fica até outra esfera ser apontada; perto de um ponto amarelo,
     // o fantasma mostra o triângulo inteiro (R: só a barra).
+    let triTab: { x: number; y: number; anchor: string | null } | null = null;
     const triangleStep = (ev: PointerEvent, rect: DOMRect, model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"]): boolean => {
       const st = useApp.getState();
       const dpx = (p: Vec3) => {
@@ -328,11 +331,34 @@ export function Placement() {
         return q.z > 1 ? Infinity : Math.hypot(q.x - ev.clientX, q.y - ev.clientY);
       };
       const anchor = st.triAnchor && model.nodes[st.triAnchor] ? st.triAnchor : null;
+      // Tab: percorre os pontos da esfera de partida, do mais perto do cursor (onde o Tab foi apertado) ao mais longe;
+      // mexer o cursor mais de TAB_PX volta ao normal
+      if (st.snapCycle && !triTab) triTab = { x: ev.clientX, y: ev.clientY, anchor };
+      if (triTab && (!st.snapCycle || triTab.anchor !== anchor || Math.hypot(ev.clientX - triTab.x, ev.clientY - triTab.y) > TAB_PX)) {
+        triTab = null;
+        if (st.snapCycle) useApp.setState({ snapCycle: 0 });
+      }
       if (anchor) {
+        const guides = barGuidesFor(model, code, inv, anchor);
         let best: { g: BarGuide; d: number } | null = null;
-        for (const g of barGuidesFor(model, code, inv, anchor)) {
-          const d = dpx(g.pos);
-          if (d < TRI_PX && (!best || d < best.d)) best = { g, d };
+        let tabInfo = "";
+        if (triTab && guides.length) {
+          const from = triTab;
+          const at = (p: Vec3) => {
+            const q = toScreen(toWorld(p), rect);
+            return q.z > 1 ? Infinity : Math.hypot(q.x - from.x, q.y - from.y);
+          };
+          const order = [...guides].sort((a, b) => at(a.pos) - at(b.pos));
+          const n = order.length;
+          const i = ((((useApp.getState().snapCycle - 1) % n) + n) % n);
+          best = { g: order[i], d: 0 };
+          tabInfo = ` (ponto ${i + 1} de ${n}: Tab próximo, Shift+Tab volta)`;
+        } else {
+          for (const g of guides) {
+            const d = dpx(g.pos);
+            if (d < TRI_PX && (!best || d < best.d)) best = { g, d };
+          }
+          if (best) tabInfo = ` Tab percorre os ${guides.length} pontos.`;
         }
         if (best) {
           const g = best.g;
@@ -350,10 +376,10 @@ export function Placement() {
             const { part, ids } = newPart(model, g.model);
             st.setGhost(
               { kind: "group", model: g.model, ids, part, keep: true, check: { ok: true, errors: [], warnings: [] } },
-              `${g.closes.length > 1 ? "Laranja" : "Amarelo"}: ${g.text}. Clique: a ${code} e ${nTxt}. R: só a ${code}.`,
+              `${g.closes.length > 1 ? "Laranja" : "Amarelo"}: ${g.text}. Clique: a ${code} e ${nTxt}. R: só a ${code}.${tabInfo}`,
             );
           } else {
-            st.setGhost({ kind: "cand", cand: g.bar }, `${g.closes.length > 1 ? "Laranja" : "Amarelo"}: só a ${code} até ${fmt(g.pos)} (${g.text}). R: com ${nTxt.replace(/ que fecham?/, "")}.`);
+            st.setGhost({ kind: "cand", cand: g.bar }, `${g.closes.length > 1 ? "Laranja" : "Amarelo"}: só a ${code} até ${fmt(g.pos)} (${g.text}). R: com ${nTxt.replace(/ que fecham?/, "")}.${tabInfo}`);
           }
           return true;
         }
@@ -681,6 +707,12 @@ export function Placement() {
     const unsub = useApp.subscribe((s, p) => {
       if (s.tool !== p.tool && s.triAnchor && !(s.tool.kind === "place" && p.tool.kind === "place" && s.tool.code === p.tool.code)) {
         useApp.setState({ triAnchor: null });
+      }
+      // depois de colocar a peça, o Tab recomeça do ponto mais perto
+      if ((s.history !== p.history || s.tool !== p.tool) && s.snapCycle && s.tool.kind === "place" && catalog.pieces[s.tool.code]?.type === "bar") {
+        triTab = null;
+        useApp.setState({ snapCycle: 0 });
+        return;
       }
       if (s.history !== p.history || s.tool !== p.tool || s.barMode !== p.barMode) {
         freeAnchor = null;
