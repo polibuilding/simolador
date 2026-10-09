@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { catalog } from "../core/catalog";
 import { available, usage } from "../core/inventory";
 import { boardsOf, componentOf, len, sub, type Vec3 } from "../core/model";
-import { boardGap, boardSelection, boardSize } from "../core/boards";
+import { boardOffset, boardSelection, boardSize } from "../core/boards";
 import { useApp, useModel } from "./store";
 
 const M = catalog.settings.modulo_mm;
@@ -238,7 +238,7 @@ function BoardSelected() {
   const b = boardsOf(model).find((x) => x.id === id);
   if (!b) return null;
   const pieces = boardSelection(catalog, model, id).length;
-  const gap = boardGap(catalog, model, b);
+  const off = boardOffset(catalog, model, b);
   const { w, d } = boardSize(catalog);
   return (
     <>
@@ -246,10 +246,12 @@ function BoardSelected() {
       <dl>
         <Row k="Canto (módulos)" v={`(${fmt(b.x, Number.isInteger(b.x) ? 0 : 2)}; ${fmt(b.z, Number.isInteger(b.z) ? 0 : 2)})`} />
         <Row k="Tamanho" v={`${w} × ${d} módulos = ${fmt(w * M, 0)} × ${fmt(d * M, 0)} mm`} />
-        {gap !== null && <Row k="Distância da vizinha" v={`${fmt(gap, Number.isInteger(gap) ? 0 : 2)} módulos (${fmt(gap * M)} mm) da chapa ${b.attach!.to.slice(1)}`} />}
+        {off && <Row k="Distância da vizinha" v={`${fmt(off.gap, Number.isInteger(off.gap) ? 0 : 2)} módulos (${fmt(off.gap * M)} mm) da chapa ${b.attach!.to.slice(1)}`} />}
+        {off && off.shift !== 0 && <Row k="Deslocamento" v={`${fmt(off.shift, Number.isInteger(off.shift) ? 0 : 2)} módulos (${fmt(off.shift * M)} mm) ao longo do lado`} />}
+        <Row k="Giro" v={b.rot ? `${fmt(b.rot, Number.isInteger(b.rot) ? 0 : 2)}° (anti-horário visto de cima)` : "0°"} />
         <Row k="Peças em cima" v={pieces} />
       </dl>
-      <p className="multi-note">As opções da chapa ficam na borda dela, na cena. <strong>Delete</strong> apaga a chapa; <strong>Esc</strong> solta.</p>
+      <p className="multi-note">Distância, deslocamento, giro e as outras opções ficam no menu junto da chapa, na cena; os + nos lados acrescentam chapas. <strong>Delete</strong> apaga a chapa; <strong>Esc</strong> solta.</p>
       <div className="actions">
         <button onClick={() => useApp.getState().selectBoard(id)}>Selecionar peças</button>
         <button className="danger" onClick={() => useApp.getState().removeSelectedBoard()}>Apagar chapa</button>

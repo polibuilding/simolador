@@ -14,6 +14,13 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.8 — Chapas giradas, cruzamentos e atalhos · 09/10/2026
+- **Regras novas**: barras não se cruzam (nem barra com diagonal; duas diagonais em X podem); a esfera nova não cai em cima de uma barra ("mola não cruza bola"); RC90 não se cruzam e nenhuma peça passa por dentro de uma RC90. Valem ao colocar, mover, colar e girar chapas; os exemplos continuam válidos.
+- **Amarelo × laranja**: nos pontos de triângulo das barras, amarelo = duas barras chegam no ponto; laranja = três ou mais (pirâmides, treliças).
+- **Inércia / Vista firme** embaixo de Enquadrar (tecla B): desliga o "freio" da vista; a escolha fica guardada no navegador.
+- **Atalhos em volta do W A S D**: W A S D giram a vista (Shift: arrastam), Q/E trocam a peça pela vizinha do grupo, 1/2/3 escolhem a direção das barras, G/V/T ligam a grade e os pontos, B a inércia; botão **Atalhos** (ou ? / H) com a lista completa.
+- **Chapas**: o menu e os + só aparecem com a chapa selecionada (clique na chapa vazia). Distância livre com decimais, **deslocamento ao longo do lado** e **giro** (15° em 15° ou livre); a estrutura de cima vai junto. Numa chapa girada, a grade, os pontos azuis e os eixos das barras giram junto. Girar uma chapa encostada a afasta o mínimo para não bater. Exportar/importar .mola respeita o giro.
+
 ## 1.7 — Triângulos de barras · 09/10/2026
 - **Pontos amarelos para barras** (botão Triângulo): com uma B4, B6 ou B12 na mão, a esfera sob o cursor mostra pontos amarelos que formam **triângulos** (equiláteros, isósceles ou quaisquer, com B4, B6 ou B12) com as esferas vizinhas, e **pirâmides** quando o ponto está a um vão de barra de duas ou mais vizinhas.
 - **Um clique fecha o triângulo**: coloca a barra e as que fecham nela (uma só ação de desfazer); **R** alterna para só a barra. Valem nos modos Eixos, 15° e Livre.

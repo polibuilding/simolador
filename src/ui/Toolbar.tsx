@@ -145,24 +145,24 @@ export function Toolbar() {
 
       <Group label="Encaixe" className="snap-chips">
         <button aria-pressed={snap} className={snap ? "on" : ""} onClick={() => setSnap(!snap)}
-          title="Verde: pontos onde a peça escolhida encaixa e grade da chapa para a GC. Desligado = GC livre.">
+          title="Verde: pontos onde a peça escolhida encaixa e grade da chapa para a GC. Desligado = GC livre (G).">
           <i className="dot green" /> Grade
         </button>
         <button aria-pressed={guides.blue} className={guides.blue ? "on" : ""} onClick={() => setGuides({ ...guides, blue: !guides.blue })}
-          title="Azul: GC a um vão de barra (4, 6 ou 12 módulos) de outra GC, em X ou Z">
+          title="Azul: GC a um vão de barra (4, 6 ou 12 módulos) de outra GC, em X ou Z (V)">
           <i className="dot blue" /> Vão
         </button>
         <button aria-pressed={guides.yellow} className={guides.yellow ? "on" : ""} onClick={() => setGuides({ ...guides, yellow: !guides.yellow })}
-          title="Amarelo: vértices de triângulos. GC: com duas GC. Barras: passe o cursor numa esfera; os pontos amarelos fecham triângulos (equiláteros, isósceles, pirâmides) com as esferas vizinhas, com B4, B6 ou B12">
+          title="Vértices de triângulos (T). GC: amarelo = triângulo com duas GC. Barras: passe o cursor numa esfera; amarelo = triângulo (duas barras chegam no ponto), laranja = pirâmide ou treliça (três ou mais)">
           <i className="dot yellow" /> Triângulo
         </button>
       </Group>
 
       <Group label="Direção das barras" className="segmented">
         {([
-          ["eixos", "Eixos", "Barras só nos eixos, como num pórtico (Shift: inclina uma barra; I alterna)"],
-          ["passo", `${step}°`, `Inclinadas em passos de ${step}° nos planos X, Y e Z (I alterna)`],
-          ["livre", "Livre", "Qualquer direção 3D: a ponta segue o cursor e encaixa em esferas, triângulos e alturas existentes (treliças 3D, telhados) (I alterna)"],
+          ["eixos", "Eixos", "Barras só nos eixos, como num pórtico (Shift: inclina uma barra) (1; I alterna)"],
+          ["passo", `${step}°`, `Inclinadas em passos de ${step}° nos planos X, Y e Z (2; I alterna)`],
+          ["livre", "Livre", "Qualquer direção 3D: a ponta segue o cursor e encaixa em esferas, triângulos e alturas existentes (treliças 3D, telhados) (3; I alterna)"],
         ] as const).map(([v, label, title]) => (
           <button key={v} role="radio" aria-checked={barMode === v} className={barMode === v ? "on" : ""} onClick={() => setBarMode(v)} title={title}>
             {label}

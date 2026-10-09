@@ -94,7 +94,7 @@ export function fromFile(raw: unknown): { model: Model; inventory: InventoryConf
   const boards: Board[] = [];
   for (const b of f.boards ?? []) {
     if (typeof b?.id !== "string" || typeof b.x !== "number" || typeof b.z !== "number") throw new MolaFileError("Chapa inválida no arquivo.");
-    boards.push({ id: b.id, x: b.x, z: b.z, ...(b.attach ? { attach: b.attach } : {}) });
+    boards.push({ id: b.id, x: b.x, z: b.z, ...(typeof b.rot === "number" && b.rot ? { rot: b.rot } : {}), ...(b.attach ? { attach: b.attach } : {}) });
   }
   return {
     model: { nodes, members, plates, connectors, nextId: maxId + 1, ...(boards.length ? { boards } : {}) },

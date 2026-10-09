@@ -47,8 +47,11 @@ export interface Connector {
 /** Chapa de base (18 × 12 módulos), com o canto (x, z) em módulos. `attach`: chapa ao lado da qual foi criada. */
 export interface Board {
   id: string;
+  /** canto da chapa (módulos); com giro, é o canto que era (0, 0) */
   x: number;
   z: number;
+  /** giro em torno do eixo vertical, em graus (positivo = anti-horário visto de cima); a grade e os eixos da chapa giram junto */
+  rot?: number;
   attach?: { to: string; side: "+x" | "-x" | "+z" | "-z" };
 }
 
@@ -114,8 +117,10 @@ export function canonicalDir(d: Vec3): Vec3 {
  * Eixo da estrutura: os 4 eixos perpendiculares (como antes). Eixo inclinado num plano da estrutura:
  * a normal desse plano (±) e a perpendicular dentro do plano (±). Ordem: o mais "para cima" primeiro.
  */
-export function sidesAround(ax: Vec3): Vec3[] {
+export function sidesAround(ax: Vec3, frameRad = 0): Vec3[] {
   const a = norm(ax);
+  // pilar numa chapa girada: os lados seguem os eixos da chapa
+  if (frameRad && Math.abs(Math.abs(a[1]) - 1) < DIR_TOL) return [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].map((d) => rotDir(d as Vec3, frameRad));
   if (a.filter((x) => Math.abs(x) > DIR_TOL).length === 1) return AXES.filter((s) => Math.abs(dot(s, a)) < DIR_TOL);
   const zero = a.findIndex((x) => Math.abs(x) < DIR_TOL);
   const p: Vec3 = zero >= 0 ? (AXES.find((s) => Math.abs(s[zero]) === 1 && s[zero] > 0) as Vec3) : norm(Math.abs(a[1]) < 0.99 ? cross(a, UP) : cross(a, [1, 0, 0]));
@@ -256,6 +261,38 @@ export function rotY(v: Vec3, quarterTurns: number): Vec3 {
   let [x, y, z] = v;
   for (let i = 0; i < ((quarterTurns % 4) + 4) % 4; i++) [x, z] = [z, -x];
   return [x + 0, y, z + 0];
+}
+
+/** Gira o vetor em torno do eixo vertical (radianos; mesmo sentido do three.js: anti-horário visto de cima). */
+export function rotYRad(v: Vec3, rad: number): Vec3 {
+  if (!rad) return v;
+  const c = Math.cos(rad);
+  const s = Math.sin(rad);
+  return [v[0] * c + v[2] * s + 0, v[1], -v[0] * s + v[2] * c + 0];
+}
+
+/** Direção girada e limpa (zeros de verdade, para não virar "inclinada" por 1e-17). */
+export const rotDir = (d: Vec3, rad: number): Vec3 =>
+  rad ? (rotYRad(d, rad).map((x) => (Math.abs(x) < 1e-9 ? 0 : Math.round(x * 1e9) / 1e9)) as Vec3) : d;
+
+/** Gira um conjunto de nós (e as ligações deles) por um ângulo qualquer em torno do eixo vertical que passa por `pivot`. */
+export function rotateNodes(model: Model, ids: Set<string>, pivot: Vec3, rad: number): Model {
+  if (!rad) return model;
+  const nodes = { ...model.nodes };
+  for (const id of ids) {
+    const n = nodes[id];
+    nodes[id] = { ...n, pos: round4(add(pivot, rotYRad(sub(n.pos, pivot), rad))) };
+  }
+  const connectors = { ...model.connectors };
+  for (const c of Object.values(connectors)) {
+    if (!ids.has(c.node)) continue;
+    connectors[c.id] = {
+      ...c,
+      dirs: c.dirs.map((d) => (c.code === "RC90" ? rotDir(d, rad) : canonicalDir(rotDir(d, rad)))),
+      ...(c.side ? { side: rotDir(c.side, rad) } : {}),
+    };
+  }
+  return { ...model, nodes, connectors };
 }
 
 /** Move (e gira) um conjunto de nós rigidamente: gira `turns`×90° em torno de `pivot` e depois desloca `delta`. */

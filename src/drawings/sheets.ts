@@ -4,6 +4,7 @@ import type { Catalog } from "../core/catalog";
 import type { InventoryConfig } from "../core/inventory";
 import { usage } from "../core/inventory";
 import { boardsOf, type Model } from "../core/model";
+import { boardCorners, fromBoardLocal } from "../core/boards";
 import type { SheetMeta } from "../core/serialization";
 import { GRAY, PAPER, PEN, movePrim, type PaperName, type Prim, type Pt, type Sheet } from "./prims";
 import { bounds, itemsFor, projector, world, type Item, type ViewId } from "./views";
@@ -85,11 +86,9 @@ function boardFrames(model: Model, cat: Catalog): Pt[][] {
   const W = world(cat);
   const PW = cat.settings.chapa_modulos_x * W.M;
   const PD = cat.settings.chapa_modulos_y * W.M;
-  return boardsOf(model).map((b) => {
-    const x = b.x * W.M;
-    const z = b.z * W.M;
-    return [[x, -z], [x + PW, -z], [x + PW, -z - PD], [x, -z - PD]] as Pt[];
-  });
+  void PW;
+  void PD;
+  return boardsOf(model).map((b) => boardCorners(cat, b).map(([x, z]) => [x * W.M, -z * W.M] as Pt));
 }
 
 function axesOf(model: Model, cat: Catalog) {
@@ -489,10 +488,17 @@ function coverDrawing(input: SheetInput, n: number): Prim[] {
   // chapa
   const PW = cat.settings.chapa_modulos_x * W.M;
   const PD = cat.settings.chapa_modulos_y * W.M;
+  void PW;
+  void PD;
   const plates = boardsOf(model).map((bd) => {
     const x = bd.x * W.M;
     const z = bd.z * W.M;
-    return { x, z, pts: [[x, 0, z], [x + PW, 0, z], [x + PW, 0, z + PD], [x, 0, z + PD]].map((w) => pr.p(w as [number, number, number])).map(([h, v]) => [h, v] as Pt) };
+    // grade da chapa nos eixos dela (chapa girada: a grade gira junto)
+    const loc = (i: number, j: number) => {
+      const [wx, wz] = fromBoardLocal(bd, i, j);
+      return pr.p([wx * W.M, 0, wz * W.M]);
+    };
+    return { x, z, loc, pts: boardCorners(cat, bd).map(([cx, cz]) => pr.p([cx * W.M, 0, cz * W.M])).map(([h, v]) => [h, v] as Pt) };
   });
   const b = bounds(items, plates.flatMap((p) => p.pts));
   const fs = PAPER_NAME === "A4" ? 0.8 : 1; // letras um pouco menores na A4
@@ -510,14 +516,16 @@ function coverDrawing(input: SheetInput, n: number): Prim[] {
   const P = place(b, cell, fit);
   for (const pl of img ? [] : plates) {
     iso.push({ t: "poly", pts: pl.pts.map((q) => P.to(q)), closed: true, fill: "#2b2b2b", stroke: "#000", pen: PEN.part, layer: "MOLA-BASE" });
-    for (let i = 0; i <= cat.settings.chapa_modulos_x; i += 1) {
-      const a = pr.p([pl.x + i * W.M, 0, pl.z]);
-      const c = pr.p([pl.x + i * W.M, 0, pl.z + PD]);
+    const NX = cat.settings.chapa_modulos_x;
+    const NZ = cat.settings.chapa_modulos_y;
+    for (let i = 0; i <= NX; i += 1) {
+      const a = pl.loc(i, 0);
+      const c = pl.loc(i, NZ);
       iso.push({ t: "line", a: P.to([a[0], a[1]]), b: P.to([c[0], c[1]]), stroke: "#666", pen: PEN.thin, layer: "MOLA-BASE" });
     }
-    for (let j = 0; j <= cat.settings.chapa_modulos_y; j += 1) {
-      const a = pr.p([pl.x, 0, pl.z + j * W.M]);
-      const c = pr.p([pl.x + PW, 0, pl.z + j * W.M]);
+    for (let j = 0; j <= NZ; j += 1) {
+      const a = pl.loc(0, j);
+      const c = pl.loc(NX, j);
       iso.push({ t: "line", a: P.to([a[0], a[1]]), b: P.to([c[0], c[1]]), stroke: "#666", pen: PEN.thin, layer: "MOLA-BASE" });
     }
   }

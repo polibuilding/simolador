@@ -4,12 +4,12 @@ import { catalog } from "../core/catalog";
 import { codeOf, moveGroup, nodeMoveNearest, removeMany, removeSelection, rotateSelection, selAfter, type Sel } from "../core/edit";
 import { createHistory, push, redo, undo, type History } from "../core/history";
 import { defaultInventory, type InventoryConfig } from "../core/inventory";
-import { boardsOf, emptyModel, membersAt, type Model, type Vec3 } from "../core/model";
+import { boardsOf, emptyModel, membersAt, rotateNodes, type Model, type Vec3 } from "../core/model";
 import { overlappingNodes, type Check } from "../core/rules";
 import { fromFile, toFile, type SheetMeta } from "../core/serialization";
 import { applyCandidate, type Candidate } from "../core/snapping";
 import { cutSelection, makeClip, pasteClip, repeatClip, type Clip } from "../core/clipboard";
-import { addBoard, boardAsModel, boardSelection, filterByBoards, removeBoard, setBoardGap, type Side } from "../core/boards";
+import { addBoard, boardAsModel, boardRad, boardSelection, filterByBoards, removeBoard, setBoardGap, setBoardPose, type Side } from "../core/boards";
 
 export type Tool =
   | { kind: "select" }
@@ -40,6 +40,14 @@ interface State {
   guides: { blue: boolean; yellow: boolean };
   /** esfera de onde saem os pontos amarelos de barras (triângulos) */
   triAnchor: string | null;
+  /** inércia da vista: a câmera desliza um pouco depois de soltar o mouse */
+  inertia: boolean;
+  setInertia: (on: boolean) => void;
+  /** painel de atalhos do teclado */
+  helpOpen: boolean;
+  setHelpOpen: (on: boolean) => void;
+  /** Q/E: peça anterior/seguinte do mesmo grupo da paleta */
+  cyclePiece: (dir: 1 | -1, groups: string[][]) => void;
   /** Tab: qual dos pontos sobrepostos perto do cursor vale */
   snapCycle: number;
   /** barras inclinadas ligadas (botão na barra de ferramentas ou tecla I) */
@@ -99,6 +107,8 @@ interface State {
   addBoardAt: (fromId: string, side: Side) => void;
   removeBoardId: (id: string) => string | null;
   setBoardGapOf: (id: string, gap: number) => string | null;
+  /** distância, deslocamento ao longo do lado e giro (graus) da chapa; a estrutura de cima vai junto */
+  setBoardPoseOf: (id: string, pose: { gap?: number; shift?: number; rot?: number }) => string | null;
   selectBoard: (id: string) => void;
   /** a estrutura da chapa como arquivo .mola (texto) */
   exportBoard: (id: string) => string;
@@ -173,6 +183,23 @@ export function workingModel(s: Pick<State, "history" | "tool">): Model {
 
 export type BarMode = "eixos" | "passo" | "livre";
 
+/** Preferência do usuário guardada no navegador (pode faltar: janela anônima, bloqueio). */
+function readPref(key: string, fallback: boolean): boolean {
+  try {
+    const v = localStorage.getItem(key);
+    return v === null ? fallback : v === "1";
+  } catch {
+    return fallback;
+  }
+}
+function writePref(key: string, v: boolean) {
+  try {
+    localStorage.setItem(key, v ? "1" : "0");
+  } catch {
+    /* sem armazenamento: vale só nesta aba */
+  }
+}
+
 export const useApp = create<State>((set, get) => ({
   history: createHistory(emptyModel()),
   inventory: defaultInventory(catalog),
@@ -182,6 +209,24 @@ export const useApp = create<State>((set, get) => ({
   snap: catalog.settings.gc_encaixe_padrao !== "livre",
   guides: { blue: true, yellow: true },
   triAnchor: null,
+  inertia: readPref("simolador:inercia", true),
+  setInertia: (inertia) => (writePref("simolador:inercia", inertia), set({ inertia, hint: inertia ? "Inércia ligada: a vista desliza um pouco depois de soltar o mouse (B)." : "Vista firme: para assim que você solta o mouse (B)." })),
+  helpOpen: false,
+  setHelpOpen: (helpOpen) => set({ helpOpen }),
+  cyclePiece: (dir, groups) => {
+    const s = get();
+    const code = s.tool.kind === "place" && !s.tool.moving ? s.tool.code : null;
+    if (!code) {
+      if (s.lastCode) s.arm(s.lastCode);
+      else set({ hint: "Q/E trocam a peça na mão pela vizinha do mesmo grupo: escolha uma peça na paleta primeiro." });
+      return;
+    }
+    const g = groups.find((x) => x.includes(code));
+    if (!g || g.length < 2) return set({ hint: `${code} não tem outra peça no mesmo grupo.` });
+    const next = g[(g.indexOf(code) + dir + g.length) % g.length];
+    s.arm(next);
+    set({ hint: `${catalog.pieces[next]?.name ?? next} (Q/E trocam).` });
+  },
   snapCycle: 0,
   incline: false,
   barMode: "eixos",
@@ -313,13 +358,20 @@ export const useApp = create<State>((set, get) => ({
     const s = get();
     const r = addBoard(catalog, s.history.present, fromId, side);
     if (!r.model) return set({ hint: r.error ?? null });
-    set({ history: push(s.history, r.model), hoverBoard: r.id ?? null, hint: "Chapa nova. Passe o mouse nela para mudar a distância (0, 4, 6, 12 módulos ou livre)." });
+    set({ history: push(s.history, r.model), hoverBoard: null, selectedBoard: r.id ?? null, selection: null, multi: [], hint: "Chapa nova (selecionada): ajuste a distância, o deslocamento e o giro no menu dela. Esc solta." });
   },
   removeBoardId: (id) => {
     const s = get();
     const r = removeBoard(catalog, s.history.present, id);
     if (!r.model) return r.error ?? null;
     set({ history: push(s.history, r.model), hoverBoard: null, selectedBoard: null, selection: null, multi: [], hint: "Chapa apagada. Ctrl+Z desfaz." });
+    return null;
+  },
+  setBoardPoseOf: (id, pose) => {
+    const s = get();
+    const r = setBoardPose(catalog, s.history.present, id, pose);
+    if (!r.model) return r.error ?? null;
+    set({ history: push(s.history, r.model), hint: r.note ?? null });
     return null;
   },
   setBoardGapOf: (id, gap) => {
@@ -355,9 +407,12 @@ export const useApp = create<State>((set, get) => ({
       ...Object.keys(src.plates).map((k) => ({ kind: "plate" as const, id: k })),
       ...Object.keys(src.connectors).map((k) => ({ kind: "connector" as const, id: k })),
     ];
+    const from = boardsOf(src)[0];
+    // chapa de destino girada: a estrutura gira junto (em torno do canto da chapa de origem)
+    const turn = boardRad(target) - boardRad(from);
+    if (turn) src = rotateNodes(src, new Set(Object.keys(src.nodes)), [from.x, 0, from.z], turn);
     const clip = makeClip(src, sels);
     if (!clip) return "O arquivo não tem peças.";
-    const from = boardsOf(src)[0];
     const r = pasteClip(catalog, s.inventory, s.history.present, clip, [clip.anchor[0] + target.x - from.x, clip.anchor[1], clip.anchor[2] + target.z - from.z]);
     if (!r.check.ok) return r.check.errors[0];
     set({ history: push(s.history, r.model), hint: `${r.added} peças importadas na chapa.` });

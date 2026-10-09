@@ -132,9 +132,10 @@ export function GroundConnection({ position, look = "normal", ...p }: { position
 
 /** Chapa de base preta com a grade de módulos, com o canto em (x, z) módulos. */
 export function GroundPlate({
-  id = "b1", x = 0, z = 0, highlight = false, selected = false, onPointerMove, onPointerOut, onClick,
+  id = "b1", x = 0, z = 0, rot = 0, highlight = false, selected = false, onPointerMove, onPointerOut, onClick,
 }: {
-  id?: string; x?: number; z?: number; highlight?: boolean; selected?: boolean;
+  /** rot: giro em graus em torno do canto (x, z) */
+  id?: string; x?: number; z?: number; rot?: number; highlight?: boolean; selected?: boolean;
   onPointerMove?: (e: ThreeEvent<PointerEvent>) => void;
   onPointerOut?: (e: ThreeEvent<PointerEvent>) => void;
   onClick?: (e: ThreeEvent<MouseEvent>) => void;
@@ -163,7 +164,7 @@ export function GroundPlate({
     }
   });
   return (
-    <group position={[x * M, 0, z * M]}>
+    <group position={[x * M, 0, z * M]} rotation={[0, (rot * Math.PI) / 180, 0]}>
       <mesh
         name={`chapa:${id}`}
         position={[PLATE_W / 2, -t / 2, PLATE_D / 2]}

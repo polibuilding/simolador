@@ -3,7 +3,9 @@ import { useThree } from "@react-three/fiber";
 import { useEffect } from "react";
 import * as THREE from "three";
 import { boardsOf, type Model } from "../core/model";
-import { M, PLATE_D, PLATE_W, toWorld } from "./units";
+import { boardCorners } from "../core/boards";
+import { catalog } from "../core/catalog";
+import { M, toWorld } from "./units";
 
 let ctx: { gl: THREE.WebGLRenderer; scene: THREE.Scene } | null = null;
 
@@ -37,9 +39,7 @@ export function renderIso(model: Model, widthPx = 2600): IsoImage | null {
   // limites na tela: a chapa inteira e as esferas (com folga do raio)
   const pts: THREE.Vector3[] = [];
   for (const b of boardsOf(model)) {
-    const x = b.x * M;
-    const z = b.z * M;
-    pts.push(new THREE.Vector3(x, 0, z), new THREE.Vector3(x + PLATE_W, 0, z), new THREE.Vector3(x, 0, z + PLATE_D), new THREE.Vector3(x + PLATE_W, 0, z + PLATE_D));
+    for (const [x, z] of boardCorners(catalog, b)) pts.push(new THREE.Vector3(x * M, 0, z * M));
   }
   for (const n of Object.values(model.nodes)) pts.push(toWorld(n.pos));
   let h0 = Infinity, h1 = -Infinity, v0 = Infinity, v1 = -Infinity;

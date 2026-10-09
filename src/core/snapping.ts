@@ -1,10 +1,10 @@
 // Posições candidatas (encaixe) para cada tipo de peça, já validadas.
 import type { Catalog } from "./catalog";
 import type { InventoryConfig } from "./inventory";
-import { boardAt, boardSize, nearestBoard } from "./boards";
+import { boardAt, boardSize, frameRadAt, fromBoardLocal, nearestBoard, toBoardLocal } from "./boards";
 import {
   AXES, DEFAULT_BOARD, DIR_TOL, EPS, UP, type Board, type Model, boardsOf, type Vec3, add, addConnector, addMember, addPlate, addSupport, canonicalDir, cross, dot,
-  findNodeAt, len, membersAt, directionFrom, norm, plateKey, samePos, scale, sidesAround, sub,
+  findNodeAt, len, membersAt, directionFrom, norm, plateKey, rotDir, samePos, scale, sidesAround, sub,
 } from "./model";
 import {
   inclineStep, validateConnector, validateMember, validatePlate, validateSupport,
@@ -100,8 +100,11 @@ export function memberCandidates(
   const mk = (toPos: Vec3, inclined = false): Candidate => ({
     kind: "member", code, fromId, toPos, inclined, check: validateMember(cat, inv, model, code, fromId, toPos),
   });
+  // chapa girada: os eixos da estrutura giram junto
+  const fr = frameRadAt(cat, boardsOf(model), from.pos[0], from.pos[2]);
+  const R = (d: Vec3) => rotDir(d, fr);
   if (piece.type === "cable") {
-    const out = cableOffsets(piece.spanM[0], piece.spanM[1]).map((o) => mk(add(from.pos, o)));
+    const out = cableOffsets(piece.spanM[0], piece.spanM[1]).map((o) => mk(add(from.pos, R(o))));
     // painéis inclinados: esferas existentes à distância da diagonal (a regra confere o canto a 90°)
     const seen = new Set(out.map((c) => (c as { toPos: Vec3 }).toPos.map((v) => v.toFixed(3)).join(",")));
     const diag = Math.hypot(piece.spanM[0], piece.spanM[1]);
@@ -113,7 +116,8 @@ export function memberCandidates(
     return out;
   }
   const span = piece.spanM[0];
-  const out = AXES.map((d) => mk(add(from.pos, scale(d, span))));
+  const axes = AXES.map(R);
+  const out = axes.map((d) => mk(add(from.pos, scale(d, span)).map((x) => Math.round(x * 1e4) / 1e4 + 0) as Vec3));
   const seen = new Set(out.map((c) => (c as { toPos: Vec3 }).toPos.join(",")));
   // fechar numa esfera existente à distância exata (triângulos, geodésicas)
   const tol = cat.settings.tolerancia_encaixe_mm / cat.settings.modulo_mm;
@@ -122,13 +126,13 @@ export function memberCandidates(
     const d = Math.hypot(n.pos[0] - from.pos[0], n.pos[1] - from.pos[1], n.pos[2] - from.pos[2]);
     if (Math.abs(d - span) <= tol && !seen.has(n.pos.join(","))) {
       seen.add(n.pos.join(","));
-      out.push(mk(n.pos, !AXES.some((a) => samePos(scale(a, span), [n.pos[0] - from.pos[0], n.pos[1] - from.pos[1], n.pos[2] - from.pos[2]], 1e-3))));
+      out.push(mk(n.pos, !axes.some((a) => samePos(scale(a, span), [n.pos[0] - from.pos[0], n.pos[1] - from.pos[1], n.pos[2] - from.pos[2]], 1e-3))));
     }
   }
   // inclinadas até um ponto novo
   if (opts.inclined === false) return out;
   for (const d of inclinedDirs(inclineStep(cat))) {
-    const p = add(from.pos, scale(d, span)).map((x) => Math.round(x * 1e4) / 1e4 + 0) as Vec3;
+    const p = add(from.pos, scale(R(d), span)).map((x) => Math.round(x * 1e4) / 1e4 + 0) as Vec3;
     if (seen.has(p.join(",")) || findNodeAt(model, p)) continue;
     out.push(mk(p, true));
   }
@@ -180,8 +184,9 @@ export function connectorCandidates(cat: Catalog, inv: InventoryConfig, model: M
       }
     }
     if (n.kind === "support" && dirs.some((d) => Math.abs(d[1] - 1) < EPS)) {
+      const fr = frameRadAt(cat, boardsOf(model), n.pos[0], n.pos[2]);
       for (const side of [[1, 0, 0], [0, 0, 1], [-1, 0, 0], [0, 0, -1]] as Vec3[]) {
-        specs.push({ code, node: nodeId, dirs: [UP, side], base: true });
+        specs.push({ code, node: nodeId, dirs: [UP, rotDir(side, fr)], base: true });
       }
     }
   } else if (code === "CC") {
@@ -193,7 +198,7 @@ export function connectorCandidates(cat: Catalog, inv: InventoryConfig, model: M
     }
     for (const ax of axes) {
       // os 4 lados em volta do par; lado com barra transversal fica de fora (L6)
-      for (const side of sidesAround(ax)) if (!has(side)) specs.push({ code, node: nodeId, dirs: [ax], side });
+      for (const side of sidesAround(ax, frameRadAt(cat, boardsOf(model), n.pos[0], n.pos[2]))) if (!has(side)) specs.push({ code, node: nodeId, dirs: [ax], side });
     }
   } else if (code === "CC90") {
     const has = (d: Vec3) => dirs.some((x) => Math.abs(dot(x, d) - 1) < DIR_TOL);
@@ -210,12 +215,14 @@ export function connectorCandidates(cat: Catalog, inv: InventoryConfig, model: M
 export function supportPosition(cat: Catalog, point: { x: number; z: number }, snap: boolean, boards: Board[] = [DEFAULT_BOARD]): Vec3 {
   const b = boardAt(cat, boards, point.x, point.z) ?? nearestBoard(cat, boards, point.x, point.z);
   const { w, d } = boardSize(cat);
-  const cx = (v: number) => Math.min(b.x + w, Math.max(b.x, v));
-  const cz = (v: number) => Math.min(b.z + d, Math.max(b.z, v));
-  // a grade de cada chapa começa no canto dela
-  if (snap) return [cx(b.x + Math.round(point.x - b.x)), 0, cz(b.z + Math.round(point.z - b.z))].map((v) => Math.round(v * 1e4) / 1e4 + 0) as Vec3;
-  const r = (v: number) => Math.round(v * 100) / 100;
-  return [r(point.x), 0, r(point.z)];
+  // nos eixos da chapa (que pode estar girada): a grade começa no canto dela
+  const [lx, lz] = toBoardLocal(b, point.x, point.z);
+  const cx = Math.min(w, Math.max(0, lx));
+  const cz = Math.min(d, Math.max(0, lz));
+  const r4 = (v: number) => Math.round(v * 1e4) / 1e4 + 0;
+  const [gx, gz] = snap ? fromBoardLocal(b, Math.round(cx), Math.round(cz)) : fromBoardLocal(b, Math.round(cx * 100) / 100, Math.round(cz * 100) / 100);
+  if (!b.rot && !snap) return [Math.round(gx * 100) / 100, 0, Math.round(gz * 100) / 100];
+  return [r4(gx), 0, r4(gz)];
 }
 
 export function supportCandidate(cat: Catalog, inv: InventoryConfig, model: Model, pos: Vec3): Candidate {
@@ -256,9 +263,10 @@ export function supportGuides(cat: Catalog, inv: InventoryConfig, model: Model, 
   };
   const xz = (p: Vec3) => `(${[p[0], p[2]].map((v) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })).join("; ")})`;
   for (const g of gcs) {
+    const fr = frameRadAt(cat, boardsOf(model), g.pos[0], g.pos[2]);
     for (const b of bars) {
       for (const d of [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]] as Vec3[]) {
-        push(add(g.pos, scale(d, b.span)), "blue", `A ${b.span} M da GC ${xz(g.pos)}: cabe uma ${b.code} entre os pilares.`);
+        push(add(g.pos, scale(rotDir(d, fr), b.span)), "blue", `A ${b.span} M da GC ${xz(g.pos)}: cabe uma ${b.code} entre os pilares.`);
       }
     }
   }
@@ -303,7 +311,8 @@ export function allCandidates(cat: Catalog, inv: InventoryConfig, model: Model, 
     for (const b of boardsOf(model)) {
       for (let x = 0; x <= cat.settings.chapa_modulos_x; x++) {
         for (let z = 0; z <= cat.settings.chapa_modulos_y; z++) {
-          const p = [b.x + x, 0, b.z + z].map((v) => Math.round(v * 1e4) / 1e4 + 0) as Vec3;
+          const [wx, wz] = fromBoardLocal(b, x, z);
+          const p = [wx, 0, wz].map((v) => Math.round(v * 1e4) / 1e4 + 0) as Vec3;
           const k = p.join(",");
           if (seen.has(k)) continue;
           seen.add(k);
