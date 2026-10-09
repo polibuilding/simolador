@@ -165,6 +165,26 @@ function plateSpots(model: Model, cornerIds: string[]): Map<string, Vec3> {
   return new Map(cornerIds.map((id, i) => [id, norm(sub(c, ps[i]))]));
 }
 
+/**
+ * L8: uma ligação e uma placa disputam o mesmo canto/lado da esfera?
+ * - RC90: a placa encosta na esfera por dentro do canto da RC90 (no plano dele).
+ * - CC/CC90: a placa está no plano do par de barras e do lado da peça (a ponte passaria dentro da placa).
+ * `spot` = direção, a partir da esfera, do ponto onde a placa encosta (rumo ao centro); `normal` = normal da placa.
+ */
+export function connectorHitsPlate(c: { code: string; dirs: Vec3[]; side?: Vec3 }, spot: Vec3, normal: Vec3): boolean {
+  if (c.code === "RC90") return inRc90Corner(c.dirs, spot);
+  const ax = c.dirs[0];
+  const side = c.side;
+  if (!ax || !side) return false;
+  const n = norm(cross(ax, side));
+  return Math.abs(dot(norm(normal), n)) > 0.9 && dot(norm(spot), side) > 0.2;
+}
+
+const plateNormal = (model: Model, corners: string[]) => {
+  const p = corners.map((id) => model.nodes[id].pos);
+  return norm(cross(sub(p[1], p[0]), sub(p[3], p[0])));
+};
+
 /** O segmento a–b atravessa o miolo da placa (cantos em ordem)? Barras no contorno não contam. */
 export function segmentHitsPlate(a: Vec3, b: Vec3, corners: Vec3[]): boolean {
   const [c0, c1, , c3] = corners;
@@ -362,6 +382,12 @@ export function validatePlate(cat: Catalog, inv: InventoryConfig, model: Model, 
         }
       }
     }
+    // L8: ligação no canto/lado da esfera onde a placa encosta
+    {
+      const n0 = norm(cross(sub(g.corners[1], g.corners[0]), sub(g.corners[3], g.corners[0])));
+      const hit = Object.values(model.connectors).find((c) => spots.has(c.node) && connectorHitsPlate(c, spots.get(c.node)!, n0));
+      if (hit) errors.push(`Há uma ${hit.code} nesse canto da placa: tire a ligação ou use outro vão.`);
+    }
     // P3: barras do contorno recomendadas
     const ids = nodes.map((n) => n!.id);
     const edges = [0, 1, 2, 3].filter((i) => {
@@ -430,6 +456,15 @@ export function validateConnector(cat: Catalog, inv: InventoryConfig, model: Mod
     }
   } else {
     errors.push(`${spec.code} não é uma ligação.`);
+  }
+  // L8: placa encostando na esfera pelo mesmo canto/lado
+  for (const p of Object.values(model.plates)) {
+    if (!p.corners.includes(spec.node)) continue;
+    const spot = plateSpots(model, p.corners).get(spec.node)!;
+    if (connectorHitsPlate(spec, spot, plateNormal(model, p.corners))) {
+      errors.push(spec.code === "RC90" ? "Nesse canto há uma placa: a RC90 não cabe." : `Nesse lado há uma placa: a ${spec.code} não cabe.`);
+      break;
+    }
   }
   errors.push(...stockErrors(cat, inv, model, spec.code));
   return result(errors);

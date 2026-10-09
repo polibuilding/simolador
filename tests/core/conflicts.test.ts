@@ -102,3 +102,35 @@ describe("CC em vários lados", () => {
     expect(left.length).toBe(0); // os três lados ocupados; o de baixo tem o pilar
   });
 });
+
+describe("ligação × placa (L8)", () => {
+  it("RC90 não vai no canto onde a parede encosta, e a parede não entra num canto com RC90", () => {
+    const m = parede();
+    const wall = [id(m, [3, 0, 3]), id(m, [9, 0, 3]), id(m, [9, 6, 3]), id(m, [3, 6, 3])] as [string, string, string, string];
+    const withPlate = addPlate(m, "P6x6", wall).model;
+    const r = validateConnector(catalog, inv, withPlate, { code: "RC90", node: id(m, [3, 6, 3]), dirs: [[1, 0, 0], [0, -1, 0]] });
+    expect(r.ok).toBe(false);
+    expect(r.errors.join()).toMatch(/placa/);
+    const withRc = addConnector(m, { code: "RC90", node: id(m, [3, 6, 3]), dirs: [[1, 0, 0], [0, -1, 0]] }).model;
+    expect(plateCandidates(catalog, inv, withRc, "P6x6")[0]?.check.ok).toBe(false);
+  });
+  it("CC do lado da parede não cabe; nos outros lados, sim", () => {
+    let m = emptyModel();
+    m = addSupport(m, [6, 0, 3]).model;
+    m = addMember(m, "B6", id(m, [6, 0, 3]), [6, 6, 3]).model;
+    m = addMember(m, "B6", id(m, [6, 6, 3]), [0, 6, 3]).model;
+    m = addMember(m, "B6", id(m, [6, 6, 3]), [12, 6, 3]).model;
+    m = addMember(m, "B6", id(m, [6, 6, 3]), [6, 12, 3]).model;
+    m = addMember(m, "B6", id(m, [12, 6, 3]), [12, 12, 3]).model;
+    m = addMember(m, "B6", id(m, [6, 12, 3]), [12, 12, 3]).model;
+    m = addPlate(m, "P6x6", [id(m, [6, 6, 3]), id(m, [12, 6, 3]), id(m, [12, 12, 3]), id(m, [6, 12, 3])]).model;
+    const n = id(m, [6, 6, 3]);
+    // em cima tem barra (L6); dos lados ±Z a parede não atrapalha
+    expect(validateConnector(catalog, inv, m, { code: "CC", node: n, dirs: [[1, 0, 0]], side: [0, 0, 1] }).ok).toBe(true);
+    // sem a barra de cima, o lado +Y fica livre de barra mas a parede ocupa
+    const noTop = { ...m, members: Object.fromEntries(Object.entries(m.members).filter(([, x]) => !(x.a === n && m.nodes[x.b].pos[1] === 12))) };
+    const r = validateConnector(catalog, inv, noTop, { code: "CC", node: n, dirs: [[1, 0, 0]], side: [0, 1, 0] });
+    expect(r.ok).toBe(false);
+    expect(r.errors.join()).toMatch(/placa/);
+  });
+});

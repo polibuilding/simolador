@@ -408,3 +408,5 @@ dl { margin: 0 0 16px; }
 
 .board-menu-head, .board-menu-actions { display: flex; align-items: center; gap: 2px; }
 .board-menu-head .board-gap { border-right: 0; }
+
+.statusbar .version { font-size: 11px; font-weight: 600; color: var(--graphite); letter-spacing: 0.02em; }

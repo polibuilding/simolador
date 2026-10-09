@@ -1,6 +1,7 @@
 import { catalog } from "../core/catalog";
 import { useState } from "react";
 import { useApp, useModel } from "./store";
+import { EDITION, VERSION, VERSION_SHORT } from "../version";
 
 // Rodapé no formato do carimbo das pranchas.
 export function StatusBar() {
@@ -51,6 +52,7 @@ export function StatusBar() {
             </g>
           </svg>
         )}
+        <span className="version" title={`siMOLAdor ${VERSION}${EDITION ? ` · versão ${EDITION}` : ""}`}>v{VERSION_SHORT}</span>
       </div>
       <div className={`cell message ${state}`} role="status" aria-live="polite">
         {message}
