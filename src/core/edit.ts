@@ -1,8 +1,9 @@
 // Editar peças já colocadas: retirar, girar, mover estrutura.
 import type { Catalog } from "./catalog";
 import type { InventoryConfig } from "./inventory";
+import { frameRadAt } from "./boards";
 import {
-  AXES, type Member, type Model, type Vec3, add, componentOf, cross, directionFrom, dot, len, membersAt, norm, removeConnector,
+  AXES, boardsOf, rotDir, type Member, type Model, type Vec3, add, componentOf, cross, directionFrom, dot, len, membersAt, norm, removeConnector,
   removeMember, removeNode, removePlate, samePos, scale, sub, transformNodes,
 } from "./model";
 import { inclineStep as inclineStepOf, segmentHitsPlate, validateMovedModel, type Check } from "./rules";
@@ -255,7 +256,8 @@ export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): Nod
       const r = Math.sqrt(L * L - c[1] * c[1]);
       for (let k = 0; k < 24; k++) pts.push([c[0] + r * Math.cos(k * step), 0, c[2] + r * Math.sin(k * step)]);
     } else {
-      for (const d of [...AXES, ...inclinedDirs(inclineStepOf(cat) || 15)]) pts.push(add(c, scale(d, L)));
+      const fr = frameRadAt(cat, boardsOf(model), c[0], c[2]);
+      for (const d of [...AXES, ...inclinedDirs(inclineStepOf(cat) || 15)]) pts.push(add(c, scale(rotDir(d, fr), L)));
     }
   } else {
     const circ = circleOf(cons[0], cons[1]);

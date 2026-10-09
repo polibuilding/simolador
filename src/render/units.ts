@@ -27,4 +27,6 @@ export const COLORS = {
   guideBlue: "#3d8bff",
   /** GC no vértice de um triângulo de barras */
   guideYellow: "#ffc21a",
+  /** vértice onde chegam três ou mais barras (pirâmide, treliça espacial) */
+  guideOrange: "#ff7a1a",
 };

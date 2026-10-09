@@ -10,7 +10,8 @@ import { useThree } from "@react-three/fiber";
 import { catalog } from "../core/catalog";
 import { moveGroup, nodeMoveOptions } from "../core/edit";
 import { pasteClip, transformClip, type Clip, type PasteResult } from "../core/clipboard";
-import { AXES, add, boardsOf, findNodeAt, len, norm, scale, sub, type Model, type Vec3 } from "../core/model";
+import { AXES, add, boardsOf, findNodeAt, len, norm, rotDir, scale, sub, type Model, type Vec3 } from "../core/model";
+import { frameRadAt } from "../core/boards";
 import { validateMember } from "../core/rules";
 import type { Sel } from "../core/edit";
 import {
@@ -262,7 +263,9 @@ export function Placement() {
         if (d < 20) snaps.push({ pos: n.pos, d: d - 10, label: `fecha na esfera (${n.pos.map((v) => +v.toFixed(2)).join("; ")})` });
       }
       // 2) eixos e passos de 15°
-      for (const dir of [...AXES, ...inclinedDirs(15)]) {
+      const fr = frameRadAt(catalog, boardsOf(model), A[0], A[2]);
+      for (const dir0 of [...AXES, ...inclinedDirs(15)]) {
+        const dir = rotDir(dir0, fr);
         const p = add(A, scale(dir, L));
         const d = dpx(p);
         if (d < 9) snaps.push({ pos: p, d: d + 1, label: dir.filter((x) => Math.abs(x) > 1e-6).length === 1 ? "no eixo" : "passo de 15°" });
@@ -347,10 +350,10 @@ export function Placement() {
             const { part, ids } = newPart(model, g.model);
             st.setGhost(
               { kind: "group", model: g.model, ids, part, keep: true, check: { ok: true, errors: [], warnings: [] } },
-              `Amarelo: ${g.text}. Clique: a ${code} e ${nTxt}. R: só a ${code}.`,
+              `${g.closes.length > 1 ? "Laranja" : "Amarelo"}: ${g.text}. Clique: a ${code} e ${nTxt}. R: só a ${code}.`,
             );
           } else {
-            st.setGhost({ kind: "cand", cand: g.bar }, `Amarelo: só a ${code} até ${fmt(g.pos)} (${g.text}). R: com ${nTxt.replace(/ que fecham?/, "")}.`);
+            st.setGhost({ kind: "cand", cand: g.bar }, `${g.closes.length > 1 ? "Laranja" : "Amarelo"}: só a ${code} até ${fmt(g.pos)} (${g.text}). R: com ${nTxt.replace(/ que fecham?/, "")}.`);
           }
           return true;
         }

@@ -2,7 +2,7 @@ import { catalog } from "../core/catalog";
 import { available, usage } from "../core/inventory";
 import { useApp, useModel } from "./store";
 
-const GROUPS: { title: string; codes: string[] }[] = [
+export const GROUPS: { title: string; codes: string[] }[] = [
   { title: "Apoio", codes: ["GC"] },
   { title: "Barras", codes: ["B4", "B6", "B12"] },
   { title: "Diagonais", codes: ["D4x6", "D6x6", "D6x12"] },

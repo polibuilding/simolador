@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { catalog } from "../core/catalog";
 import { boardsOf, componentOf, type Model, type Vec3 } from "../core/model";
 import { markerPos, type Candidate } from "../core/snapping";
+import { boardCorners } from "../core/boards";
 import { barGuidesFor, candidatesFor, guidesFor, nodeOptionsFor, Placement } from "../interaction/Placement";
 import { useApp, useDisplayModel, useModel, inclineOn, workingModel } from "../ui/store";
 import type { Sel } from "../core/edit";
@@ -173,19 +174,25 @@ function Markers() {
   const ringRef = useRef<THREE.InstancedMesh>(null);
   const blueRef = useRef<THREE.InstancedMesh>(null);
   const yellowRef = useRef<THREE.InstancedMesh>(null);
+  const orangeRef = useRef<THREE.InstancedMesh>(null);
   const code = tool.kind === "place" ? tool.code : null;
   // GC: pontos azuis (a um vão de barra de outra GC) e amarelos (vértice de triângulo), nos dois modos de encaixe
   const present = useApp((s) => s.history.present);
   const show = useApp((s) => s.guides);
   const triAnchor = useApp((s) => s.triAnchor);
-  const { blue, yellow, guideKeys } = useMemo(() => {
-    const empty = { blue: [] as THREE.Vector3[], yellow: [] as THREE.Vector3[], guideKeys: new Set<string>() };
+  const { blue, yellow, orange = [], guideKeys } = useMemo((): { blue: THREE.Vector3[]; yellow: THREE.Vector3[]; orange?: THREE.Vector3[]; guideKeys: Set<string> } => {
+    const empty = { blue: [] as THREE.Vector3[], yellow: [] as THREE.Vector3[], orange: [] as THREE.Vector3[], guideKeys: new Set<string>() };
     let guides;
     // barras: pontos amarelos da esfera de partida (vértices de triângulos com esferas vizinhas)
     if (code && catalog.pieces[code]?.type === "bar" && tool.kind === "place" && !tool.moving) {
       if (!show.yellow || !triAnchor || !model.nodes[triAnchor]) return empty;
       const g = barGuidesFor(model, code, inventory, triAnchor);
-      return { blue: [], yellow: g.map((x) => toWorld(x.pos)), guideKeys: new Set(g.map((x) => x.pos.join(","))) };
+      return {
+        blue: [],
+        yellow: g.filter((x) => x.closes.length < 2).map((x) => toWorld(x.pos)),
+        orange: g.filter((x) => x.closes.length >= 2).map((x) => toWorld(x.pos)),
+        guideKeys: new Set(g.map((x) => x.pos.join(","))),
+      };
     }
     if (code && catalog.pieces[code]?.type === "support") {
       const inv = tool.kind === "place" && tool.moving ? { ...inventory, unlimited: true } : inventory;
@@ -245,11 +252,11 @@ function Markers() {
     if (ref.current) (ref.current.count = dots.length), (ref.current.instanceMatrix.needsUpdate = true);
     rings.forEach((p, i) => ringRef.current?.setMatrixAt(i, m.makeTranslation(p.x, p.y, p.z)));
     if (ringRef.current) (ringRef.current.count = rings.length), (ringRef.current.instanceMatrix.needsUpdate = true);
-    for (const [r, list] of [[blueRef, blue], [yellowRef, yellow]] as const) {
+    for (const [r, list] of [[blueRef, blue], [yellowRef, yellow], [orangeRef, orange]] as const) {
       list.forEach((p, i) => r.current?.setMatrixAt(i, m.makeTranslation(p.x, p.y, p.z)));
       if (r.current) (r.current.count = list.length), (r.current.instanceMatrix.needsUpdate = true);
     }
-  }, [dots, rings, blue, yellow]);
+  }, [dots, rings, blue, yellow, orange]);
 
   const max = 2000;
   return (
@@ -265,6 +272,10 @@ function Markers() {
       <instancedMesh ref={yellowRef} args={[undefined, undefined, 400]} raycast={() => null} frustumCulled={false}>
         <sphereGeometry args={[3.6, 14, 10]} />
         <meshBasicMaterial color={COLORS.guideYellow} transparent opacity={0.95} depthTest={false} />
+      </instancedMesh>
+      <instancedMesh ref={orangeRef} args={[undefined, undefined, 400]} raycast={() => null} frustumCulled={false}>
+        <sphereGeometry args={[4.2, 14, 10]} />
+        <meshBasicMaterial color={COLORS.guideOrange} transparent opacity={0.95} depthTest={false} />
       </instancedMesh>
       <instancedMesh ref={ringRef} args={[undefined, undefined, max]} raycast={() => null} frustumCulled={false}>
         <sphereGeometry args={[10.5, 20, 14]} />
@@ -290,8 +301,10 @@ function CameraRig() {
     const model = useApp.getState().history.present;
     const box = new THREE.Box3();
     for (const b of boardsOf(model)) {
-      box.expandByPoint(new THREE.Vector3(b.x * M, -3, b.z * M));
-      box.expandByPoint(new THREE.Vector3(b.x * M + PLATE_W, 20, b.z * M + PLATE_D));
+      for (const [x, z] of boardCorners(catalog, b)) {
+        box.expandByPoint(new THREE.Vector3(x * M, -3, z * M));
+        box.expandByPoint(new THREE.Vector3(x * M, 20, z * M));
+      }
     }
     for (const n of Object.values(model.nodes)) box.expandByPoint(toWorld(n.pos));
     box.expandByScalar(25);
@@ -315,8 +328,51 @@ function CameraRig() {
   return null;
 }
 
+/** W A S D giram a vista (15° por toque); com Shift, arrastam. */
+function KeyCamera() {
+  const { camera, controls } = useThree();
+  useEffect(() => {
+    const STEP = (15 * Math.PI) / 180;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target as HTMLElement;
+      if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT") return;
+      const st = useApp.getState();
+      if (st.sheetsOpen || st.helpOpen) return;
+      const k = e.key.toLowerCase();
+      if (k !== "w" && k !== "a" && k !== "s" && k !== "d") return;
+      const ctl = controls as unknown as { target: THREE.Vector3; update: () => void } | null;
+      if (!ctl) return;
+      e.preventDefault();
+      const off = camera.position.clone().sub(ctl.target);
+      if (e.shiftKey) {
+        const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
+        const up = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1);
+        const step = off.length() * 0.08;
+        const d = k === "a" ? right.multiplyScalar(-step) : k === "d" ? right.multiplyScalar(step) : k === "w" ? up.multiplyScalar(step) : up.multiplyScalar(-step);
+        camera.position.add(d);
+        ctl.target.add(d);
+      } else {
+        const sph = new THREE.Spherical().setFromVector3(off);
+        if (k === "a") sph.theta -= STEP;
+        if (k === "d") sph.theta += STEP;
+        if (k === "w") sph.phi = Math.max(0.01, sph.phi - STEP);
+        if (k === "s") sph.phi = Math.min(Math.PI - 0.01, sph.phi + STEP);
+        off.setFromSpherical(sph);
+        camera.position.copy(ctl.target).add(off);
+      }
+      camera.lookAt(ctl.target);
+      ctl.update();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [camera, controls]);
+  return null;
+}
+
 export function Scene() {
   const select = useApp((s) => s.select);
+  const inertia = useApp((s) => s.inertia);
   return (
     <Canvas
       shadows
@@ -381,8 +437,10 @@ export function Scene() {
       <GizmoHelper alignment="bottom-left" margin={[62, 62]} renderPriority={2}>
         <GizmoViewport axisColors={["#e5484d", "#19a974", "#3d8bff"]} labelColor="#ffffff" axisHeadScale={0.95} font="bold 17px Arial" />
       </GizmoHelper>
+      <KeyCamera />
       <OrbitControls
         makeDefault
+        enableDamping={inertia}
         // esquerdo = selecionar (clique ou retângulo); direito = girar; Shift+direito ou meio = mover; roda = zoom
         mouseButtons={{ LEFT: undefined as unknown as THREE.MOUSE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.ROTATE }}
         target={[PLATE_W / 2, 40, PLATE_D / 2]}

@@ -2,10 +2,11 @@
 // Nenhum número fixo aqui: tudo vem de catalog.settings (data/parametros.xlsx).
 import type { Catalog } from "./catalog";
 import { remaining, type InventoryConfig } from "./inventory";
-import { boardAt } from "./boards";
+import { boardAt, frameRadAt } from "./boards";
+import { pointSegDist, polygonsCross, rc90Outline, segmentHitsPolygon, segSegDist } from "./geom";
 import {
   DIR_TOL, EPS, UP, type Model, boardsOf, type Vec3, type Member, add, cross, dot, findNodeAt, len, membersAt,
-  directionFrom, memberAlong, norm, plateKey, samePos, scale, sub,
+  directionFrom, memberAlong, norm, plateKey, rotYRad, samePos, scale, sub,
 } from "./model";
 
 export interface Check {
@@ -44,6 +45,10 @@ export function validateSupport(cat: Catalog, inv: InventoryConfig, model: Model
   }
   const at = findNodeAt(model, pos);
   if (at && !ignore.has(at.id) && at.kind === "sphere") errors.push("Já existe uma esfera nesse ponto.");
+  if (!at && !ignore.size) {
+    const hit = sphereOnMember(cat, model, pos);
+    if (hit) errors.push(hit); // C7
+  }
   if (!ignore.size) errors.push(...stockErrors(cat, inv, model, "GC"));
   return result(errors);
 }
@@ -99,6 +104,24 @@ function collisionErrors(cat: Catalog, model: Model, a: Vec3, b: Vec3, fromId: s
     const { t, perp } = onSegment(n.pos);
     if (perp < clear && t > EPS && t < L - EPS) return ["A peça atravessaria uma esfera."];
   }
+  // C7: a esfera nova da ponta não cai em cima de outra peça
+  if (!targetId) {
+    const hit = sphereOnMember(cat, model, b, fromId);
+    if (hit) return [hit];
+  }
+  // C3: molas não se cruzam (nem mola com diagonal); duas diagonais podem se cruzar (cabos finos, em X)
+  const rNew = ((cable ? s.cabo_diametro_mm : s.barra_diametro_mm) / 2) / s.modulo_mm;
+  for (const m of Object.values(model.members)) {
+    if (m.a === fromId || m.b === fromId || (targetId && (m.a === targetId || m.b === targetId))) continue;
+    const other = typeOf(cat, m.code) === "cable";
+    if (cable && other) continue;
+    const pa = model.nodes[m.a].pos;
+    const pb = model.nodes[m.b].pos;
+    if (samePos(pa, b, 1e-3) || samePos(pb, b, 1e-3) || samePos(pa, a, 1e-3) || samePos(pb, a, 1e-3)) continue;
+    if (segSegDist(a, b, pa, pb) < rNew + radiusOf(cat, m.code) - 1e-6) {
+      return [cable ? "A diagonal cruzaria uma barra." : other ? "A barra cruzaria uma diagonal." : "A barra cruzaria outra barra."];
+    }
+  }
   for (const m of Object.values(model.members)) {
     const sp = onSegment(model.nodes[m.a].pos);
     const sq = onSegment(model.nodes[m.b].pos);
@@ -147,6 +170,32 @@ export function inclinedPanel(model: Model, p: Vec3, q: Vec3, a: number, b: numb
 // ---------------- Conflitos entre peças na mesma esfera / no mesmo vão ----------------
 
 /** Ângulo (graus) abaixo do qual duas peças disputam o mesmo ponto de ligação na esfera. */
+/** Raio da peça (módulos): mola ou cabo. */
+const radiusOf = (cat: Catalog, code: string) =>
+  (typeOf(cat, code) === "cable" ? cat.settings.cabo_diametro_mm : cat.settings.barra_diametro_mm) / 2 / cat.settings.modulo_mm;
+/** Folga entre o centro de uma esfera e o eixo de uma peça. */
+const sphereClear = (cat: Catalog, code: string) => cat.settings.esfera_diametro_mm / 2 / cat.settings.modulo_mm + radiusOf(cat, code);
+
+/** C7: uma esfera em `p` (que não é ponta da peça) encostaria no meio de alguma peça? */
+function sphereOnMember(cat: Catalog, model: Model, p: Vec3, skipNode?: string): string | null {
+  for (const m of Object.values(model.members)) {
+    if (m.a === skipNode || m.b === skipNode) continue;
+    const a = model.nodes[m.a].pos;
+    const b = model.nodes[m.b].pos;
+    if (samePos(a, p, 1e-3) || samePos(b, p, 1e-3)) continue;
+    if (pointSegDist(p, a, b) < sphereClear(cat, m.code) - 1e-6) {
+      return typeOf(cat, m.code) === "cable" ? "A esfera ficaria em cima de uma diagonal." : "A esfera ficaria em cima de uma barra.";
+    }
+  }
+  return null;
+}
+
+/** Contornos das RC90 do modelo. */
+const rc90Polys = (cat: Catalog, model: Model) =>
+  Object.values(model.connectors)
+    .filter((c) => c.code === "RC90" && model.nodes[c.node])
+    .map((c) => ({ c, poly: rc90Outline(cat, model.nodes[c.node].pos, c.dirs, c.base) }));
+
 const SAME_SPOT_DEG = 20;
 const sameSpot = (a: Vec3, b: Vec3) => dot(norm(a), norm(b)) > Math.cos((SAME_SPOT_DEG * Math.PI) / 180);
 
@@ -235,7 +284,10 @@ export function validateMember(
   const L = len(v);
   if (L < EPS) return result(["A peça precisa de duas pontas diferentes."]);
   const tolM = s.tolerancia_encaixe_mm / s.modulo_mm;
-  const absC = v.map(Math.abs);
+  // direção nos eixos da chapa embaixo (chapa girada: os eixos giram junto)
+  const fr = frameRadAt(cat, boardsOf(model), from.pos[0], from.pos[2]);
+  const vLoc = fr ? (rotYRad(v, -fr).map((c) => (Math.abs(c) < 2e-3 ? 0 : c)) as Vec3) : v;
+  const absC = vLoc.map(Math.abs);
   const nonZero = absC.filter((c) => c > EPS);
 
   if (!cable) {
@@ -243,7 +295,7 @@ export function validateMember(
     if (Math.abs(L - span) > tolM) errors.push(`A ${code} vence ${span} módulos; a distância é ${L.toFixed(2)}.`); // B1
     // B2: eixos, inclinação em passos (num plano da estrutura) ou fechando numa esfera existente
     // B2 (modo Livre: qualquer direção 3D)
-    if (!opts.free && nonZero.length !== 1 && !findNodeAt(model, toPos) && !inStepPlane(cat, v)) {
+    if (!opts.free && nonZero.length !== 1 && !findNodeAt(model, toPos) && !inStepPlane(cat, vLoc)) {
       errors.push(inclineStep(cat) ? `Barra inclinada só em passos de ${inclineStep(cat)}° nos planos da estrutura, ou fechando numa esfera.` : "Barra só na direção dos eixos, ou fechando numa esfera.");
     }
   } else {
@@ -291,6 +343,13 @@ export function validateMember(
         errors.push("A diagonal usaria o mesmo ponto de ligação da placa na esfera.");
         break;
       }
+    }
+  }
+  // L9: nenhuma peça passa por dentro de uma RC90
+  for (const { poly } of rc90Polys(cat, model)) {
+    if (segmentHitsPolygon(from.pos, toPos, poly)) {
+      errors.push(cable ? "A diagonal passaria por dentro de uma RC90." : "A barra passaria por dentro de uma RC90.");
+      break;
     }
   }
   // L7: a diagonal não sai pelo canto de uma RC90
@@ -434,6 +493,15 @@ export function validateConnector(cat: Catalog, inv: InventoryConfig, model: Mod
     if (existing.some((c) => c.code === "RC90" && !!c.base === !!spec.base && sameDirs(c.dirs, spec.dirs))) {
       errors.push("Esse canto já tem uma RC90."); // L2
     }
+    // L9: a RC90 não cruza outra RC90 nem uma peça (de qualquer esfera)
+    if (spec.dirs.length === 2) {
+      const poly = rc90Outline(cat, n.pos, spec.dirs, spec.base);
+      if (rc90Polys(cat, model).some((o) => !(o.c.node === spec.node && !!o.c.base === !!spec.base && sameDirs(o.c.dirs, spec.dirs)) && polygonsCross(poly, o.poly))) {
+        errors.push("Essa RC90 cruzaria outra RC90.");
+      }
+      const hitM = Object.values(model.members).find((m) => segmentHitsPolygon(model.nodes[m.a].pos, model.nodes[m.b].pos, poly));
+      if (hitM) errors.push(typeOf(cat, hitM.code) === "cable" ? "Uma diagonal passa por esse canto: a RC90 não cabe." : "Uma barra passa por esse canto: a RC90 não cabe.");
+    }
     // L7: canto por onde sai uma diagonal não recebe RC90
     const cables = membersAt(model, spec.node).filter((m) => cat.pieces[m.code]?.type === "cable");
     if (cables.some((m) => inRc90Corner(spec.dirs, directionFrom(model, m, spec.node)))) {
@@ -489,6 +557,25 @@ export function validateMovedModel(cat: Catalog, model: Model, moved: Set<string
       if (o.id !== id && !moved.has(o.id) && len(sub(o.pos, n.pos)) < cat.settings.esfera_diametro_mm / cat.settings.modulo_mm) {
         errors.push("Bateria em outra esfera.");
       }
+    }
+  }
+  // C7: esfera movida em cima de uma peça parada (ou o contrário)
+  for (const id of moved) {
+    const n = model.nodes[id];
+    const fixed = { ...model, members: Object.fromEntries(Object.entries(model.members).filter(([, m]) => m.a !== id && m.b !== id)) };
+    const hit = sphereOnMember(cat, fixed, n.pos);
+    if (hit) errors.push(hit);
+  }
+  // L9: RC90 que se mexem não cruzam outras RC90 nem peças
+  const polys = rc90Polys(cat, model);
+  for (let i = 0; i < polys.length; i++) {
+    const mi = moved.has(polys[i].c.node);
+    for (let j = i + 1; j < polys.length; j++) {
+      if ((mi || moved.has(polys[j].c.node)) && polygonsCross(polys[i].poly, polys[j].poly)) errors.push("Uma RC90 cruzaria outra RC90.");
+    }
+    for (const m of Object.values(model.members)) {
+      if (!mi && !moved.has(m.a) && !moved.has(m.b)) continue;
+      if (segmentHitsPolygon(model.nodes[m.a].pos, model.nodes[m.b].pos, polys[i].poly)) errors.push("Uma peça passaria por dentro de uma RC90.");
     }
   }
   for (const m of Object.values(model.members)) {

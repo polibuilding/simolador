@@ -6,7 +6,11 @@ import { SheetsView } from "./ui/SheetsView";
 import { StatusBar } from "./ui/StatusBar";
 import { Toolbar } from "./ui/Toolbar";
 import { ViewControls } from "./ui/ViewControls";
+import { Shortcuts } from "./ui/Shortcuts";
+import { GROUPS } from "./ui/Palette";
 import { useApp } from "./ui/store";
+import { catalog } from "./core/catalog";
+import { available } from "./core/inventory";
 
 /** Retângulo de seleção: azul = só o que está inteiro dentro; verde tracejado = o que tocar. */
 function SelectBox() {
@@ -41,7 +45,9 @@ function useShortcuts() {
       }
       const mod = e.ctrlKey || e.metaKey;
       const k = e.key.toLowerCase();
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && st.helpOpen) {
+        st.setHelpOpen(false);
+      } else if (e.key === "Escape") {
         if (st.tool.kind !== "select") st.disarm();
         else st.select(null); // limpa também a seleção múltipla
       } else if ((e.key === "Delete" || e.key === "Backspace") && (st.selection || st.multi.length)) {
@@ -98,6 +104,26 @@ function useShortcuts() {
       } else if (mod && k === "a") {
         e.preventDefault();
         st.selectAll();
+      } else if (!mod && !e.altKey && (k === "1" || k === "2" || k === "3")) {
+        // 1 / 2 / 3: direção das barras
+        st.setBarMode(k === "1" ? "eixos" : k === "2" ? "passo" : "livre");
+      } else if (!mod && (k === "q" || k === "e")) {
+        // Q / E: peça vizinha do mesmo grupo (B4 ⇄ B6 ⇄ B12…), só as que existem nos kits
+        const groups = GROUPS.map((g) => g.codes.filter((c) => available(catalog, st.inventory, c) > 0));
+        st.cyclePiece(k === "e" ? 1 : -1, groups);
+      } else if (!mod && k === "g") {
+        st.setSnap(!st.snap);
+        useApp.setState({ hint: `Grade (pontos verdes) ${!st.snap ? "ligada" : "desligada"} (G).` });
+      } else if (!mod && k === "v") {
+        st.setGuides({ ...st.guides, blue: !st.guides.blue });
+        useApp.setState({ hint: `Pontos azuis (vão) ${!st.guides.blue ? "ligados" : "desligados"} (V).` });
+      } else if (!mod && k === "t") {
+        st.setGuides({ ...st.guides, yellow: !st.guides.yellow });
+        useApp.setState({ hint: `Pontos amarelos e laranja (triângulos) ${!st.guides.yellow ? "ligados" : "desligados"} (T).` });
+      } else if (!mod && k === "b") {
+        st.setInertia(!st.inertia);
+      } else if (!mod && (e.key === "?" || k === "h")) {
+        st.setHelpOpen(!st.helpOpen);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -126,6 +152,7 @@ export default function App() {
       <PropertiesPanel />
       <StatusBar />
       <SelectBox />
+      <Shortcuts />
       {sheetsOpen && <SheetsView />}
     </div>
   );
