@@ -222,7 +222,7 @@ Análise estrutural: fora do escopo (Q09).
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0`, `v1.1`…).
 
-- **1.x — geométrica** (atual: 1.5): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.6): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: o módulo extra ajustável.
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 

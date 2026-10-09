@@ -10,13 +10,14 @@ import { useThree } from "@react-three/fiber";
 import { catalog } from "../core/catalog";
 import { moveGroup, nodeMoveOptions } from "../core/edit";
 import { pasteClip, transformClip, type Clip, type PasteResult } from "../core/clipboard";
-import { boardsOf, findNodeAt, len, sub, type Model, type Vec3 } from "../core/model";
+import { AXES, add, boardsOf, findNodeAt, len, norm, scale, sub, type Model, type Vec3 } from "../core/model";
+import { validateMember } from "../core/rules";
 import type { Sel } from "../core/edit";
 import {
-  allCandidates, anchorPos, markerPos, supportCandidate, supportGuides, supportPosition, type Candidate, type SupportGuide,
+  allCandidates, anchorPos, inclinedDirs, markerPos, supportCandidate, supportGuides, supportPosition, type Candidate, type SupportGuide,
 } from "../core/snapping";
 import { componentOf } from "../core/model";
-import { inclineOn, useApp, workingModel } from "../ui/store";
+import { freeOn, inclineOn, useApp, workingModel } from "../ui/store";
 import { BASE_Y, M, toWorld } from "../render/units";
 
 const SPOT_PX = 46;
@@ -191,6 +192,105 @@ export function Placement() {
       return { pos: pick.pos, hint: `${KIND_NAME[pick.kind]}${pick.text ? `: ${pick.text}` : ""}${tail}` };
     };
 
+    // ---- barras livres: a ponta segue o cursor na esfera do comprimento da barra, com encaixes ----
+    let freeAnchor: string | null = null;
+    /** logo depois de encaixar, a esfera nova (sob o cursor) não vira partida até o cursor sair dali */
+    let freeHold: { x: number; y: number } | null = null;
+    const rayAt = (ev: PointerEvent, rect: DOMRect) => {
+      const ndc = new THREE.Vector2(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
+      raycaster.setFromCamera(ndc, camera);
+      return raycaster.ray.clone();
+    };
+    const toModule = (w: THREE.Vector3): Vec3 => [w.x / M, (w.y - BASE_Y) / M, w.z / M];
+    const deg = (r: number) => Math.round((r * 180) / Math.PI);
+    const freeBar = (ev: PointerEvent, rect: DOMRect, model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"]) => {
+      const st = useApp.getState();
+      const L = catalog.pieces[code].spanM![0];
+      const tolM = catalog.settings.tolerancia_encaixe_mm / M;
+      const nodes = Object.values(model.nodes);
+      const dpx = (p: Vec3) => {
+        const q = toScreen(toWorld(p), rect);
+        return q.z > 1 ? Infinity : Math.hypot(q.x - ev.clientX, q.y - ev.clientY);
+      };
+      // esfera de partida: a que estiver sob o cursor (fica até outra esfera ser apontada sem fechar a barra)
+      let anchor = freeAnchor ? model.nodes[freeAnchor] : undefined;
+      if (freeHold && Math.hypot(ev.clientX - freeHold.x, ev.clientY - freeHold.y) > 30) freeHold = null;
+      const near = freeHold ? undefined : nodes.map((n) => ({ n, d: dpx(n.pos) })).filter((x) => x.d < 16).sort((a, b) => a.d - b.d)[0];
+      if (near && near.n.id !== anchor?.id) {
+        const closes = anchor && Math.abs(len(sub(near.n.pos, anchor.pos)) - L) <= tolM;
+        if (!closes) anchor = near.n;
+      }
+      freeAnchor = anchor?.id ?? null;
+      if (!anchor) return st.setGhost(null, "Barra livre: passe o cursor numa esfera para começar e puxe em qualquer direção.");
+      const A = anchor.pos;
+      // ponto cru: onde o raio do cursor encontra a esfera de raio L em volta da partida
+      const ray = rayAt(ev, rect);
+      const C = toWorld(A);
+      const hitW = ray.intersectSphere(new THREE.Sphere(C, L * M), new THREE.Vector3())
+        ?? C.clone().add(ray.closestPointToPoint(C, new THREE.Vector3()).sub(C).setLength(L * M));
+      const raw = toModule(hitW);
+      type Snap = { pos: Vec3; d: number; label: string };
+      const snaps: Snap[] = [];
+      // 1) fechar numa esfera que está exatamente a L
+      for (const n of nodes) {
+        if (n.id === anchor.id || Math.abs(len(sub(n.pos, A)) - L) > tolM) continue;
+        const d = dpx(n.pos);
+        if (d < 20) snaps.push({ pos: n.pos, d: d - 10, label: `fecha na esfera (${n.pos.map((v) => +v.toFixed(2)).join("; ")})` });
+      }
+      // 2) eixos e passos de 15°
+      for (const dir of [...AXES, ...inclinedDirs(15)]) {
+        const p = add(A, scale(dir, L));
+        const d = dpx(p);
+        if (d < 9) snaps.push({ pos: p, d: d + 1, label: dir.filter((x) => Math.abs(x) > 1e-6).length === 1 ? "no eixo" : "passo de 15°" });
+      }
+      // 3) triângulo: ponta a um vão de barra de outra esfera (a próxima barra fecha nela)
+      const spans = [...new Set(Object.values(catalog.pieces).filter((p) => p.type === "bar" && p.spanM).map((p) => p.spanM![0]))];
+      for (const B of nodes) {
+        if (B.id === anchor.id) continue;
+        const v = sub(B.pos, A);
+        const dAB = len(v);
+        if (dAB < 1e-6 || dAB > L + Math.max(...spans)) continue;
+        const u = scale(v, 1 / dAB);
+        for (const sB of spans) {
+          const x = (L * L - sB * sB + dAB * dAB) / (2 * dAB);
+          const h2 = L * L - x * x;
+          if (h2 <= 1e-6) continue;
+          const pc = add(A, scale(u, x));
+          const w = sub(raw, pc);
+          const inPlane = sub(w, scale(u, w[0] * u[0] + w[1] * u[1] + w[2] * u[2]));
+          if (len(inPlane) < 1e-6) continue;
+          const q = add(pc, scale(norm(inPlane), Math.sqrt(h2)));
+          const d = dpx(q);
+          const name = Object.values(catalog.pieces).find((p) => p.type === "bar" && p.spanM?.[0] === sB)?.code ?? "";
+          if (d < 12) snaps.push({ pos: q, d: d + 2, label: `fecha triângulo com a esfera (${B.pos.map((t) => +t.toFixed(2)).join("; ")}) usando ${name}` });
+        }
+      }
+      // 4) alturas que já existem
+      const ys = [...new Set(nodes.map((n) => Math.round(n.pos[1] * 1e4) / 1e4))];
+      const hd = norm([raw[0] - A[0], 0, raw[2] - A[2]]);
+      for (const y of ys) {
+        const dy = y - A[1];
+        if (Math.abs(dy) >= L - 1e-6 || len(hd) < 1e-6) continue;
+        const r = Math.sqrt(L * L - dy * dy);
+        const q: Vec3 = [A[0] + hd[0] * r, y, A[2] + hd[2] * r];
+        const d = dpx(q);
+        if (d < 10) snaps.push({ pos: q, d: d + 3, label: `na altura y = ${+y.toFixed(2)} M` });
+      }
+      snaps.sort((a, b) => a.d - b.d);
+      const pick = snaps[0];
+      const end = (pick?.pos ?? raw).map((v) => Math.round(v * 1e4) / 1e4 + 0) as Vec3;
+      const target = findNodeAt(model, end);
+      const cand: Candidate = {
+        kind: "member", code, fromId: anchor.id, toPos: target ? target.pos : end, inclined: true,
+        check: validateMember(catalog, inv, model, code, anchor.id, target ? target.pos : end, { free: true }),
+      };
+      const dv = sub(end, A);
+      const elev = deg(Math.asin(Math.max(-1, Math.min(1, dv[1] / L))));
+      const azim = (deg(Math.atan2(-dv[2], dv[0])) + 360) % 360;
+      const info = `${pick ? `${pick.label} · ` : ""}${elev}° com a horizontal, ${azim}° em planta · ponta em y = ${end[1].toFixed(2).replace(".", ",")} M`;
+      st.setGhost({ kind: "cand", cand }, cand.check.ok ? `Livre: ${info}` : cand.check.errors[0]);
+    };
+
     const inGizmo = (ev: PointerEvent, rect: DOMRect) =>
       (ev.clientX > rect.right - GIZMO_PX && ev.clientY < rect.top + GIZMO_PX) || // cubo de vistas
       (ev.clientX < rect.left + AXES_PX && ev.clientY > rect.bottom - AXES_PX); // eixos X, Y, Z
@@ -250,8 +350,20 @@ export function Placement() {
         const present = st.history.present;
         const node = present.nodes[tool.nodeId];
         if (!node) return st.disarm();
-        const { options, locked } = nodeOptionsFor(present, tool.nodeId);
+        const set = nodeOptionsFor(present, tool.nodeId);
+        const { options, locked } = set;
         if (locked) return st.setGhost(null, locked);
+        // modo Livre: o nó desliza (contínuo) pelo lugar possível mais perto do cursor
+        if (freeOn(st) && set.nearest && set.evalAt) {
+          const ray = rayAt(ev, rect);
+          const tgt = toModule(ray.closestPointToPoint(toWorld(node.pos), new THREE.Vector3()));
+          const pt = set.nearest(tgt);
+          const o = pt && set.evalAt(pt);
+          if (o) {
+            const y = o.pos[1].toFixed(2).replace(".", ",");
+            return st.setGhost({ kind: "group", model: o.model, ids: o.ids, check: o.check }, o.check.ok ? `Livre: nó em (${o.pos.map((v) => +v.toFixed(2)).join("; ")}), altura y = ${y} M. Clique para deixar aí.` : o.check.errors[0]);
+          }
+        }
         let best: { o: (typeof options)[number]; d: number } | null = null;
         for (const o of options) {
           const w = toWorld(o.pos);
@@ -326,6 +438,9 @@ export function Placement() {
         const cand = supportCandidate(catalog, inv, model, choice.pos);
         return st.setGhost({ kind: "cand", cand }, cand.check.ok ? choice.hint : cand.check.errors[0]);
       }
+
+      // ---- barras no modo Livre ----
+      if (freeOn(st) && catalog.pieces[code]?.type === "bar") return freeBar(ev, rect, model, code, inv);
 
       // ---- demais peças: ponto de encaixe mais próximo ----
       const inclined = inclineOn(st);
@@ -481,7 +596,11 @@ export function Placement() {
     let lastEv: PointerEvent | null = null;
     const track = (ev: PointerEvent) => ((lastEv = ev), update(ev));
     const unsub = useApp.subscribe((s, p) => {
-      if (lastEv && (s.rotIndex !== p.rotIndex || (s.tool !== p.tool && s.tool.kind === "paste") || s.snapCycle !== p.snapCycle || s.guides !== p.guides || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
+      if (s.history !== p.history || s.tool !== p.tool || s.barMode !== p.barMode) {
+        freeAnchor = null;
+        freeHold = s.history !== p.history && lastEv ? { x: lastEv.clientX, y: lastEv.clientY } : null;
+      }
+      if (lastEv && (s.rotIndex !== p.rotIndex || s.barMode !== p.barMode || (s.tool !== p.tool && s.tool.kind === "paste") || s.snapCycle !== p.snapCycle || s.guides !== p.guides || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
         update(lastEv);
       }
     });

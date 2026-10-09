@@ -1,7 +1,7 @@
 // Estado da aplicação (zustand). O modelo vive dentro de um histórico para desfazer/refazer.
 import { create } from "zustand";
 import { catalog } from "../core/catalog";
-import { codeOf, moveGroup, removeMany, removeSelection, rotateSelection, selAfter, type Sel } from "../core/edit";
+import { codeOf, moveGroup, nodeMoveNearest, removeMany, removeSelection, rotateSelection, selAfter, type Sel } from "../core/edit";
 import { createHistory, push, redo, undo, type History } from "../core/history";
 import { defaultInventory, type InventoryConfig } from "../core/inventory";
 import { boardsOf, emptyModel, membersAt, type Model, type Vec3 } from "../core/model";
@@ -42,6 +42,8 @@ interface State {
   snapCycle: number;
   /** barras inclinadas ligadas (botão na barra de ferramentas ou tecla I) */
   incline: boolean;
+  /** modo das barras: só eixos, passos de 15° ou livre (qualquer direção 3D, com encaixes) */
+  barMode: BarMode;
   /** Shift pressionado: inverte a inclinação enquanto estiver apertado */
   shiftHeld: boolean;
   /** última peça colocada (Espaço repete) */
@@ -117,7 +119,10 @@ interface State {
   setGuides: (g: State["guides"]) => void;
   /** leva a GC/esfera (e a estrutura ligada a ela) para a posição dada em módulos; devolve o erro, se houver */
   moveNodeTo: (nodeId: string, target: Vec3) => string | null;
+  /** esfera: leva só o nó para o ponto possível mais perto de (x, y, z); as barras acompanham. Devolve aviso/erro */
+  moveNodeExact: (nodeId: string, target: Vec3) => { error?: string; note?: string };
   setIncline: (v: boolean) => void;
+  setBarMode: (m: BarMode) => void;
   setShiftHeld: (v: boolean) => void;
   setInventory: (inv: InventoryConfig) => void;
   setName: (n: string) => void;
@@ -164,6 +169,8 @@ export function workingModel(s: Pick<State, "history" | "tool">): Model {
   return (s.tool.kind === "place" || s.tool.kind === "paste") && s.tool.moving ? s.tool.moving.base : s.history.present;
 }
 
+export type BarMode = "eixos" | "passo" | "livre";
+
 export const useApp = create<State>((set, get) => ({
   history: createHistory(emptyModel()),
   inventory: defaultInventory(catalog),
@@ -174,6 +181,7 @@ export const useApp = create<State>((set, get) => ({
   guides: { blue: true, yellow: true },
   snapCycle: 0,
   incline: false,
+  barMode: "eixos",
   shiftHeld: false,
   lastCode: null,
   rotChain: null,
@@ -424,6 +432,14 @@ export const useApp = create<State>((set, get) => ({
   redo: () => set((s) => ({ history: redo(s.history), selection: null, multi: [], selectedBoard: null, ghost: null, tool: { kind: "select" } })),
   setSnap: (snap) => set({ snap }),
   setGuides: (guides) => set({ guides }),
+  moveNodeExact: (nodeId, target) => {
+    const { history } = get();
+    const r = nodeMoveNearest(catalog, history.present, nodeId, target);
+    if (!r.move) return { error: r.error };
+    set({ history: push(history, r.move.model), hint: null });
+    const p = r.move.pos.map((v) => +v.toFixed(2)).join("; ");
+    return r.off && r.off > 0.01 ? { note: `As barras não chegam exatamente lá: foi para o ponto possível mais perto, (${p}).` } : {};
+  },
   moveNodeTo: (nodeId, target) => {
     const { history } = get();
     const n = history.present.nodes[nodeId];
@@ -435,7 +451,8 @@ export const useApp = create<State>((set, get) => ({
     set({ history: push(history, r.model), hint: null });
     return null;
   },
-  setIncline: (incline) => set({ incline, rotIndex: 0 }),
+  setIncline: (incline) => set({ incline, barMode: incline ? "passo" : "eixos", rotIndex: 0 }),
+  setBarMode: (barMode) => set({ barMode, incline: barMode === "passo", rotIndex: 0, hint: barMode === "livre" ? "Barras livres: a ponta segue o cursor em qualquer direção; encaixa em esferas, em triângulos com esferas vizinhas e nas alturas que já existem." : null }),
   setShiftHeld: (shiftHeld) => (get().shiftHeld === shiftHeld ? undefined : set({ shiftHeld, rotIndex: 0 })),
   setInventory: (inventory) => set({ inventory }),
   setName: (name) => set({ name }),
@@ -482,6 +499,8 @@ useApp.subscribe((s, prev) => {
 
 /** Inclinação efetiva: o botão, invertido enquanto Shift estiver pressionado. */
 export const inclineOn = (s: Pick<State, "incline" | "shiftHeld">) => s.incline !== s.shiftHeld;
+/** barras livres (qualquer direção 3D) */
+export const freeOn = (s: Pick<State, "barMode">) => s.barMode === "livre";
 
 /** Modelo para exibir: durante um movimento, o modelo sem a peça retirada. */
 export const useModel = () => useApp((s) => workingModel(s));

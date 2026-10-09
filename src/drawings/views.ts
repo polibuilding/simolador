@@ -1,5 +1,6 @@
 // Projeção ortográfica do modelo nas plantas e vistas A–D, com os símbolos das pranchas do Desafio 2022.
 import type { Catalog } from "../core/catalog";
+import { continuousOutline } from "../core/shapes";
 import { type Model, type Vec3, cross, norm, sub } from "../core/model";
 import { GRAY, PEN, type Prim, type Pt } from "./prims";
 
@@ -42,6 +43,8 @@ export interface Item {
   anchor: [number, number]; // ponto para a chamada
   draw: (to: (q: [number, number]) => Pt, s: number) => Prim[];
   level?: number; // y (mm) do elemento, para plantas
+  /** y (mm) da ponta mais alta (peças inclinadas aparecem na planta do nível em que chegam) */
+  top?: number;
 }
 
 export interface World {
@@ -144,6 +147,24 @@ export function itemsFor(cat: Catalog, model: Model, pr: Projector): Item[] {
     });
   }
 
+  // trechos das barras na projeção: diagonal que cai em cima de uma barra (vista de lado, atrás dela) não é desenhada
+  const barSegs: [Pt, Pt][] = [];
+  for (const m of Object.values(model.members)) {
+    if (typeOf(m.code) === "cable") continue;
+    const [ah, av] = pr.p(P(m.a));
+    const [bh, bv] = pr.p(P(m.b));
+    barSegs.push([[ah, av], [bh, bv]]);
+  }
+  const onSeg = (q: Pt, [p0, p1]: [Pt, Pt]) => {
+    const d = sub2(p1, p0);
+    const L2 = len2(d);
+    if (L2 < 1e-6) return len2(sub2(q, p0)) < 0.25;
+    const t = ((q[0] - p0[0]) * d[0] + (q[1] - p0[1]) * d[1]) / L2;
+    const c = add2(p0, mul2(d, t));
+    return t > -0.01 && t < 1.01 && len2(sub2(q, c)) < 0.25; // 0,5 mm
+  };
+  const hiddenBehindBar = (a: Pt, b: Pt) => barSegs.some((sg) => onSeg(a, sg) && onSeg(b, sg));
+
   // barras e diagonais
   for (const m of Object.values(model.members)) {
     const a = P(m.a);
@@ -157,10 +178,11 @@ export function itemsFor(cat: Catalog, model: Model, pr: Projector): Item[] {
     const u = mul2(sub2(b2, a2), 1 / L);
     const depth = (ad + bd) / 2;
     const level = Math.min(a[1], b[1]);
+    const top = Math.max(a[1], b[1]);
     if (typeOf(m.code) === "cable") {
-      // nas vistas, diagonal vista de lado (plano dela de topo) some atrás das barras, como nas pranchas de 2022
-      const dw = norm(sub(b, a));
-      if (pr.id !== "plan" && pr.id !== "iso" && Math.abs(dw[0] * pr.depthAxis[0] + dw[1] * pr.depthAxis[1] + dw[2] * pr.depthAxis[2]) > 0.1) continue;
+      // diagonal vista de lado (cai em cima de uma barra) some atrás dela, como nas pranchas de 2022;
+      // as demais aparecem, inclusive em planos inclinados e contraventamentos 3D
+      if (pr.id !== "iso" && hiddenBehindBar(a2, b2)) continue;
       const t = s.diagonal_terminal_mm;
       // encurtamento proporcional ao que aparece da diagonal nesta vista
       const L3 = Math.hypot(...sub(b, a));
@@ -169,7 +191,7 @@ export function itemsFor(cat: Catalog, model: Model, pr: Projector): Item[] {
       const p2 = sub2(b2, mul2(u, (R + t / 2) * kk));
       const diamond = (c: Pt): Pt[] => [[c[0], c[1] + t * 0.7], [c[0] + t * 0.7, c[1]], [c[0], c[1] - t * 0.7], [c[0] - t * 0.7, c[1]]];
       items.push({
-        depth, order: 3, kind: "cable", anchor: mul2(add2(p1, p2), 0.5), level,
+        depth, order: 3, kind: "cable", anchor: mul2(add2(p1, p2), 0.5), level, top,
         draw: (to) => [
           { t: "line", a: to(p1), b: to(p2), stroke: "#000", pen: PEN.thin * 1.5, layer: "MOLA-DIAGONAL" },
           { t: "poly", pts: diamond(p1).map(to), closed: true, fill: GRAY.light, stroke: "#000", pen: PEN.thin, layer: "MOLA-DIAGONAL" },
@@ -181,7 +203,7 @@ export function itemsFor(cat: Catalog, model: Model, pr: Projector): Item[] {
     const vertical = Math.abs(a[1] - b[1]) > 1;
     const rect = segRect(add2(a2, mul2(u, R * 0.6)), sub2(b2, mul2(u, R * 0.6)), s.barra_diametro_mm);
     items.push({
-      depth, order: 2, kind: vertical ? "bar-v" : "bar-h", anchor: mul2(add2(a2, b2), 0.5), level,
+      depth, order: 2, kind: vertical ? "bar-v" : "bar-h", anchor: mul2(add2(a2, b2), 0.5), level, top,
       draw: poly(rect, GRAY.light, "MOLA-BARRA"),
     });
   }
@@ -239,11 +261,7 @@ export function itemsFor(cat: Catalog, model: Model, pr: Projector): Item[] {
       const ax = cn.dirs[0];
       const side: Vec3 = cn.side ?? (Math.abs(ax[1]) > 0.5 ? [1, 0, 0] : [0, 1, 0]);
       n = norm(cross(ax, side));
-      const Lc = R + 14;
-      const tall = cn.code === "CC90";
-      const b0 = tall ? R + 1.5 : s.barra_diametro_mm / 2;
-      const h = tall ? 9 : 5;
-      pts3 = [shift(at, ax, -Lc, side, b0), shift(at, ax, Lc, side, b0), shift(at, ax, Lc - 4, side, b0 + h), shift(at, ax, -Lc + 4, side, b0 + h)];
+      pts3 = continuousOutline(cat, cn.code).map(([u, v]) => shift(at, ax, u, side, v));
     }
     const pts = planar(pr, pts3, n, s.rc90_espessura_mm);
     const mid = pts.reduce((acc, q) => add2(acc, mul2(q, 1 / pts.length)), [0, 0] as Pt);

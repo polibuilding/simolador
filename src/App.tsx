@@ -50,6 +50,12 @@ function useShortcuts() {
       } else if ((e.key === "Delete" || e.key === "Backspace") && st.selectedBoard) {
         e.preventDefault();
         st.removeSelectedBoard();
+      } else if (mod && k === "s") {
+        e.preventDefault();
+        document.dispatchEvent(new CustomEvent("simolador:salvar"));
+      } else if (mod && k === "o") {
+        e.preventDefault();
+        document.dispatchEvent(new CustomEvent("simolador:abrir"));
       } else if (mod && k === "c") {
         st.copySelection();
       } else if (mod && k === "x" && (st.selection || st.multi.length)) {
@@ -85,7 +91,8 @@ function useShortcuts() {
         e.preventDefault();
         st.repeatLast();
       } else if (!mod && k === "i") {
-        st.setIncline(!st.incline);
+        // I: eixos → 15° → livre → eixos
+        st.setBarMode(st.barMode === "eixos" ? "passo" : st.barMode === "passo" ? "livre" : "eixos");
       } else if (!mod && k === "f") {
         st.setCamera("fit");
       } else if (mod && k === "a") {

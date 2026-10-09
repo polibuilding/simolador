@@ -42,6 +42,7 @@ export function SheetsView() {
   // capa: foto 3D renderizada (padrão) ou o desenho em linhas
   const [cover, setCover] = useState<"foto" | "desenho">("foto");
   const [dims, setDims] = useState(true);
+  const paper = meta.paper ?? "A3";
   const [iso, setIso] = useState<IsoImage | null>(null);
   useEffect(() => {
     if (cover !== "foto") return;
@@ -68,20 +69,29 @@ export function SheetsView() {
     };
   }, []);
   const { sheets, scale: used } = useMemo(
-    () => buildSheets({ cat: catalog, model, inventory, name, meta, scale, isoImage, logos, dims }),
-    [model, inventory, name, meta, scale, isoImage, logos, dims],
+    () => buildSheets({ cat: catalog, model, inventory, name, meta, scale, isoImage, logos, dims, paper }),
+    [model, inventory, name, meta, scale, isoImage, logos, dims, paper],
   );
-  const svgs = useMemo(() => sheets.map(sheetToSvg), [sheets]);
+  const svgs = useMemo(() => sheets.map((sh) => sheetToSvg(sh, { interactive: true })), [sheets]);
 
   // arrastar etiquetas: durante o arraste só o texto anda; ao soltar, a posição vai para o carimbo/arquivo e a folha é redesenhada
-  const drag = useRef<{ el: SVGTextElement; tag: string; x: number; y: number; k: number } | null>(null);
+  const drag = useRef<{ el: SVGGraphicsElement; tag: string; kind: "label" | "block"; x: number; y: number; k: number } | null>(null);
   const onDown = (e: React.PointerEvent) => {
-    const el = (e.target as Element).closest("[data-tag]") as SVGTextElement | null;
+    const target = e.target as Element;
+    const label = target.closest("[data-tag]") as SVGGraphicsElement | null;
+    const block = label ? null : (target.closest("[data-group]") as SVGGraphicsElement | null);
+    const el = label ?? block;
     const svg = el?.ownerSVGElement;
     if (!el || !svg) return;
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    drag.current = { el, tag: el.getAttribute("data-tag")!, x: e.clientX, y: e.clientY, k: 420 / svg.getBoundingClientRect().width };
+    const vbW = svg.viewBox.baseVal.width || 420;
+    drag.current = {
+      el, kind: label ? "label" : "block",
+      tag: label ? label.getAttribute("data-tag")! : `${paper}|${block!.getAttribute("data-group")}`,
+      x: e.clientX, y: e.clientY, k: vbW / svg.getBoundingClientRect().width,
+    };
+    el.classList.add("dragging");
   };
   const onMove = (e: React.PointerEvent) => {
     const d = drag.current;
@@ -92,13 +102,16 @@ export function SheetsView() {
     const d = drag.current;
     drag.current = null;
     if (!d) return;
+    d.el.classList.remove("dragging");
     const dx = (e.clientX - d.x) * d.k;
     const dy = (e.clientY - d.y) * d.k;
     if (Math.hypot(dx, dy) < 0.3) return d.el.removeAttribute("transform");
-    const prev = meta.labels?.[d.tag] ?? [0, 0];
-    setSheet({ ...meta, labels: { ...meta.labels, [d.tag]: [prev[0] + dx, prev[1] + dy] } });
+    const map = d.kind === "label" ? meta.labels : meta.blocks;
+    const prev = map?.[d.tag] ?? [0, 0];
+    const next = { ...map, [d.tag]: [prev[0] + dx, prev[1] + dy] as [number, number] };
+    setSheet(d.kind === "label" ? { ...meta, labels: next } : { ...meta, blocks: next });
   };
-  const moved = Object.keys(meta.labels ?? {}).length;
+  const moved = Object.keys(meta.labels ?? {}).length + Object.keys(meta.blocks ?? {}).filter((k) => k.startsWith(`${paper}|`)).length;
   const empty = Object.keys(model.nodes).length === 0;
 
   return (
@@ -123,6 +136,13 @@ export function SheetsView() {
           <input value={meta.line2} onChange={(e) => setSheet({ ...meta, line2: e.target.value })} />
         </label>
         <label>
+          Folha
+          <select value={paper} onChange={(e) => setSheet({ ...meta, paper: e.target.value as "A3" | "A4" })}>
+            <option value="A3">A3 (420 × 297)</option>
+            <option value="A4">A4 (297 × 210)</option>
+          </select>
+        </label>
+        <label>
           Capa
           <select value={cover} onChange={(e) => setCover(e.target.value as "foto" | "desenho")}>
             <option value="foto">Isométrica renderizada</option>
@@ -145,8 +165,12 @@ export function SheetsView() {
           Cotas
         </label>
         {moved > 0 && (
-          <button className="sheets-reset" onClick={() => setSheet({ ...meta, labels: {} })} title="Volta as etiquetas arrastadas para a posição automática">
-            Etiquetas no automático
+          <button
+            className="sheets-reset"
+            onClick={() => setSheet({ ...meta, labels: {}, blocks: Object.fromEntries(Object.entries(meta.blocks ?? {}).filter(([k]) => !k.startsWith(`${paper}|`))) })}
+            title="Volta etiquetas, desenhos, títulos e tabela para a posição automática"
+          >
+            Posições no automático
           </button>
         )}
         <div className="sheets-actions">
@@ -168,7 +192,7 @@ export function SheetsView() {
             disabled={empty}
             onClick={() => {
               // DXF não leva imagem: a capa vai com a isométrica em linhas
-              const vector = buildSheets({ cat: catalog, model, inventory, name, meta, scale, dims }).sheets;
+              const vector = buildSheets({ cat: catalog, model, inventory, name, meta, scale, dims, paper }).sheets;
               save(new Blob([sheetsToDxf(vector)], { type: "application/dxf" }), `${fileBase(name)}-pranchas.dxf`);
             }}
             title="Todas as folhas lado a lado, em mm de papel, com camadas MOLA-*"
@@ -182,17 +206,17 @@ export function SheetsView() {
       {empty ? (
         <p className="sheets-empty">Monte a estrutura primeiro: as pranchas saem dela.</p>
       ) : (
-        <p className="sheets-tip">Arraste os nomes das peças (PILAR, VIGA…) para mudar o lugar da etiqueta.</p>
+        <p className="sheets-tip">Arraste os desenhos, os títulos, a tabela da capa e os nomes das peças (PILAR, VIGA…) para mudar o lugar deles.</p>
       )}
       {!empty && (
         <div className="sheets-list" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
           {svgs.map((svg, i) => (
             <figure key={i} className="sheet">
-              <div className="sheet-paper" dangerouslySetInnerHTML={{ __html: svg.replace(/width="420mm" height="297mm"/, 'width="100%"') }} />
+              <div className="sheet-paper" dangerouslySetInnerHTML={{ __html: svg.replace(/width="[\d.]+mm" height="[\d.]+mm"/, 'width="100%"') }} />
               <figcaption>
                 P_{String(i + 1).padStart(2, "0")}: {sheets[i].title}
                 <button
-                  onClick={() => save(new Blob([svg], { type: "image/svg+xml" }), `${fileBase(name)}-P${String(i + 1).padStart(2, "0")}.svg`)}
+                  onClick={() => save(new Blob([sheetToSvg(sheets[i])], { type: "image/svg+xml" }), `${fileBase(name)}-P${String(i + 1).padStart(2, "0")}.svg`)}
                 >
                   SVG desta folha
                 </button>
