@@ -1,8 +1,9 @@
 // Posições candidatas (encaixe) para cada tipo de peça, já validadas.
 import type { Catalog } from "./catalog";
 import type { InventoryConfig } from "./inventory";
+import { boardAt, boardSize, nearestBoard } from "./boards";
 import {
-  AXES, DIR_TOL, EPS, UP, type Model, type Vec3, add, addConnector, addMember, addPlate, addSupport, canonicalDir, cross, dot,
+  AXES, DEFAULT_BOARD, DIR_TOL, EPS, UP, type Board, type Model, boardsOf, type Vec3, add, addConnector, addMember, addPlate, addSupport, canonicalDir, cross, dot,
   findNodeAt, len, membersAt, directionFrom, norm, plateKey, samePos, scale, sidesAround, sub,
 } from "./model";
 import {
@@ -205,12 +206,14 @@ export function connectorCandidates(cat: Catalog, inv: InventoryConfig, model: M
   return specs.map((spec) => ({ kind: "connector" as const, spec, check: validateConnector(cat, inv, model, spec) }));
 }
 
-/** GC: ponto da chapa (em módulos) → posição encaixada (grade) ou livre. */
-export function supportPosition(cat: Catalog, point: { x: number; z: number }, snap: boolean): Vec3 {
-  const s = cat.settings;
-  const cx = (v: number) => Math.min(s.chapa_modulos_x, Math.max(0, v));
-  const cz = (v: number) => Math.min(s.chapa_modulos_y, Math.max(0, v));
-  if (snap) return [cx(Math.round(point.x)), 0, cz(Math.round(point.z))];
+/** GC: ponto (em módulos) → posição encaixada na grade da chapa mais perto, ou livre. */
+export function supportPosition(cat: Catalog, point: { x: number; z: number }, snap: boolean, boards: Board[] = [DEFAULT_BOARD]): Vec3 {
+  const b = boardAt(cat, boards, point.x, point.z) ?? nearestBoard(cat, boards, point.x, point.z);
+  const { w, d } = boardSize(cat);
+  const cx = (v: number) => Math.min(b.x + w, Math.max(b.x, v));
+  const cz = (v: number) => Math.min(b.z + d, Math.max(b.z, v));
+  // a grade de cada chapa começa no canto dela
+  if (snap) return [cx(b.x + Math.round(point.x - b.x)), 0, cz(b.z + Math.round(point.z - b.z))].map((v) => Math.round(v * 1e4) / 1e4 + 0) as Vec3;
   const r = (v: number) => Math.round(v * 100) / 100;
   return [r(point.x), 0, r(point.z)];
 }
@@ -296,8 +299,17 @@ export function allCandidates(cat: Catalog, inv: InventoryConfig, model: Model, 
   const t = cat.pieces[code]?.type;
   if (t === "support") {
     const out: Candidate[] = [];
-    for (let x = 0; x <= cat.settings.chapa_modulos_x; x++) {
-      for (let z = 0; z <= cat.settings.chapa_modulos_y; z++) out.push(supportCandidate(cat, inv, model, [x, 0, z]));
+    const seen = new Set<string>();
+    for (const b of boardsOf(model)) {
+      for (let x = 0; x <= cat.settings.chapa_modulos_x; x++) {
+        for (let z = 0; z <= cat.settings.chapa_modulos_y; z++) {
+          const p = [b.x + x, 0, b.z + z].map((v) => Math.round(v * 1e4) / 1e4 + 0) as Vec3;
+          const k = p.join(",");
+          if (seen.has(k)) continue;
+          seen.add(k);
+          out.push(supportCandidate(cat, inv, model, p));
+        }
+      }
     }
     return out;
   }

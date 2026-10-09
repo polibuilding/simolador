@@ -4,11 +4,12 @@ import { catalog } from "../core/catalog";
 import { codeOf, moveGroup, removeMany, removeSelection, rotateSelection, selAfter, type Sel } from "../core/edit";
 import { createHistory, push, redo, undo, type History } from "../core/history";
 import { defaultInventory, type InventoryConfig } from "../core/inventory";
-import { emptyModel, membersAt, type Model, type Vec3 } from "../core/model";
+import { boardsOf, emptyModel, membersAt, type Model, type Vec3 } from "../core/model";
 import { overlappingNodes, type Check } from "../core/rules";
 import { fromFile, toFile, type SheetMeta } from "../core/serialization";
 import { applyCandidate, type Candidate } from "../core/snapping";
-import { cutSelection, makeClip, repeatClip, type Clip } from "../core/clipboard";
+import { cutSelection, makeClip, pasteClip, repeatClip, type Clip } from "../core/clipboard";
+import { addBoard, boardAsModel, boardSelection, filterByBoards, removeBoard, setBoardGap, type Side } from "../core/boards";
 
 export type Tool =
   | { kind: "select" }
@@ -83,6 +84,21 @@ interface State {
   pasteAdjust: (change: { dy?: number; flip?: "x" | "z" }) => void;
   /** Repetir a seleção `times` vezes com deslocamento `step` (módulos) */
   repeatSelection: (step: Vec3, times: number) => string | null;
+  // ---- chapas ----
+  /** chapa sob o mouse (mostra os + e o menu) */
+  hoverBoard: string | null;
+  setHoverBoard: (id: string | null) => void;
+  addBoardAt: (fromId: string, side: Side) => void;
+  removeBoardId: (id: string) => string | null;
+  setBoardGapOf: (id: string, gap: number) => string | null;
+  selectBoard: (id: string) => void;
+  /** a estrutura da chapa como arquivo .mola (texto) */
+  exportBoard: (id: string) => string;
+  /** cola um .mola na chapa (canto do arquivo no canto da chapa) */
+  importToBoard: (id: string, raw: unknown) => string | null;
+  /** chapas escolhidas para as pranchas (null = todas) */
+  sheetBoards: string[] | null;
+  setSheetBoards: (ids: string[] | null) => void;
   select: (s: Sel | null) => void;
   toggleMulti: (s: Sel) => void;
   setMulti: (list: Sel[], add?: boolean) => void;
@@ -263,6 +279,65 @@ export const useApp = create<State>((set, get) => ({
       },
     });
   },
+  hoverBoard: null,
+  setHoverBoard: (hoverBoard) => (get().hoverBoard === hoverBoard ? undefined : set({ hoverBoard })),
+  addBoardAt: (fromId, side) => {
+    const s = get();
+    const r = addBoard(catalog, s.history.present, fromId, side);
+    if (!r.model) return set({ hint: r.error ?? null });
+    set({ history: push(s.history, r.model), hoverBoard: r.id ?? null, hint: "Chapa nova. Passe o mouse nela para mudar a distância (0, 4, 6, 12 módulos ou livre)." });
+  },
+  removeBoardId: (id) => {
+    const s = get();
+    const r = removeBoard(catalog, s.history.present, id);
+    if (!r.model) return r.error ?? null;
+    set({ history: push(s.history, r.model), hoverBoard: null, selection: null, multi: [], hint: "Chapa apagada. Ctrl+Z desfaz." });
+    return null;
+  },
+  setBoardGapOf: (id, gap) => {
+    const s = get();
+    const r = setBoardGap(catalog, s.history.present, id, gap);
+    if (!r.model) return r.error ?? null;
+    set({ history: push(s.history, r.model) });
+    return null;
+  },
+  selectBoard: (id) => {
+    const sels = boardSelection(catalog, get().history.present, id);
+    get().setMulti(sels, false);
+    set({ hint: sels.length ? `${sels.length} peças da chapa selecionadas: Ctrl+C copia, M move, Delete apaga.` : "Essa chapa ainda está vazia." });
+  },
+  exportBoard: (id) => {
+    const s = get();
+    const m = boardAsModel(catalog, s.history.present, id);
+    return JSON.stringify(toFile(m, s.inventory, `${s.name} - chapa ${id.slice(1)}`, catalog.settings.modulo_mm, s.sheet), null, 2);
+  },
+  importToBoard: (id, raw) => {
+    const s = get();
+    let src: Model;
+    try {
+      src = fromFile(raw).model;
+    } catch (e) {
+      return e instanceof Error ? e.message : "Arquivo inválido.";
+    }
+    const target = boardsOf(s.history.present).find((b) => b.id === id);
+    if (!target) return "Chapa não encontrada.";
+    const sels: Sel[] = [
+      ...Object.keys(src.nodes).map((k) => ({ kind: "node" as const, id: k })),
+      ...Object.keys(src.members).map((k) => ({ kind: "member" as const, id: k })),
+      ...Object.keys(src.plates).map((k) => ({ kind: "plate" as const, id: k })),
+      ...Object.keys(src.connectors).map((k) => ({ kind: "connector" as const, id: k })),
+    ];
+    const clip = makeClip(src, sels);
+    if (!clip) return "O arquivo não tem peças.";
+    const from = boardsOf(src)[0];
+    const r = pasteClip(catalog, s.inventory, s.history.present, clip, [clip.anchor[0] + target.x - from.x, clip.anchor[1], clip.anchor[2] + target.z - from.z]);
+    if (!r.check.ok) return r.check.errors[0];
+    set({ history: push(s.history, r.model), hint: `${r.added} peças importadas na chapa.` });
+    return null;
+  },
+  sheetBoards: null,
+  setSheetBoards: (sheetBoards) => set({ sheetBoards }),
+
   repeatSelection: (step, times) => {
     const s = get();
     const sels = s.multi.length ? s.multi : s.selection ? [s.selection] : [];
@@ -353,7 +428,7 @@ export const useApp = create<State>((set, get) => ({
   setCamera: (view) => set((s) => ({ camera: { view, n: s.camera.n + 1 } })),
   // abrir as pranchas limpa seleção e destaque (a foto da capa sai sem cores de seleção)
   setSheetsOpen: (sheetsOpen) =>
-    set(sheetsOpen ? { sheetsOpen, tool: { kind: "select" }, ghost: null, selection: null, multi: [], hoverId: null } : { sheetsOpen }),
+    set(sheetsOpen ? { sheetsOpen, tool: { kind: "select" }, ghost: null, selection: null, multi: [], hoverId: null, hoverBoard: null } : { sheetsOpen, sheetBoards: null }),
   newProject: () =>
     set((s) => ({ history: push(s.history, emptyModel()), selection: null, ghost: null, name: "Estrutura 01", tool: { kind: "select" } })),
 
@@ -395,3 +470,15 @@ export const inclineOn = (s: Pick<State, "incline" | "shiftHeld">) => s.incline 
 
 /** Modelo para exibir: durante um movimento, o modelo sem a peça retirada. */
 export const useModel = () => useApp((s) => workingModel(s));
+
+/** O que a cena mostra: nas pranchas de algumas chapas, só elas e o que está nelas (para a foto da capa). */
+let displayCache: { m: Model; ids: string[] | null; out: Model } | null = null;
+export const useDisplayModel = () =>
+  useApp((s) => {
+    const m = workingModel(s);
+    const ids = s.sheetsOpen ? s.sheetBoards : null;
+    if (!ids) return m;
+    if (displayCache && displayCache.m === m && displayCache.ids === ids) return displayCache.out;
+    displayCache = { m, ids, out: filterByBoards(catalog, m, ids) };
+    return displayCache.out;
+  });

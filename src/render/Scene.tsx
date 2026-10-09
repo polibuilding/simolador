@@ -3,14 +3,15 @@ import { Environment, GizmoHelper, GizmoViewcube, GizmoViewport, Lightformer, Or
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { catalog } from "../core/catalog";
-import { componentOf, type Model, type Vec3 } from "../core/model";
+import { boardsOf, componentOf, type Model, type Vec3 } from "../core/model";
 import { markerPos, type Candidate } from "../core/snapping";
 import { candidatesFor, guidesFor, nodeOptionsFor, Placement } from "../interaction/Placement";
-import { useApp, useModel, inclineOn, workingModel } from "../ui/store";
+import { useApp, useDisplayModel, useModel, inclineOn, workingModel } from "../ui/store";
 import type { Sel } from "../core/edit";
-import { Bar, GroundConnection, GroundPlate, Sphere, type Look } from "./pieces/pieces";
+import { Bar, GroundConnection, Sphere, type Look } from "./pieces/pieces";
 import { Cable, ContinuousConnector, PlateMesh, RigidConnector } from "./pieces/more";
-import { COLORS, PLATE_D, PLATE_W, toWorld } from "./units";
+import { COLORS, M, PLATE_D, PLATE_W, toWorld } from "./units";
+import { Boards } from "./Boards";
 import { SnapshotHook } from "./snapshot";
 
 const typeOf = (code: string) => catalog.pieces[code]?.type;
@@ -74,7 +75,7 @@ function ModelGroup({
 }
 
 function ModelView() {
-  const model = useModel();
+  const model = useDisplayModel();
   const selection = useApp((s) => s.selection);
   const multi = useApp((s) => s.multi);
   const hoverId = useApp((s) => s.hoverId);
@@ -266,6 +267,12 @@ function Markers() {
   );
 }
 
+/** Chapas (nas pranchas de algumas chapas, só elas aparecem, para a foto da capa). */
+function BoardsView() {
+  const model = useDisplayModel();
+  return <Boards model={model} />;
+}
+
 /** Câmera: enquadrar a estrutura e vistas prontas (A = frente, B = esquerda, topo). */
 function CameraRig() {
   const cmd = useApp((s) => s.camera);
@@ -274,7 +281,11 @@ function CameraRig() {
     if (!controls) return;
     const ctl = controls as unknown as { target: THREE.Vector3; update: () => void };
     const model = useApp.getState().history.present;
-    const box = new THREE.Box3(new THREE.Vector3(0, -3, 0), new THREE.Vector3(PLATE_W, 20, PLATE_D));
+    const box = new THREE.Box3();
+    for (const b of boardsOf(model)) {
+      box.expandByPoint(new THREE.Vector3(b.x * M, -3, b.z * M));
+      box.expandByPoint(new THREE.Vector3(b.x * M + PLATE_W, 20, b.z * M + PLATE_D));
+    }
     for (const n of Object.values(model.nodes)) box.expandByPoint(toWorld(n.pos));
     box.expandByScalar(25);
     const center = box.getCenter(new THREE.Vector3());
@@ -340,7 +351,7 @@ export function Scene() {
         <planeGeometry args={[8000, 8000]} />
         <shadowMaterial opacity={0.12} />
       </mesh>
-      <GroundPlate />
+      <BoardsView />
       <ModelView />
       <GhostView />
       <Markers />

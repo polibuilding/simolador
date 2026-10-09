@@ -130,8 +130,15 @@ export function GroundConnection({ position, look = "normal", ...p }: { position
   );
 }
 
-/** Chapa de base preta com a grade de módulos. */
-export function GroundPlate() {
+/** Chapa de base preta com a grade de módulos, com o canto em (x, z) módulos. */
+export function GroundPlate({
+  id = "b1", x = 0, z = 0, highlight = false, onPointerMove, onPointerOut, onClick,
+}: {
+  id?: string; x?: number; z?: number; highlight?: boolean;
+  onPointerMove?: (e: ThreeEvent<PointerEvent>) => void;
+  onPointerOut?: (e: ThreeEvent<PointerEvent>) => void;
+  onClick?: (e: ThreeEvent<MouseEvent>) => void;
+}) {
   const t = s.chapa_espessura_mm;
   const grid = useMemo(() => {
     const pts: number[] = [];
@@ -156,13 +163,20 @@ export function GroundPlate() {
     }
   });
   return (
-    <group>
-      <mesh name="chapa" position={[PLATE_W / 2, -t / 2, PLATE_D / 2]} receiveShadow>
+    <group position={[x * M, 0, z * M]}>
+      <mesh
+        name={`chapa:${id}`}
+        position={[PLATE_W / 2, -t / 2, PLATE_D / 2]}
+        receiveShadow
+        onPointerMove={onPointerMove}
+        onPointerOut={onPointerOut}
+        onClick={onClick}
+      >
         <boxGeometry args={[PLATE_W, t, PLATE_D]} />
-        <meshStandardMaterial ref={mat} color={COLORS.plate} roughness={0.7} metalness={0.1} />
+        <meshStandardMaterial ref={mat} color={highlight ? "#202529" : COLORS.plate} roughness={0.7} metalness={0.1} />
       </mesh>
-      <lineSegments geometry={grid}>
-        <lineBasicMaterial color={COLORS.grid} transparent opacity={0.55} />
+      <lineSegments geometry={grid} raycast={() => null}>
+        <lineBasicMaterial color={COLORS.grid} transparent opacity={highlight ? 0.75 : 0.55} />
       </lineSegments>
     </group>
   );

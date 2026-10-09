@@ -2,8 +2,9 @@
 // Nenhum número fixo aqui: tudo vem de catalog.settings (data/parametros.xlsx).
 import type { Catalog } from "./catalog";
 import { remaining, type InventoryConfig } from "./inventory";
+import { boardAt } from "./boards";
 import {
-  DIR_TOL, EPS, UP, type Model, type Vec3, type Member, add, cross, dot, findNodeAt, len, membersAt,
+  DIR_TOL, EPS, UP, type Model, boardsOf, type Vec3, type Member, add, cross, dot, findNodeAt, len, membersAt,
   directionFrom, memberAlong, norm, plateKey, samePos, scale, sub,
 } from "./model";
 
@@ -29,7 +30,7 @@ export function validateSupport(cat: Catalog, inv: InventoryConfig, model: Model
   const [x, y, z] = pos;
   // G1: centro dentro da chapa, borda inclusive
   if (Math.abs(y) > EPS) errors.push("A ligação de base fica sobre a chapa.");
-  if (x < -EPS || x > s.chapa_modulos_x + EPS || z < -EPS || z > s.chapa_modulos_y + EPS) {
+  if (!boardAt(cat, boardsOf(model), x, z)) {
     errors.push("O centro da ligação de base precisa ficar dentro da chapa.");
   }
   // G3: sem sobreposição com outra GC

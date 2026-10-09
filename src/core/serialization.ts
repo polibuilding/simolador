@@ -1,9 +1,9 @@
 // Arquivo de projeto .mola (JSON com versão de esquema; A-CONFIRMAR Q05).
 import type { InventoryConfig } from "./inventory";
-import type { Connector, Member, Model, MolaNode, Plate, Vec3 } from "./model";
+import type { Board, Connector, Member, Model, MolaNode, Plate, Vec3 } from "./model";
 
 export const FORMAT = "simolador";
-export const VERSION = 2;
+export const VERSION = 3;
 
 export interface SheetMeta {
   line1: string; // ex.: MOLA STRUCTURAL MODEL
@@ -24,6 +24,8 @@ export interface MolaFile {
   members: Member[];
   plates: Plate[];
   connectors: Connector[];
+  /** chapas de base (v3); sem elas, uma chapa no canto (0, 0) */
+  boards?: Board[];
 }
 
 export function toFile(model: Model, inv: InventoryConfig, name: string, moduleMm: number, sheet?: SheetMeta): MolaFile {
@@ -39,6 +41,7 @@ export function toFile(model: Model, inv: InventoryConfig, name: string, moduleM
     members: Object.values(model.members),
     plates: Object.values(model.plates),
     connectors: Object.values(model.connectors),
+    ...(model.boards?.length ? { boards: model.boards } : {}),
   };
 }
 
@@ -84,8 +87,13 @@ export function fromFile(raw: unknown): { model: Model; inventory: InventoryConf
   }
   const all = [...Object.keys(nodes), ...Object.keys(members), ...Object.keys(plates), ...Object.keys(connectors)];
   const maxId = Math.max(0, ...all.map((k) => Number(k.slice(1)) || 0));
+  const boards: Board[] = [];
+  for (const b of f.boards ?? []) {
+    if (typeof b?.id !== "string" || typeof b.x !== "number" || typeof b.z !== "number") throw new MolaFileError("Chapa inválida no arquivo.");
+    boards.push({ id: b.id, x: b.x, z: b.z, ...(b.attach ? { attach: b.attach } : {}) });
+  }
   return {
-    model: { nodes, members, plates, connectors, nextId: maxId + 1 },
+    model: { nodes, members, plates, connectors, nextId: maxId + 1, ...(boards.length ? { boards } : {}) },
     inventory: f.inventory ?? { kits: {}, unlimited: false },
     name: f.name ?? "Estrutura",
     sheet: f.sheet,

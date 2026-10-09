@@ -10,7 +10,7 @@ import { useThree } from "@react-three/fiber";
 import { catalog } from "../core/catalog";
 import { moveGroup, nodeMoveOptions } from "../core/edit";
 import { pasteClip, transformClip, type Clip, type PasteResult } from "../core/clipboard";
-import { findNodeAt, len, sub, type Model, type Vec3 } from "../core/model";
+import { boardsOf, findNodeAt, len, sub, type Model, type Vec3 } from "../core/model";
 import type { Sel } from "../core/edit";
 import {
   allCandidates, anchorPos, markerPos, supportCandidate, supportGuides, supportPosition, type Candidate, type SupportGuide,
@@ -154,7 +154,7 @@ export function Placement() {
       const radius = exclusive ? EXCLUSIVE_PX : GUIDE_PX;
       const all: Choice[] = [];
       if (st.snap) {
-        const g = supportPosition(catalog, hit, true);
+        const g = supportPosition(catalog, hit, true, boardsOf(st.history.present));
         all.push({ pos: g, kind: "grid", text: null, d: dist(g) });
       }
       for (const g of enabled) {
@@ -175,7 +175,7 @@ export function Placement() {
           return { pos: null, hint: `Grade desligada: leve o cursor até um ponto ${which}.` };
         }
         const none = !st.snap && (st.guides.blue || st.guides.yellow);
-        return { pos: supportPosition(catalog, hit, false), hint: none ? "Ainda não há pontos azuis/amarelos: a GC vai livre. Coloque duas GC a um vão de barra para surgirem os triângulos." : null };
+        return { pos: supportPosition(catalog, hit, false, boardsOf(st.history.present)), hint: none ? "Ainda não há pontos azuis/amarelos: a GC vai livre. Coloque duas GC a um vão de barra para surgirem os triângulos." : null };
       }
       all.sort((a, b) => a.d - b.d);
       // pontos "disputados": os que estão quase tão perto quanto o mais perto
