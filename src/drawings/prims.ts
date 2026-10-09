@@ -1,4 +1,4 @@
-// Primitivas de desenho em milímetros de papel (origem no canto superior esquerdo da folha A3, y para baixo).
+// Primitivas de desenho em milímetros de papel (origem no canto superior esquerdo da folha, y para baixo).
 // O mesmo desenho vira SVG (tela e PDF) e DXF (AutoCAD).
 
 export type Pt = [number, number];
@@ -9,6 +9,8 @@ export type Layer =
 
 export interface Style {
   layer: Layer;
+  /** bloco arrastável da folha (desenho, título, tabela…); a posição fica salva no carimbo do projeto */
+  group?: string;
   pen?: number; // espessura em mm
   fill?: string | null; // cinza, ex. "#bababa"
   stroke?: string | null;
@@ -24,14 +26,31 @@ export type Prim =
   /** imagem (foto renderizada da capa); o DXF ignora */
   | ({ t: "image"; x: number; y: number; w: number; h: number; href: string } & Style);
 
+export type PaperName = "A3" | "A4";
+export const PAPER: Record<PaperName, { w: number; h: number }> = { A3: { w: 420, h: 297 }, A4: { w: 297, h: 210 } };
+/** compatibilidade: tamanho padrão */
+export const A3 = PAPER.A3;
+
 export interface Sheet {
   number: number;
   total: number;
   title: string;
   prims: Prim[];
+  paper: PaperName;
+  size: { w: number; h: number };
 }
 
-export const A3 = { w: 420, h: 297 };
+/** Desloca uma primitiva (mm de papel). */
+export function movePrim(p: Prim, dx: number, dy: number): Prim {
+  const m = (q: Pt): Pt => [q[0] + dx, q[1] + dy];
+  switch (p.t) {
+    case "line": return { ...p, a: m(p.a), b: m(p.b) };
+    case "poly": return { ...p, pts: p.pts.map(m) };
+    case "circle": return { ...p, c: m(p.c) };
+    case "text": return { ...p, p: m(p.p) };
+    case "image": return { ...p, x: p.x + dx, y: p.y + dy };
+  }
+}
 
 // Tons de cinza das pranchas do Desafio 2022
 export const GRAY = {

@@ -1,11 +1,11 @@
-// Conjunto de pranchas A3 no padrão do Desafio Poli-USP 2022 (docs/plano-simolador.md, seção 6b):
+// Conjunto de pranchas (A3 ou A4) no padrão do Desafio Poli-USP 2022 (docs/plano-simolador.md, seção 6b):
 // P_01 capa (isométrica + lista de peças) · P_02… plantas por pavimento (2×2 por folha) · vistas A e B · vistas C e D.
 import type { Catalog } from "../core/catalog";
 import type { InventoryConfig } from "../core/inventory";
 import { usage } from "../core/inventory";
 import { boardsOf, type Model } from "../core/model";
 import type { SheetMeta } from "../core/serialization";
-import { A3, GRAY, PEN, type Prim, type Pt, type Sheet } from "./prims";
+import { GRAY, PAPER, PEN, movePrim, type PaperName, type Prim, type Pt, type Sheet } from "./prims";
 import { bounds, itemsFor, projector, world, type Item, type ViewId } from "./views";
 
 export interface SheetInput {
@@ -18,6 +18,8 @@ export interface SheetInput {
   date?: Date;
   /** foto isométrica renderizada para a capa; sem ela, a capa usa o desenho em linhas */
   isoImage?: { url: string; aspect: number } | null;
+  /** tamanho da folha (padrão: A3) */
+  paper?: PaperName;
   /** cotas (entre eixos, totais, alturas e cota dos níveis); padrão: ligadas */
   dims?: boolean;
   /** logos do carimbo (Mola e equipe), lado a lado no canto inferior esquerdo; sem elas, o hexágono */
@@ -27,7 +29,17 @@ export interface SheetInput {
 const SCALES = [1, 2, 2.5, 5, 10, 20];
 const MARGIN = 10;
 const TB_H = 16; // altura do carimbo
-const AREA = { x0: MARGIN, y0: MARGIN, x1: A3.w - MARGIN, y1: A3.h - MARGIN - TB_H - 4 };
+// folha atual (definida no começo de buildSheets)
+let PAPER_NAME: PaperName = "A3";
+let PG = PAPER.A3;
+let AREA = { x0: MARGIN, y0: MARGIN, x1: PG.w - MARGIN, y1: PG.h - MARGIN - TB_H - 4 };
+function setPaper(name: PaperName) {
+  PAPER_NAME = name;
+  PG = PAPER[name];
+  AREA = { x0: MARGIN, y0: MARGIN, x1: PG.w - MARGIN, y1: PG.h - MARGIN - TB_H - 4 };
+}
+/** marca as primitivas como um bloco arrastável */
+const tagged = (prims: Prim[], group: string): Prim[] => prims.map((p) => (p.group ? p : { ...p, group }));
 
 const LABEL: Partial<Record<Item["kind"], string>> = {
   "bar-v": "PILAR",
@@ -228,12 +240,13 @@ function viewMarker(c: Pt, dir: "up" | "down" | "left" | "right", letter: string
 // ---------------- carimbo ----------------
 
 function titleBlock(input: SheetInput, n: number, number: number, total: number, title: string): Prim[] {
-  const y0 = A3.h - MARGIN - TB_H;
-  const y1 = A3.h - MARGIN;
+  const y0 = PG.h - MARGIN - TB_H;
+  const y1 = PG.h - MARGIN;
   const ym = (y0 + y1) / 2;
-  const cols = [MARGIN, 46, 118, 176, 252, 330, A3.w - MARGIN];
+  const kc = (PG.w - 2 * MARGIN) / (PAPER.A3.w - 2 * MARGIN);
+  const cols = [MARGIN, ...[46, 118, 176, 252, 330].map((x) => MARGIN + (x - MARGIN) * kc), PG.w - MARGIN];
   const out: Prim[] = [
-    { t: "poly", pts: [[MARGIN, y0], [A3.w - MARGIN, y0], [A3.w - MARGIN, y1], [MARGIN, y1]], closed: true, fill: null, stroke: "#000", pen: PEN.frame, layer: "MOLA-CARIMBO" },
+    { t: "poly", pts: [[MARGIN, y0], [PG.w - MARGIN, y0], [PG.w - MARGIN, y1], [MARGIN, y1]], closed: true, fill: null, stroke: "#000", pen: PEN.frame, layer: "MOLA-CARIMBO" },
   ];
   for (const x of cols.slice(1, -1)) out.push({ t: "line", a: [x, y0], b: [x, y1], stroke: "#000", pen: PEN.part, layer: "MOLA-CARIMBO" });
   // logos (public/logos: Mola e equipe, lado a lado); sem arquivos, a marca provisória (hexágono)
@@ -263,7 +276,7 @@ function titleBlock(input: SheetInput, n: number, number: number, total: number,
   out.push(T([cols[2] + 4, ym - 1.8], `ESCALA: ${fmtScale(n)}`, 2.1));
   out.push(T([cols[2] + 4, ym + 3.6], "MEDIDAS EM MILÍMETRO (mm)", 2.1));
   // escala gráfica (gerada pela escala real da folha)
-  const real = niceLength(50 * n);
+  const real = niceLength(50 * n * kc);
   const len = real / n;
   const gx = cols[3] + (cols[4] - cols[3] - len) / 2;
   const gy = ym + 1.5;
@@ -280,7 +293,7 @@ function titleBlock(input: SheetInput, n: number, number: number, total: number,
   out.push(T([cols[4] + 8, ym + 3.8], input.name.toUpperCase(), 3.4, true));
   out.push(T([cols[5] + 10, ym + 1], title.toUpperCase(), 2.4));
   out.push(T([cols[6] - 4, ym + 2.6], `P_${String(number).padStart(2, "0")}/${String(total).padStart(2, "0")}`, 6.5, true, "end"));
-  out.push(T([MARGIN, A3.h - 4], "FORMATO A3", 1.8));
+  out.push(T([MARGIN, PG.h - 4], `FORMATO ${PAPER_NAME}`, 1.8));
   return out;
 }
 
@@ -292,27 +305,38 @@ function niceLength(target: number) {
 // ---------------- folhas ----------------
 
 function planCells() {
+  // A3: quatro plantas por folha; A4: uma por folha (para manter a escala)
+  if (PAPER_NAME === "A4") return [{ x: AREA.x0, y: AREA.y0, w: AREA.x1 - AREA.x0, h: AREA.y1 - AREA.y0 }];
   const w = (AREA.x1 - AREA.x0) / 2;
   const h = (AREA.y1 - AREA.y0) / 2;
   return [0, 1, 2, 3].map((i) => ({ x: AREA.x0 + (i % 2) * w, y: AREA.y0 + Math.floor(i / 2) * h, w, h }));
 }
 function elevCells() {
-  const w = (AREA.x1 - AREA.x0) / 2;
-  return [0, 1].map((i) => ({ x: AREA.x0 + i * w, y: AREA.y0, w, h: AREA.y1 - AREA.y0 }));
+  // A3: duas vistas por folha; A4: uma por folha
+  const k = PAPER_NAME === "A4" ? 1 : 2;
+  const w = (AREA.x1 - AREA.x0) / k;
+  return Array.from({ length: k }, (_, i) => ({ x: AREA.x0 + i * w, y: AREA.y0, w, h: AREA.y1 - AREA.y0 }));
 }
 
 // espaço reservado dentro de cada célula (mm de papel)
 const PLAN_PAD = { left: 14, right: 44, top: 14, bottom: 22 };
 const ELEV_PAD = { left: 34, right: 52, top: 22, bottom: 34 };
 
-function planItems(cat: Catalog, model: Model, levelY: number, isGround: boolean): Item[] {
+function planItems(cat: Catalog, model: Model, levelY: number, isGround: boolean, levels: number[] = []): Item[] {
   const all = itemsFor(cat, model, projector("plan"));
   const near = (y?: number) => y !== undefined && Math.abs(y - levelY) < 0.5;
+  // peça inclinada: aparece na planta do primeiro nível em que ela chega (o da ponta de cima ou o seguinte)
+  const arrival = (top?: number) => {
+    if (top === undefined) return false;
+    const lv = levels.find((y) => y >= top - 0.5);
+    return lv !== undefined ? Math.abs(lv - levelY) < 0.5 : near(top);
+  };
   return all.filter((it) => {
     if (it.kind === "base") return isGround;
     if (it.kind === "node") return near(it.level);
-    if (it.kind === "plate-h" || it.kind === "bar-h" || it.kind === "bar-v") return near(it.level); // bar-v: só as inclinadas aparecem (pilares ficam de topo)
-    if (it.kind === "plate-v" || it.kind === "cable") return near(it.level);
+    if (it.kind === "plate-h" || it.kind === "bar-h") return near(it.level);
+    if (it.kind === "bar-v" || it.kind === "cable") return it.top !== undefined && Math.abs((it.top ?? 0) - (it.level ?? 0)) > 0.5 ? arrival(it.top) : near(it.level);
+    if (it.kind === "plate-v") return near(it.level);
     if (it.kind === "rc90" || it.kind === "cc") return near(it.level);
     return false;
   });
@@ -347,7 +371,7 @@ function inner(cell: { x: number; y: number; w: number; h: number }, pad: typeof
 function planDrawing(input: SheetInput, n: number, lv: ReturnType<typeof levelsOf>[number], isGround: boolean, cell: ReturnType<typeof planCells>[number]): Prim[] {
   const { cat, model } = input;
   const W = world(cat);
-  const items = planItems(cat, model, lv.y, isGround);
+  const items = planItems(cat, model, lv.y, isGround, levelsOf(model, cat).map((l) => l.y));
   const frames = boardFrames(model, cat);
   const b = bounds([], frames.flat());
   const P = place(b, inner(cell, PLAN_PAD), n);
@@ -401,8 +425,9 @@ function planDrawing(input: SheetInput, n: number, lv: ReturnType<typeof levelsO
   out.push(...viewMarker([P.box.x0 - 13, my], "right", "B"));
   out.push(...viewMarker([cell.x + cell.w - 4, my], "left", "D"));
   out.push(...callouts(items, PLAN_LABELS, P, P.box.x1 + 12, P.box.y0, P.box.y1, `planta ${lv.planTitle.join(" ")}`, input.meta.labels));
-  out.push(...viewTitle([cell.x + 2, cell.y + cell.h - 13], lv.planTitle[0], lv.planTitle[1], n));
-  return out;
+  const key = lv.planTitle.join(" ");
+  const title = viewTitle([cell.x + 2, cell.y + cell.h - 13], lv.planTitle[0], lv.planTitle[1], n);
+  return [...tagged(out, `desenho:${key}`), ...tagged(title, `titulo:${key}`)];
 }
 
 function elevationDrawing(input: SheetInput, n: number, view: ViewId, cell: ReturnType<typeof elevCells>[number]): Prim[] {
@@ -450,8 +475,8 @@ function elevationDrawing(input: SheetInput, n: number, view: ViewId, cell: Retu
   const gy = P.to([0, 0])[1];
   out.push({ t: "line", a: [x0, gy], b: [x1 + 4, gy], stroke: "#000", pen: PEN.ground, layer: "MOLA-BASE" });
   out.push(...callouts(items, ELEV_LABELS, P, P.box.x1 + 20, P.box.y0, P.box.y1, `vista ${view}`, input.meta.labels));
-  out.push(...viewTitle([cell.x + ELEV_PAD.left, cell.y + cell.h - 24], `VISTA - ${view}`, input.name.toUpperCase(), n));
-  return out;
+  const title = viewTitle([cell.x + ELEV_PAD.left, cell.y + cell.h - 24], `VISTA - ${view}`, input.name.toUpperCase(), n);
+  return [...tagged(out, `desenho:vista ${view}`), ...tagged(title, `titulo:vista ${view}`)];
 }
 
 function coverDrawing(input: SheetInput, n: number): Prim[] {
@@ -470,110 +495,149 @@ function coverDrawing(input: SheetInput, n: number): Prim[] {
     return { x, z, pts: [[x, 0, z], [x + PW, 0, z], [x + PW, 0, z + PD], [x, 0, z + PD]].map((w) => pr.p(w as [number, number, number])).map(([h, v]) => [h, v] as Pt) };
   });
   const b = bounds(items, plates.flatMap((p) => p.pts));
-  const cell = { x: AREA.x0 + 4, y: AREA.y0 + 26, w: 250, h: AREA.y1 - AREA.y0 - 34 };
+  const fs = PAPER_NAME === "A4" ? 0.8 : 1; // letras um pouco menores na A4
+  const isoW = (AREA.x1 - AREA.x0) * 0.58;
+  const cell = { x: AREA.x0 + 4, y: AREA.y0 + 26 * fs, w: isoW, h: AREA.y1 - AREA.y0 - 34 * fs };
+  const iso: Prim[] = [];
   const img = input.isoImage;
   if (img) {
     // foto renderizada, centrada na área da isométrica
     const w = Math.min(cell.w, cell.h * img.aspect);
     const h = w / img.aspect;
-    out.push({ t: "image", x: cell.x + (cell.w - w) / 2, y: cell.y + (cell.h - h) / 2, w, h, href: img.url, layer: "MOLA-BASE" });
+    iso.push({ t: "image", x: cell.x + (cell.w - w) / 2, y: cell.y + (cell.h - h) / 2, w, h, href: img.url, layer: "MOLA-BASE" });
   }
   const fit = Math.max((b.x1 - b.x0) / cell.w, (b.y1 - b.y0) / cell.h);
   const P = place(b, cell, fit);
   for (const pl of img ? [] : plates) {
-    out.push({ t: "poly", pts: pl.pts.map((q) => P.to(q)), closed: true, fill: "#2b2b2b", stroke: "#000", pen: PEN.part, layer: "MOLA-BASE" });
+    iso.push({ t: "poly", pts: pl.pts.map((q) => P.to(q)), closed: true, fill: "#2b2b2b", stroke: "#000", pen: PEN.part, layer: "MOLA-BASE" });
     for (let i = 0; i <= cat.settings.chapa_modulos_x; i += 1) {
       const a = pr.p([pl.x + i * W.M, 0, pl.z]);
       const c = pr.p([pl.x + i * W.M, 0, pl.z + PD]);
-      out.push({ t: "line", a: P.to([a[0], a[1]]), b: P.to([c[0], c[1]]), stroke: "#666", pen: PEN.thin, layer: "MOLA-BASE" });
+      iso.push({ t: "line", a: P.to([a[0], a[1]]), b: P.to([c[0], c[1]]), stroke: "#666", pen: PEN.thin, layer: "MOLA-BASE" });
     }
     for (let j = 0; j <= cat.settings.chapa_modulos_y; j += 1) {
       const a = pr.p([pl.x, 0, pl.z + j * W.M]);
       const c = pr.p([pl.x + PW, 0, pl.z + j * W.M]);
-      out.push({ t: "line", a: P.to([a[0], a[1]]), b: P.to([c[0], c[1]]), stroke: "#666", pen: PEN.thin, layer: "MOLA-BASE" });
+      iso.push({ t: "line", a: P.to([a[0], a[1]]), b: P.to([c[0], c[1]]), stroke: "#666", pen: PEN.thin, layer: "MOLA-BASE" });
     }
   }
-  if (!img) out.push(...paint(items, P));
+  if (!img) iso.push(...paint(items, P));
+  out.push(...tagged(iso, "capa:isometrica"));
   // título
-  out.push(txt([AREA.x0 + 4, AREA.y0 + 10], input.name.toUpperCase(), 9, { bold: true }));
-  out.push(txt([AREA.x0 + 4, AREA.y0 + 17], `${input.meta.line1}  |  ${input.meta.line2}`, 3));
-  // painel à direita
-  const px = 285;
-  let y = AREA.y0 + 12;
-  const H = (s: string) => {
-    out.push(txt([px, y], s, 3.2, { bold: true }));
-    out.push({ t: "line", a: [px, y + 1.6], b: [A3.w - MARGIN, y + 1.6], stroke: "#000", pen: PEN.part, layer: "MOLA-TEXTO" });
-    y += 7;
+  out.push(...tagged([
+    txt([AREA.x0 + 4, AREA.y0 + 10 * fs], input.name.toUpperCase(), 9 * fs, { bold: true }),
+    txt([AREA.x0 + 4, AREA.y0 + 17 * fs], `${input.meta.line1}  |  ${input.meta.line2}`, 3 * fs),
+  ], "capa:titulo"));
+
+  // painel à direita: dados e lista de peças (tabela grande)
+  const px = AREA.x0 + isoW + 14;
+  const pr1 = PG.w - MARGIN;
+  const dados: Prim[] = [];
+  let y = AREA.y0 + 12 * fs;
+  const H = (arr: Prim[], s: string) => {
+    arr.push(txt([px, y], s, 3.4 * fs, { bold: true }));
+    arr.push({ t: "line", a: [px, y + 1.8 * fs], b: [pr1, y + 1.8 * fs], stroke: "#000", pen: PEN.part, layer: "MOLA-TEXTO" });
+    y += 7.5 * fs;
   };
-  const row = (a: string, bTxt: string, c?: string) => {
-    out.push(txt([px, y], a, 2.4));
-    out.push(txt([c ? px + 78 : A3.w - MARGIN, y], bTxt, 2.4, { anchor: "end", bold: true }));
-    if (c) out.push(txt([A3.w - MARGIN, y], c, 2.4, { anchor: "end" }));
-    y += 4.8;
+  const row = (a: string, bTxt: string) => {
+    dados.push(txt([px, y], a, 2.6 * fs));
+    dados.push(txt([pr1, y], bTxt, 2.6 * fs, { anchor: "end", bold: true }));
+    y += 5 * fs;
   };
   const nodes = Object.values(model.nodes).map((nd) => W.pos(nd.pos));
   const span = (k: 0 | 1 | 2) => (nodes.length ? Math.max(...nodes.map((p) => p[k])) - Math.min(...nodes.map((p) => p[k])) : 0);
   const f0 = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
-  H("DADOS DA ESTRUTURA");
+  H(dados, "DADOS DA ESTRUTURA");
   row("Planta (entre centros)", `${f0(span(0))} × ${f0(span(2))} mm`);
   row("Altura (entre centros)", `${f0(span(1))} mm`);
   row("Níveis", String(levelsOf(model, cat).length));
   row("Escala das plantas e vistas", fmtScale(n));
   row("Módulo", `${cat.settings.modulo_mm.toLocaleString("pt-BR")} mm`);
-  y += 4;
-  H("LISTA DE PEÇAS");
+  out.push(...tagged(dados, "capa:dados"));
+
+  // tabela: faixa de cabeçalho, linhas zebradas, quantidades em destaque, total em faixa escura
+  y += 5 * fs;
+  const tab: Prim[] = [];
+  H(tab, "LISTA DE PEÇAS");
   const used = usage(model);
-  out.push(txt([px, y], "Código", 2.2, { bold: true }));
-  out.push(txt([px + 18, y], "Peça", 2.2, { bold: true }));
-  out.push(txt([px + 78, y], "Usadas", 2.2, { bold: true, anchor: "end" }));
-  out.push(txt([A3.w - MARGIN, y], "No estoque", 2.2, { bold: true, anchor: "end" }));
-  y += 5;
+  const codes = Object.keys(used).sort();
+  const rowH = 7 * fs;
+  const colCode = px + 2;
+  const colName = px + 20 * fs;
+  const colUsed = pr1 - 30 * fs;
+  const colStock = pr1 - 2;
+  const top = y - 2;
+  const rect = (y0: number, h: number, fill: string): Prim => ({ t: "poly", pts: [[px, y0], [pr1, y0], [pr1, y0 + h], [px, y0 + h]], closed: true, fill, stroke: null, layer: "MOLA-TEXTO" });
+  tab.push(rect(top, rowH, "#e3e3e3"));
+  const mid = (y0: number) => y0 + rowH / 2 + 1.1 * fs;
+  tab.push(txt([colCode, mid(top)], "CÓDIGO", 2.5 * fs, { bold: true }));
+  tab.push(txt([colName, mid(top)], "PEÇA", 2.5 * fs, { bold: true }));
+  tab.push(txt([colUsed, mid(top)], "USADAS", 2.5 * fs, { bold: true, anchor: "end" }));
+  tab.push(txt([colStock, mid(top)], "NO ESTOQUE", 2.5 * fs, { bold: true, anchor: "end" }));
+  let yy = top + rowH;
   let total = 0;
-  for (const code of Object.keys(used).sort()) {
+  codes.forEach((code, i) => {
     const p = cat.pieces[code];
     const stock = Object.entries(inventory.kits).reduce((s2, [k, cnt]) => s2 + (cat.kits[k]?.pieces[code] ?? 0) * cnt, 0);
     total += used[code];
-    out.push(txt([px, y], code, 2.3, { bold: true }));
-    out.push(txt([px + 18, y], p?.name.replace(` ${code}`, "") ?? code, 2.3));
-    out.push(txt([px + 78, y], String(used[code]), 2.3, { anchor: "end", bold: true }));
-    out.push(txt([A3.w - MARGIN, y], inventory.unlimited ? "∞" : String(stock), 2.3, { anchor: "end" }));
-    y += 4.4;
-  }
-  out.push({ t: "line", a: [px, y - 2.6], b: [A3.w - MARGIN, y - 2.6], stroke: "#000", pen: PEN.thin, layer: "MOLA-TEXTO" });
-  out.push(txt([px, y + 1], "Total", 2.4, { bold: true }));
-  out.push(txt([px + 78, y + 1], String(total), 2.4, { anchor: "end", bold: true }));
-  y += 10;
-  H("KITS");
+    if (i % 2) tab.push(rect(yy, rowH, "#f3f3f3"));
+    tab.push(txt([colCode, mid(yy)], code, 3.2 * fs, { bold: true }));
+    tab.push(txt([colName, mid(yy)], p?.name.replace(` ${code}`, "") ?? code, 3 * fs));
+    tab.push(txt([colUsed, mid(yy) + 0.3], String(used[code]), 4 * fs, { anchor: "end", bold: true }));
+    tab.push(txt([colStock, mid(yy)], inventory.unlimited ? "∞" : String(stock), 3 * fs, { anchor: "end", fill: "#555" }));
+    yy += rowH;
+  });
+  tab.push(rect(yy, rowH * 1.15, "#1d1d1d"));
+  tab.push(txt([colCode, mid(yy) + 0.5], "TOTAL DE PEÇAS", 3.2 * fs, { bold: true, fill: "#fff" }));
+  tab.push(txt([colUsed, mid(yy) + 0.8], String(total), 4.4 * fs, { anchor: "end", bold: true, fill: "#fff" }));
+  yy += rowH * 1.15;
+  tab.push({ t: "poly", pts: [[px, top], [pr1, top], [pr1, yy], [px, yy]], closed: true, fill: null, stroke: "#000", pen: PEN.part, layer: "MOLA-TEXTO" });
+  for (const x of [colName - 2, colUsed - 16 * fs, colUsed + 3]) tab.push({ t: "line", a: [x, top], b: [x, yy - rowH * 1.15], stroke: "#bdbdbd", pen: PEN.thin, layer: "MOLA-TEXTO" });
+  yy += 7 * fs;
   const kitTxt = inventory.unlimited
     ? "Sem limite de peças"
     : Object.entries(inventory.kits).filter(([, c]) => c > 0).map(([k, c]) => `${c}× ${cat.kits[k]?.name ?? `Kit ${k}`}`).join("; ");
-  out.push(txt([px, y], kitTxt || "—", 2.4));
-  y += 10;
+  tab.push(txt([px, yy], `Kits: ${kitTxt || "—"}`, 2.5 * fs));
+  out.push(...tagged(tab, "capa:tabela"));
   const d = input.date ?? new Date();
-  out.push(txt([px, AREA.y1 - 2], `Gerado pelo siMOLAdor em ${d.toLocaleDateString("pt-BR")}`, 2, { fill: "#555" }));
+  out.push(txt([px, AREA.y1 - 2], `Gerado pelo siMOLAdor em ${d.toLocaleDateString("pt-BR")}`, 2 * fs, { fill: "#555" }));
   return out;
 }
 
 /** Monta todas as folhas. */
 export function buildSheets(input: SheetInput): { sheets: Sheet[]; scale: number } {
+  setPaper(input.paper ?? "A3");
   const n = computeScale(input);
   const levels = levelsOf(input.model, input.cat);
   const pages: { title: string; prims: Prim[] }[] = [];
   pages.push({ title: "Capa", prims: coverDrawing(input, n) });
-  for (let i = 0; i < Math.max(1, levels.length); i += 4) {
-    const cells = planCells();
-    const prims = levels.slice(i, i + 4).flatMap((lv, k) => planDrawing(input, n, lv, i + k === 0, cells[k]));
+  const cells = planCells();
+  for (let i = 0; i < Math.max(1, levels.length); i += cells.length) {
+    const prims = levels.slice(i, i + cells.length).flatMap((lv, k) => planDrawing(input, n, lv, i + k === 0, cells[k]));
     pages.push({ title: "Plantas", prims });
   }
   const ec = elevCells();
-  pages.push({ title: "Vistas A e B", prims: [...elevationDrawing(input, n, "A", ec[0]), ...elevationDrawing(input, n, "B", ec[1])] });
-  pages.push({ title: "Vistas C e D", prims: [...elevationDrawing(input, n, "C", ec[0]), ...elevationDrawing(input, n, "D", ec[1])] });
+  const views: ViewId[] = ["A", "B", "C", "D"];
+  for (let i = 0; i < views.length; i += ec.length) {
+    const vs = views.slice(i, i + ec.length);
+    pages.push({ title: vs.length > 1 ? `Vistas ${vs.join(" e ")}` : `Vista ${vs[0]}`, prims: vs.flatMap((v, k) => elevationDrawing(input, n, v, ec[k])) });
+  }
   const total = pages.length;
+  // blocos arrastados na tela (por folha A3/A4)
+  const moved = input.meta.blocks ?? {};
   const sheets = pages.map((p, i) => ({
     number: i + 1,
     total,
     title: p.title,
-    prims: [...p.prims, ...titleBlock(input, n, i + 1, total, p.title)],
+    paper: PAPER_NAME,
+    size: { ...PG },
+    prims: [
+      ...p.prims.map((q) => {
+        const off = q.group ? moved[`${PAPER_NAME}|${q.group}`] : undefined;
+        return off ? movePrim(q, off[0], off[1]) : q;
+      }),
+      ...titleBlock(input, n, i + 1, total, p.title),
+    ],
   }));
   return { sheets, scale: n };
 }

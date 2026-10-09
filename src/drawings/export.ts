@@ -1,13 +1,27 @@
 // Saídas das pranchas: SVG (tela e base do PDF), PDF (jsPDF + svg2pdf) e DXF R12 (AutoCAD).
-import { A3, type Prim, type Sheet } from "./prims";
+import { type Prim, type Sheet } from "./prims";
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const f = (n: number) => (Math.round(n * 1000) / 1000).toString();
 const DASH = { center: "4 1 0.6 1", hidden: "1.5 1" };
 
-export function sheetToSvg(sheet: Sheet): string {
-  const body = sheet.prims
-    .map((p) => {
+/** Caixa (mm) de um conjunto de primitivas. */
+function boxOf(prims: Prim[]) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const take = (x: number, y: number) => ((x0 = Math.min(x0, x)), (y0 = Math.min(y0, y)), (x1 = Math.max(x1, x)), (y1 = Math.max(y1, y)));
+  for (const p of prims) {
+    if (p.t === "line") (take(...p.a), take(...p.b));
+    else if (p.t === "poly") p.pts.forEach((q) => take(...q));
+    else if (p.t === "circle") (take(p.c[0] - p.r, p.c[1] - p.r), take(p.c[0] + p.r, p.c[1] + p.r));
+    else if (p.t === "text") (take(p.p[0], p.p[1] - p.size), take(p.p[0] + p.s.length * p.size * 0.55, p.p[1]));
+    else take(p.x, p.y), take(p.x + p.w, p.y + p.h);
+  }
+  return { x0, y0, x1, y1 };
+}
+
+/** `interactive`: na tela, cada bloco ganha uma área invisível para ser agarrado (não vai para o PDF). */
+export function sheetToSvg(sheet: Sheet, opts: { interactive?: boolean } = {}): string {
+  const one = (p: Prim) => {
       const stroke = p.stroke === null ? "none" : (p.stroke ?? "#000");
       const fill = p.fill ? p.fill : "none";
       const common = `stroke="${stroke}" stroke-width="${f(p.pen ?? 0.2)}"${p.dash ? ` stroke-dasharray="${DASH[p.dash]}"` : ""}`;
@@ -31,25 +45,48 @@ export function sheetToSvg(sheet: Sheet): string {
           return `<text${tag} x="${f(p.p[0])}" y="${f(p.p[1])}" font-family="Arial, Helvetica, sans-serif" font-size="${f(p.size)}" font-weight="${p.bold ? 700 : 400}" text-anchor="${anchor}" fill="${p.fill ?? "#000"}"${tr}>${esc(p.s)}</text>`;
         }
       }
-    })
-    .join("\n");
-  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${A3.w}mm" height="${A3.h}mm" viewBox="0 0 ${A3.w} ${A3.h}"><rect x="0" y="0" width="${A3.w}" height="${A3.h}" fill="#fff"/>\n${body}\n</svg>`;
+  };
+  // blocos arrastáveis (desenhos, títulos, tabela) viram <g data-group>
+  const parts: string[] = [];
+  let cur: string | undefined;
+  const groupBox = new Map<string, ReturnType<typeof boxOf>>();
+  if (opts.interactive) {
+    const by = new Map<string, Prim[]>();
+    for (const p of sheet.prims) if (p.group) (by.get(p.group) ?? by.set(p.group, []).get(p.group)!).push(p);
+    for (const [g, ps] of by) groupBox.set(g, boxOf(ps));
+  }
+  for (const p of sheet.prims) {
+    if (p.group !== cur) {
+      if (cur) parts.push("</g>");
+      if (p.group) {
+        parts.push(`<g data-group="${esc(p.group)}">`);
+        const bx = groupBox.get(p.group);
+        if (bx) parts.push(`<rect class="grab" x="${f(bx.x0 - 1)}" y="${f(bx.y0 - 1)}" width="${f(bx.x1 - bx.x0 + 2)}" height="${f(bx.y1 - bx.y0 + 2)}" fill="#fff" fill-opacity="0"/>`);
+      }
+      cur = p.group;
+    }
+    parts.push(one(p));
+  }
+  if (cur) parts.push("</g>");
+  const { w, h } = sheet.size;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}mm" height="${h}mm" viewBox="0 0 ${w} ${h}"><rect x="0" y="0" width="${w}" height="${h}" fill="#fff"/>\n${parts.join("\n")}\n</svg>`;
 }
 
-/** PDF com uma folha A3 paisagem por prancha (vetorial). */
+/** PDF com uma folha (A3 ou A4, paisagem) por prancha (vetorial). */
 export async function sheetsToPdf(sheets: Sheet[]): Promise<Blob> {
   const { jsPDF } = await import("jspdf");
   await import("svg2pdf.js");
-  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a3", compress: true });
+  const fmt = (sh: Sheet) => sh.paper.toLowerCase();
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: fmt(sheets[0]), compress: true });
   const host = document.createElement("div");
   host.style.cssText = "position:fixed;left:-10000px;top:0;width:1px;height:1px;overflow:hidden";
   document.body.appendChild(host);
   try {
     for (let i = 0; i < sheets.length; i++) {
-      if (i > 0) doc.addPage("a3", "landscape");
+      if (i > 0) doc.addPage(fmt(sheets[i]), "landscape");
       host.innerHTML = sheetToSvg(sheets[i]);
       const el = host.querySelector("svg")!;
-      await (doc as unknown as { svg: (e: Element, o: object) => Promise<unknown> }).svg(el, { x: 0, y: 0, width: A3.w, height: A3.h });
+      await (doc as unknown as { svg: (e: Element, o: object) => Promise<unknown> }).svg(el, { x: 0, y: 0, width: sheets[i].size.w, height: sheets[i].size.h });
     }
   } finally {
     host.remove();
@@ -86,10 +123,11 @@ export function sheetsToDxf(sheets: Sheet[]): string {
   g(0, "ENDSEC");
   g(0, "SECTION"); g(2, "ENTITIES");
   sheets.forEach((sh, i) => {
-    const ox = i * (A3.w + 20);
+    const { w: SW, h: SH } = sh.size;
+    const ox = i * (SW + 20);
     const X = (x: number) => x + ox;
-    const Y = (y: number) => A3.h - y;
-    const border: Prim = { t: "poly", pts: [[0, 0], [A3.w, 0], [A3.w, A3.h], [0, A3.h]], closed: true, layer: "MOLA-CARIMBO" };
+    const Y = (y: number) => SH - y;
+    const border: Prim = { t: "poly", pts: [[0, 0], [SW, 0], [SW, SH], [0, SH]], closed: true, layer: "MOLA-CARIMBO" };
     for (const p of [border, ...sh.prims]) {
       switch (p.t) {
         case "line":

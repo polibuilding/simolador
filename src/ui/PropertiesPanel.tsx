@@ -56,47 +56,57 @@ function parseCoord(t: string): number | null {
 }
 const fieldText = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 4, useGrouping: false });
 
-/** Posição da GC/esfera por coordenadas: leva junto a estrutura ligada (como Mover). */
-function CoordEditor({ id, pos }: { id: string; pos: Vec3 }) {
-  const [x, setX] = useState(fieldText(pos[0]));
-  const [z, setZ] = useState(fieldText(pos[2]));
+/**
+ * Posição por coordenadas.
+ * GC: X e Z levam junto a estrutura ligada (como Mover estrutura).
+ * Esfera: X, Y e Z movem só o nó; as barras acompanham, e ele vai para o ponto possível mais perto.
+ */
+function CoordEditor({ id, pos, support }: { id: string; pos: Vec3; support: boolean }) {
+  const axes = support ? ([0, 2] as const) : ([0, 1, 2] as const);
+  const [vals, setVals] = useState<string[]>(pos.map(fieldText));
   const [err, setErr] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   useEffect(() => {
-    setX(fieldText(pos[0]));
-    setZ(fieldText(pos[2]));
+    setVals(pos.map(fieldText));
     setErr(null);
-  }, [id, pos[0], pos[2]]);
+  }, [id, pos[0], pos[1], pos[2]]);
   const apply = () => {
-    const px = parseCoord(x);
-    const pz = parseCoord(z);
-    if (px === null || pz === null) return setErr("Use números em módulos (ex.: 5,196) ou em mm (ex.: 77,3 mm).");
-    setErr(useApp.getState().moveNodeTo(id, [px, pos[1], pz]));
+    const v = vals.map(parseCoord);
+    if (axes.some((k) => v[k] === null)) return setErr("Use números em módulos (ex.: 5,196) ou em mm (ex.: 77,3 mm).");
+    const target: Vec3 = [v[0] ?? pos[0], support ? pos[1] : (v[1] ?? pos[1]), v[2] ?? pos[2]];
+    setNote(null);
+    if (support) return setErr(useApp.getState().moveNodeTo(id, target));
+    const r = useApp.getState().moveNodeExact(id, target);
+    setErr(r.error ?? null);
+    setNote(r.note ?? null);
   };
-  const field = (label: string, v: string, set: (v: string) => void) => (
-    <label className="coord">
-      <span>{label}</span>
+  const reset = () => (setVals(pos.map(fieldText)), setErr(null), setNote(null));
+  const field = (k: 0 | 1 | 2) => (
+    <label className="coord" key={k}>
+      <span>{"XYZ"[k]}</span>
       <input
-        value={v}
+        value={vals[k]}
         inputMode="decimal"
-        onChange={(e) => set(e.target.value)}
+        onChange={(e) => setVals((o) => o.map((x, i) => (i === k ? e.target.value : x)))}
         onKeyDown={(e) => {
           if (e.key === "Enter") apply();
-          if (e.key === "Escape") (setX(fieldText(pos[0])), setZ(fieldText(pos[2])), setErr(null), (e.target as HTMLInputElement).blur());
+          if (e.key === "Escape") (reset(), (e.target as HTMLInputElement).blur());
         }}
-        aria-label={`Coordenada ${label} em módulos`}
+        aria-label={`Coordenada ${"XYZ"[k]} em módulos`}
       />
     </label>
   );
   return (
     <div className="coords">
-      <div className="coords-row">
-        {field("X", x, setX)}
-        {field("Z", z, setZ)}
+      <div className={`coords-row${support ? "" : " four"}`}>
+        {axes.map(field)}
         <button onClick={apply}>Aplicar</button>
       </div>
       <p className="coords-help">
-        Em módulos (1 M = {fmt(M, 2)} mm) ou em mm (ex.: 77,3 mm). Enter aplica. A estrutura ligada vai junto.
+        Em módulos (1 M = {fmt(M, 2)} mm) ou em mm (ex.: 77,3 mm). Enter aplica.{" "}
+        {support ? "A estrutura ligada vai junto." : "Só a esfera anda; as barras inclinam para acompanhar (Y = altura)."}
       </p>
+      {note && <p className="coords-help"><strong>{note}</strong></p>}
       {err && <p className="coords-err" role="alert">{err}</p>}
     </div>
   );
@@ -156,7 +166,7 @@ function Selected() {
           <Row k="Peças ligadas" v={links} />
           <Row k="Mover e girar" v={`levam a estrutura inteira (${group} ${group === 1 ? "nó" : "nós"})`} />
         </dl>
-        <CoordEditor id={n.id} pos={n.pos} />
+        <CoordEditor id={n.id} pos={n.pos} support={n.kind === "support"} />
         {n.kind === "support" && <Distances id={n.id} />}
         <Actions nodeOnly moveLabel="Mover estrutura" removeLabel={n.kind === "support" ? "Remover GC e o que sai dela" : "Remover esfera e peças ligadas"} />
       </>

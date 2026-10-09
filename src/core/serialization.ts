@@ -10,6 +10,10 @@ export interface SheetMeta {
   line2: string; // ex.: DESAFIO POLI-USP 2026
   /** etiquetas das pranchas arrastadas na tela: deslocamento (mm de papel) por chave */
   labels?: Record<string, [number, number]>;
+  /** blocos das pranchas (desenhos, títulos, tabela) arrastados: deslocamento por "A3|bloco" */
+  blocks?: Record<string, [number, number]>;
+  /** tamanho da folha das pranchas */
+  paper?: "A3" | "A4";
 }
 
 export interface MolaFile {

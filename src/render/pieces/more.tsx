@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import * as THREE from "three";
 import { catalog } from "../../core/catalog";
+import { continuousOutline } from "../../core/shapes";
 import type { Vec3 } from "../../core/model";
 import { COLORS } from "../units";
 import { pickProps, SPHERE_R, useMaterial, type Look, type Pickable } from "./pieces";
@@ -95,11 +96,10 @@ export function PlateMesh({ corners, code, look = "normal", ...p }: { corners: T
 function extruded(points: [number, number][], depth: number) {
   const shape = new THREE.Shape(points.map(([x, y]) => new THREE.Vector2(x, y)));
   const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false });
-  g.translate(0, 0, -depth / 2);
+  g.translate(0, 0, -depth / 2); // centrada no plano das barras
   return g;
 }
 
-/** RC90: trapézio no canto entre duas peças a 90° (ou entre a GC e o pilar). */
 export function RigidConnector({
   at, dirs, base, look = "normal", ...p
 }: { at: THREE.Vector3; dirs: Vec3[]; base?: boolean; look?: Look } & Pickable) {
@@ -125,7 +125,7 @@ export function RigidConnector({
   return <mesh geometry={geom} material={mat} matrix={matrix} matrixAutoUpdate={false} castShadow {...pickProps(p)} />;
 }
 
-/** CC / CC90 (formato provisório até as medidas): ponte sobre a esfera, ao longo do eixo do par de barras. */
+/** CC / CC90 (formato provisório até as medidas): CC sobre a esfera; CC90 por cima dela, com as hastes nas molas transversais. */
 export function ContinuousConnector({
   at, axis, side: sideIn, code, look = "normal", ...p
 }: { at: THREE.Vector3; axis: Vec3; side?: Vec3; code: string; look?: Look } & Pickable) {
@@ -134,11 +134,7 @@ export function ContinuousConnector({
     const u = v3(axis);
     // lado da esfera onde a peça fica (escolhido ao colocar; arquivos antigos: para cima, ou +x em pilares)
     const side = sideIn ? v3(sideIn) : Math.abs(axis[1]) > 0.5 ? new THREE.Vector3(1, 0, 0) : Y.clone();
-    const L = SPHERE_R + 14;
-    const base = tall ? SPHERE_R + 1.5 : BAR_R;
-    const h = tall ? 9 : 5;
-    const pts: [number, number][] = [[-L, base], [L, base], [L - 4, base + h], [-L + 4, base + h]];
-    return { matrix: basis(at, u, side), geom: extruded(pts, 6) };
+    return { matrix: basis(at, u, side), geom: extruded(continuousOutline(catalog, code), 6) };
   }, [at, axis, tall, sideIn]);
   const mat = useMaterial(look, tall ? "#c4c9cd" : "#d6dadd", 0.05, 0.5);
   return <mesh geometry={geom} material={mat} matrix={matrix} matrixAutoUpdate={false} castShadow {...pickProps(p)} />;

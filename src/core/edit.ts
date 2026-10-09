@@ -149,7 +149,16 @@ export interface NodeMove {
  * - Ligação de base fica na chapa (y = 0).
  * - Rigidez: RC90/CC/CC90 numa barra que giraria travam o ângulo; placa presa a partes fixas trava o nó.
  */
-export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): { options: NodeMove[]; locked?: string } {
+export interface NodeMoveSet {
+  options: NodeMove[];
+  locked?: string;
+  /** avalia o nó numa posição qualquer (null se as barras não deixam) */
+  evalAt?: (p: Vec3) => NodeMove | null;
+  /** ponto possível mais perto de um alvo */
+  nearest?: (p: Vec3) => Vec3 | null;
+}
+
+export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): NodeMoveSet {
   const node = model.nodes[nodeId];
   if (!node) return { options: [], locked: "Nó não encontrado." };
   const s = cat.settings;
@@ -264,22 +273,17 @@ export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): { o
 
   const tol = s.tolerancia_encaixe_mm / s.modulo_mm;
   const minA = s.angulo_minimo_membros_graus;
-  const options: NodeMove[] = [];
-  const done = new Set<string>();
-  for (const raw of pts) {
+  /** Avalia o nó numa posição: o modelo resultante e as regras. */
+  const evalAt = (raw: Vec3): NodeMove | null => {
     const pos = raw.map((v) => Math.round(v * 1e4) / 1e4 + 0) as Vec3;
     if (support) pos[1] = 0;
-    const key = pos.map((v) => v.toFixed(3)).join(",");
-    if (done.has(key) || len(sub(pos, node.pos)) < 1e-3) continue;
-    done.add(key);
-    if (!cons.every(({ c, L }) => Math.abs(len(sub(pos, c)) - L) <= tol)) continue;
+    if (!cons.every(({ c, L }) => Math.abs(len(sub(pos, c)) - L) <= tol)) return null;
     const delta = sub(pos, node.pos);
     const next = transformNodes(model, moving, [0, 0, 0], 0, delta);
     next.nodes[nodeId] = { ...next.nodes[nodeId], pos };
     const errors: string[] = [];
     if ([...moving].some((k) => next.nodes[k].pos[1] < -1e-6)) errors.push("O nó iria para baixo da chapa.");
-    const mv = validateMovedModel(cat, next, moving);
-    errors.push(...mv.errors);
+    errors.push(...validateMovedModel(cat, next, moving).errors);
     // N3 no nó e nas pontas fixas das barras que giraram
     for (const at of [nodeId, ...ties.map((m) => (m.a === nodeId ? m.b : m.a))]) {
       const bars = membersAt(next, at).filter((m) => cat.pieces[m.code]?.type === "bar").map((m) => directionFrom(next, m, at));
@@ -301,7 +305,56 @@ export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): { o
         errors.push("Uma barra atravessaria uma placa.");
       }
     }
-    options.push({ pos, model: next, ids: moving, check: { ok: !errors.length, errors: [...new Set(errors)], warnings: [] } });
+    return { pos, model: next, ids: moving, check: { ok: !errors.length, errors: [...new Set(errors)], warnings: [] } };
+  };
+  /** Ponto possível mais perto de `target` (contínuo: esfera ou círculo; com 3 ou mais vínculos, os pontos que fecham). */
+  const nearest = (target: Vec3): Vec3 | null => {
+    if (cons.length === 1) {
+      const { c, L } = cons[0];
+      if (support) {
+        if (c[1] >= L) return null;
+        const r = Math.sqrt(L * L - c[1] * c[1]);
+        const d = norm([target[0] - c[0], 0, target[2] - c[2]]);
+        return [c[0] + r * d[0], 0, c[2] + r * d[2]];
+      }
+      return add(c, scale(norm(sub(target, c)), L));
+    }
+    const circ = circleOf(cons[0], cons[1]);
+    if (!circ) return null;
+    const { p, h, e1, e2 } = circ;
+    let ts: number[];
+    if (support) ts = solve(h * e1[1], h * e2[1], -p[1]);
+    else if (cons.length === 2) {
+      const w = sub(target, p);
+      ts = [Math.atan2(dot(w, e2), dot(w, e1))];
+    } else {
+      const w = sub(p, cons[2].c);
+      ts = solve(2 * h * dot(w, e1), 2 * h * dot(w, e2), cons[2].L * cons[2].L - dot(w, w) - h * h);
+    }
+    const pts = ts.map((t) => onCircle(p, h, e1, e2, t));
+    return pts.length ? pts.reduce((a, b) => (len(sub(a, target)) <= len(sub(b, target)) ? a : b)) : null;
+  };
+  const options: NodeMove[] = [];
+  const done = new Set<string>();
+  for (const raw of pts) {
+    const key = raw.map((v) => (Math.round(v * 1e4) / 1e4).toFixed(3)).join(",");
+    if (done.has(key) || len(sub(raw, node.pos)) < 1e-3) continue;
+    done.add(key);
+    const o = evalAt(raw);
+    if (o) options.push(o);
   }
-  return { options };
+  return { options, evalAt, nearest };
+}
+
+
+/** Leva o nó para o ponto possível mais perto de `target` (as barras acompanham). */
+export function nodeMoveNearest(cat: Catalog, model: Model, nodeId: string, target: Vec3): { move?: NodeMove; off?: number; error?: string } {
+  const set = nodeMoveOptions(cat, model, nodeId);
+  if (set.locked) return { error: set.locked };
+  const p = set.nearest?.(target);
+  if (!p) return { error: "As barras não deixam esse nó ir para lá." };
+  const move = set.evalAt?.(p);
+  if (!move) return { error: "As barras não deixam esse nó ir para lá." };
+  if (!move.check.ok) return { error: move.check.errors[0] };
+  return { move, off: len(sub(move.pos, target)) };
 }

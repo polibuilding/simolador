@@ -1,6 +1,6 @@
 # Regras de encaixe — siMOLAdor
 
-Versão 3.9 · 09/10/2026 (siMOLAdor 1.5) (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
+Versão 4.0 · 09/10/2026 (siMOLAdor 1.6) (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
 
 Uma regra **bloqueia** quando torna o encaixe inválido (fantasma vermelho, não deixa soltar). Uma regra **avisa** quando a montagem é possível, mas não é recomendada (fantasma verde, aviso na barra de status).
 
@@ -21,7 +21,7 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | # | Regra | Tipo | Origem |
 |---|---|---|---|
 | B1 | Distância entre os centros dos dois nós = `spanM` × `modulo_mm`, com tolerância de `tolerancia_encaixe_mm`. | bloqueia | — |
-| B2 | A barra sai na direção de um eixo, **ou** inclinada em múltiplos de `passo_inclinacao_graus` (15°) num plano ortogonal, **ou** fecha numa esfera existente que esteja à distância exata do vão (triângulos). Fora disso, bloqueia. | bloqueia | E19, equipe 08/10 |
+| B2 | Modos **Eixos** e **15°**: a barra sai na direção de um eixo, **ou** inclinada em múltiplos de `passo_inclinacao_graus` (15°) num plano ortogonal, **ou** fecha numa esfera existente que esteja à distância exata do vão. Modo **Livre**: qualquer direção 3D (o comprimento continua exato); a ponta encaixa em esferas à distância certa, em eixos/15°, no vértice de um triângulo com uma esfera vizinha (circunferência das duas esferas) e nas alturas existentes. | bloqueia (Eixos/15°) | E19, equipe 08–09/10 |
 | B3 | B6 do Kit 1 = B6 do Kit 2 (mesmo código, estoques somados). | estrutura | E01 |
 | B4 | Polaridade não é verificada. | — | E15 |
 
@@ -29,7 +29,7 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 
 | # | Regra | Tipo | Origem |
 |---|---|---|---|
-| D1 | Só existem três diagonais e cada uma só vale no seu vão nominal: o vetor entre os nós, em módulos, é (a, b) ou (b, a) num plano ortogonal, **ou**, num painel inclinado, as pontas estão à distância da diagonal de um retângulo a × b e existe a esfera de um dos outros cantos (lados a e b a 90°). | bloqueia | E11, equipe 08/10 |
+| D1 | Só existem três diagonais, cada uma com o comprimento da diagonal do seu vão a × b (D4x6, D6x6, D6x12). A diagonal vale entre duas esferas que estejam **exatamente a essa distância, em qualquer direção** (painéis inclinados, torres triangulares, contraventamento em altura). | bloqueia | E11, equipe 09/10 |
 | D2 | Podem ficar em planos verticais ou horizontais (contraventamento em planta). | — | E12 |
 | D3 | Trabalham só à tração: desenhadas como cabo fino; marcadas como "só tração" nas propriedades. | visual | E10 |
 | D4 | Duas diagonais cruzadas no mesmo vão (X) são permitidas; elas não colidem entre si. | — | pranchas 2022 |
@@ -43,7 +43,7 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | L2 | Uma RC90 por canto. Um nó pode ter vários cantos (ex.: pilar com duas vigas = 2 cantos), e o usuário escolhe em quais colocar. | bloqueia a 2ª no mesmo canto | E04 |
 | L3 | Na **GC**, a RC90 vai entre a GC e o pilar. O usuário pode pôr uma, ou uma de cada lado do pilar (até 4, uma por lado). | — | E04 |
 | L4 | **CC** (forma 1, trapézio baixo) vai direto na esfera, ligando duas molas alinhadas (180°) e tornando-as contínuas. Não substitui a esfera. **Uma peça por lado da esfera**: o mesmo par mola–bola–mola pode levar CC em vários lados (ex.: em cima e nos dois lados de uma viga), desde que o lado esteja livre. | bloqueia sem duas barras alinhadas, ou se o lado já tem CC | E05, equipe 08/10 |
-| L5 | **CC90** (forma 2, chapéu alto) vai **por cima de uma CC** no mesmo nó, **do mesmo lado**, e enrijece um segundo par de molas alinhadas, perpendicular ao primeiro e no mesmo plano: o nó vira um X contínuo. Uma CC90 por lado. | bloqueia sem CC no nó, ou sem o segundo par alinhado a 90° | E06, equipe 08/10 |
+| L5 | **CC90** (forma 2, chapéu alto) vai **por cima de uma CC** no mesmo nó, **do mesmo lado**, com as **hastes descendo até encostar nas molas transversais**, e enrijece um segundo par de molas alinhadas, perpendicular ao primeiro e no mesmo plano: o nó vira um X contínuo. Uma CC90 por lado. | bloqueia sem CC no nó, ou sem o segundo par alinhado a 90° | E06, equipe 08/10 |
 | L7 | **RC90 × diagonal**: a RC90 ocupa o canto entre as duas barras; se uma diagonal sai da esfera por dentro desse canto (no plano dele, com folga de 20°), a RC90 não cabe, e a diagonal não pode sair por um canto que já tem RC90. Vale também para a RC90 da base (GC–pilar). | bloqueia | equipe 08/10 |
 | L8 | **Ligação × placa**: a RC90 não vai no canto onde uma placa encosta na esfera (no plano do canto), e a placa não entra num canto que já tem RC90. A CC/CC90 não vai do lado em que a placa está no plano do par de barras (a ponte passaria dentro da placa); os outros lados continuam livres. | bloqueia | equipe 09/10 |
 | L6 | **Lado da CC/CC90**: a peça pode ficar em qualquer um dos 4 lados da esfera perpendiculares às barras que ela une (para uma viga: em cima, embaixo e nos dois lados; para um pilar: nos 4 lados horizontais; para um par inclinado: a normal do plano e a perpendicular dentro dele), **menos** num lado onde chega uma barra transversal (viga ou pilar ligado nesse ponto). **R** alterna os lados livres. Depois de colocada a CC, não se pode encaixar barra no lado ocupado por ela. | bloqueia | equipe 08/10 |
@@ -72,7 +72,7 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | G10 | **Grade desligada e azul/amarelo ligados**: a GC só vai para os pontos ligados (puxa de até 90 px); longe deles, não há fantasma. Se ainda não existe nenhum ponto daquela cor, a GC vai livre. Um ponto que é ao mesmo tempo azul e amarelo aparece como amarelo. | equipe 08/10 |
 | G9 | **Liga/desliga dos pontos** (barra de cima, "Encaixe"): **Grade** (verde: pontos de encaixe de todas as peças e grade da chapa para a GC; desligada = livre), **Vão** (azul) e **Triângulo** (amarelo). Entre os pontos ligados perto do cursor vale o mais perto; quando há vários quase no mesmo lugar, **Tab** alterna e o rodapé diz qual está valendo. | — | equipe 08/10 |
 | G7 | **Guias ao colocar ou mover uma GC** (nos dois modos de encaixe): **azul** = a 4, 6 ou 12 módulos (vão de B4, B6 ou B12) de outra GC, em X ou Z; **amarelo** = terceiro vértice de um triângulo cujos lados são vãos de barra, com todos os ângulos ≥ 45°, apoiado em duas GC que já estão a um vão de barra uma da outra (na prática, triângulos equiláteros de B4, B6 ou B12). A GC "puxa" para o guia a menos de 18 px do cursor; o rodapé diz qual é. | — | equipe 08/10 |
-| G8 | **Coordenadas**: com uma GC ou esfera selecionada, o painel aceita X e Z em módulos (ex.: 5,196) ou em mm (ex.: 77,3 mm); a estrutura ligada vai junto, com as mesmas regras de Mover. O painel também lista a distância às GC mais próximas e marca as que batem com o vão de uma barra. | — | equipe 08/10 |
+| G8 | **Coordenadas**: com uma GC selecionada, o painel aceita X e Z em módulos (ex.: 5,196) ou em mm (ex.: 77,3 mm); a estrutura ligada vai junto, com as mesmas regras de Mover. Com uma **esfera**, X, **Y** e Z movem só o nó (as barras acompanham, como em Mover só o nó); se as barras não deixam chegar exatamente, ele vai para o ponto possível mais perto e o painel avisa. O painel também lista a distância às GC mais próximas e marca as que batem com o vão de uma barra. | — | equipe 08/10 |
 
 ## 7. Estoque
 

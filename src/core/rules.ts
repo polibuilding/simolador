@@ -220,6 +220,7 @@ const onGround = (...ps: Vec3[]) => ps.every((p) => Math.abs(p[1]) < EPS);
 
 export function validateMember(
   cat: Catalog, inv: InventoryConfig, model: Model, code: string, fromId: string, toPos: Vec3,
+  opts: { free?: boolean } = {},
 ): Check {
   const s = cat.settings;
   const piece = cat.pieces[code];
@@ -241,23 +242,27 @@ export function validateMember(
     const span = piece.spanM?.[0] ?? 0;
     if (Math.abs(L - span) > tolM) errors.push(`A ${code} vence ${span} módulos; a distância é ${L.toFixed(2)}.`); // B1
     // B2: eixos, inclinação em passos (num plano da estrutura) ou fechando numa esfera existente
-    if (nonZero.length !== 1 && !findNodeAt(model, toPos) && !inStepPlane(cat, v)) {
+    // B2 (modo Livre: qualquer direção 3D)
+    if (!opts.free && nonZero.length !== 1 && !findNodeAt(model, toPos) && !inStepPlane(cat, v)) {
       errors.push(inclineStep(cat) ? `Barra inclinada só em passos de ${inclineStep(cat)}° nos planos da estrutura, ou fechando numa esfera.` : "Barra só na direção dos eixos, ou fechando numa esfera.");
     }
   } else {
     // D1: só no vão nominal, num plano ortogonal
     const [a, b] = piece.spanM ?? [0, 0];
-    const sorted = [...nonZero].sort((p, q) => p - q);
-    const want = [a, b].sort((p, q) => p - q);
-    const ortho = nonZero.length === 2 && Math.abs(sorted[0] - want[0]) <= tolM && Math.abs(sorted[1] - want[1]) <= tolM;
-    if (!ortho && !(findNodeAt(model, toPos) && inclinedPanel(model, from.pos, toPos, a, b, tolM))) {
-      errors.push(`A ${code} só vale num vão de ${a} × ${b} módulos.`);
+    // D1: o cabo tem comprimento fixo; vale entre duas esferas que estejam exatamente à distância da diagonal
+    // de um vão a × b, em qualquer direção (painéis inclinados, torres triangulares, contraventamento em altura)
+    const diag = Math.hypot(a, b);
+    if (Math.abs(L - diag) > tolM) {
+      errors.push(`A ${code} tem ${(diag * s.modulo_mm).toFixed(1).replace(".", ",")} mm entre esferas (vão de ${a} × ${b}); aqui são ${(L * s.modulo_mm).toFixed(1).replace(".", ",")} mm.`);
     }
   }
   if (toPos[1] < -EPS) errors.push("A peça iria para baixo da chapa.");
   if (onGround(from.pos, toPos)) errors.push("Nada pode ficar deitado na chapa: comece pelos pilares."); // G6
 
   const target = findNodeAt(model, toPos);
+  if (target && Object.values(model.members).some((m) => (m.a === fromId && m.b === target.id) || (m.b === fromId && m.a === target.id))) {
+    return result(["Já existe uma peça entre essas duas esferas."]);
+  }
   if (cable && !target) errors.push("A diagonal liga duas esferas que já existem."); // D5
   const dir = scale(v, 1 / L);
   if (!cable) errors.push(...angleErrors(cat, model, fromId, dir, "origem"));

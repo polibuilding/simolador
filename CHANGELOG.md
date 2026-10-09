@@ -14,6 +14,15 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.6 — Barras livres e pranchas sob medida · 09/10/2026
+- **Direção das barras: Eixos · 15° · Livre.** No modo Livre a ponta segue o cursor em qualquer direção 3D e encaixa: numa esfera que está à distância certa, em eixos e passos de 15°, no vértice de um **triângulo** com uma esfera vizinha (a próxima barra fecha nele) e nas **alturas** que já existem. Treliças 3D e telhados sem precisar de coordenadas.
+- **Coordenada Y**: no painel da esfera, X, Y e Z movem só o nó (as barras acompanham); se não der para chegar exatamente, ele vai para o ponto possível mais perto e avisa. "Mover só o nó" no modo Livre desliza sem passos.
+- **Diagonais (D1)**: valem entre duas esferas à distância da diagonal em qualquer direção (contraventamento em altura, torres triangulares). Peça repetida entre as mesmas esferas tem mensagem clara.
+- **CC90** por cima da CC, com as hastes encostando nas molas transversais (cena e pranchas).
+- **Pranchas**: folha **A3 ou A4** (na A4, uma planta ou vista por folha para manter a escala); **arrastar desenhos, títulos e a tabela**; tabela da capa maior, com cabeçalho, linhas zebradas e total em destaque; diagonais em planos inclinados aparecem nas vistas (só somem quando ficam atrás de uma barra); peças inclinadas aparecem na planta do nível em que chegam.
+- **Barra de cima reorganizada** em grupos (Projeto, Encaixe, Direção das barras, Peças disponíveis, Pranchas); menu Arquivo com Ctrl+O e Ctrl+S.
+- Exemplo novo: `examples/torre-triangular.mola`.
+
 ## 1.5 — Várias chapas · 09/10/2026
 - **Várias chapas de base**: + nos lados para acrescentar chapa; distância 0, 4, 6, 12 módulos ou livre (a estrutura vai junto); estruturas de chapas diferentes podem se ligar.
 - **Chapa selecionável**: clique na chapa vazia; menu fixo até Esc; Delete apaga; painel com os dados da chapa.
