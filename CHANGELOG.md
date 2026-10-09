@@ -14,6 +14,12 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.7 — Triângulos de barras · 09/10/2026
+- **Pontos amarelos para barras** (botão Triângulo): com uma B4, B6 ou B12 na mão, a esfera sob o cursor mostra pontos amarelos que formam **triângulos** (equiláteros, isósceles ou quaisquer, com B4, B6 ou B12) com as esferas vizinhas, e **pirâmides** quando o ponto está a um vão de barra de duas ou mais vizinhas.
+- **Um clique fecha o triângulo**: coloca a barra e as que fecham nela (uma só ação de desfazer); **R** alterna para só a barra. Valem nos modos Eixos, 15° e Livre.
+- Só aparecem pontos possíveis: acima da chapa, com ângulos ≥ 45°, folgas e estoque conferidos.
+- Modo Livre: a ponta não "fecha" mais numa esfera que já está ligada à partida.
+
 ## 1.6 — Barras livres e pranchas sob medida · 09/10/2026
 - **Direção das barras: Eixos · 15° · Livre.** No modo Livre a ponta segue o cursor em qualquer direção 3D e encaixa: numa esfera que está à distância certa, em eixos e passos de 15°, no vértice de um **triângulo** com uma esfera vizinha (a próxima barra fecha nele) e nas **alturas** que já existem. Treliças 3D e telhados sem precisar de coordenadas.
 - **Coordenada Y**: no painel da esfera, X, Y e Z movem só o nó (as barras acompanham); se não der para chegar exatamente, ele vai para o ponto possível mais perto e avisa. "Mover só o nó" no modo Livre desliza sem passos.

@@ -153,7 +153,7 @@ export function Toolbar() {
           <i className="dot blue" /> Vão
         </button>
         <button aria-pressed={guides.yellow} className={guides.yellow ? "on" : ""} onClick={() => setGuides({ ...guides, yellow: !guides.yellow })}
-          title="Amarelo: GC no vértice de um triângulo de barras com duas GC">
+          title="Amarelo: vértices de triângulos. GC: com duas GC. Barras: passe o cursor numa esfera; os pontos amarelos fecham triângulos (equiláteros, isósceles, pirâmides) com as esferas vizinhas, com B4, B6 ou B12">
           <i className="dot yellow" /> Triângulo
         </button>
       </Group>

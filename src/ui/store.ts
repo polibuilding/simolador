@@ -25,7 +25,7 @@ export type Tool =
 export type Ghost =
   | { kind: "cand"; cand: Candidate }
   /** `part`: só as peças novas (colar), para o fantasma */
-  | { kind: "group"; model: Model; ids: Set<string>; check: Check; part?: Model };
+  | { kind: "group"; model: Model; ids: Set<string>; check: Check; part?: Model; keep?: boolean };
 
 export type CameraView = "fit" | "iso" | "front" | "side" | "top";
 
@@ -38,6 +38,8 @@ interface State {
   snap: boolean;
   /** guias da GC ligados: azul (vão de barra) e amarelo (vértice de triângulo) */
   guides: { blue: boolean; yellow: boolean };
+  /** esfera de onde saem os pontos amarelos de barras (triângulos) */
+  triAnchor: string | null;
   /** Tab: qual dos pontos sobrepostos perto do cursor vale */
   snapCycle: number;
   /** barras inclinadas ligadas (botão na barra de ferramentas ou tecla I) */
@@ -179,6 +181,7 @@ export const useApp = create<State>((set, get) => ({
   tool: { kind: "select" },
   snap: catalog.settings.gc_encaixe_padrao !== "livre",
   guides: { blue: true, yellow: true },
+  triAnchor: null,
   snapCycle: 0,
   incline: false,
   barMode: "eixos",
@@ -216,8 +219,10 @@ export const useApp = create<State>((set, get) => ({
     if (ghost.kind === "group") {
       if (!ghost.check.ok) return set({ hint: ghost.check.errors[0] }), false;
       // colar uma cópia: continua colando até Esc; mover: termina
-      const keep = tool.kind === "paste" && !tool.moving;
-      set({ history: push(history, ghost.model), ghost: null, ...(keep ? {} : { tool: { kind: "select" } as Tool }), hint: keep ? "Colado. Clique de novo para outra cópia; Esc termina." : null });
+      // `keep` (triângulo de barras): a peça continua armada
+      const keep = (tool.kind === "paste" && !tool.moving) || !!ghost.keep;
+      const pasting = tool.kind === "paste" && !tool.moving;
+      set({ history: push(history, ghost.model), ghost: null, ...(keep ? {} : { tool: { kind: "select" } as Tool }), hint: pasting ? "Colado. Clique de novo para outra cópia; Esc termina." : null });
       return true;
     }
     if (!ghost.cand.check.ok) return set({ hint: ghost.cand.check.errors[0] }), false;

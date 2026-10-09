@@ -14,7 +14,8 @@ import { AXES, add, boardsOf, findNodeAt, len, norm, scale, sub, type Model, typ
 import { validateMember } from "../core/rules";
 import type { Sel } from "../core/edit";
 import {
-  allCandidates, anchorPos, inclinedDirs, markerPos, supportCandidate, supportGuides, supportPosition, type Candidate, type SupportGuide,
+  allCandidates, anchorPos, barTriangleGuides, inclinedDirs, markerPos, supportCandidate, supportGuides, supportPosition,
+  type BarGuide, type Candidate, type SupportGuide,
 } from "../core/snapping";
 import { componentOf } from "../core/model";
 import { freeOn, inclineOn, useApp, workingModel } from "../ui/store";
@@ -86,6 +87,28 @@ export function guidesFor(model: Model, inv: ReturnType<typeof useApp.getState>[
   guideCache = { model, inv, key, guides: supportGuides(catalog, inv, model, ignore) };
   return guideCache.guides;
 }
+
+// pontos amarelos de barras (triângulos a partir de uma esfera)
+let barGuideCache: { model: Model; code: string; inv: unknown; anchor: string; guides: BarGuide[] } | null = null;
+export function barGuidesFor(model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"], anchor: string) {
+  const c = barGuideCache;
+  if (c && c.model === model && c.code === code && c.inv === inv && c.anchor === anchor) return c.guides;
+  barGuideCache = { model, code, inv, anchor, guides: barTriangleGuides(catalog, inv, model, code, anchor) };
+  return barGuideCache.guides;
+}
+
+/** Peças novas de `full` em relação a `base` (para o fantasma): o modelo só com elas e os nós novos. */
+function newPart(base: Model, full: Model): { part: Model; ids: Set<string> } {
+  const members = Object.fromEntries(Object.entries(full.members).filter(([k]) => !base.members[k]));
+  const used = new Set<string>();
+  for (const m of Object.values(members)) (used.add(m.a), used.add(m.b));
+  const nodes = Object.fromEntries(Object.entries(full.nodes).filter(([k]) => used.has(k)));
+  return { part: { ...full, nodes, members, plates: {}, connectors: {} }, ids: new Set(Object.keys(nodes).filter((k) => !base.nodes[k])) };
+}
+
+/** distância na tela (px) para "pegar" um ponto amarelo de barra e para adotar a esfera de partida */
+const TRI_PX = 14;
+const TRI_ANCHOR_PX = 22;
 
 // colar: recalcula só quando muda a posição na grade, o giro, o espelho ou a altura
 let pasteCache: { base: Model; clip: Clip; key: string; r: PasteResult } | null = null;
@@ -234,6 +257,7 @@ export function Placement() {
       // 1) fechar numa esfera que está exatamente a L
       for (const n of nodes) {
         if (n.id === anchor.id || Math.abs(len(sub(n.pos, A)) - L) > tolM) continue;
+        if (Object.values(model.members).some((m) => (m.a === anchor!.id && m.b === n.id) || (m.b === anchor!.id && m.a === n.id))) continue;
         const d = dpx(n.pos);
         if (d < 20) snaps.push({ pos: n.pos, d: d - 10, label: `fecha na esfera (${n.pos.map((v) => +v.toFixed(2)).join("; ")})` });
       }
@@ -289,6 +313,57 @@ export function Placement() {
       const azim = (deg(Math.atan2(-dv[2], dv[0])) + 360) % 360;
       const info = `${pick ? `${pick.label} · ` : ""}${elev}° com a horizontal, ${azim}° em planta · ponta em y = ${end[1].toFixed(2).replace(".", ",")} M`;
       st.setGhost({ kind: "cand", cand }, cand.check.ok ? `Livre: ${info}` : cand.check.errors[0]);
+    };
+
+    // ---- pontos amarelos de barras: vértices de triângulos com esferas vizinhas (botão Triângulo) ----
+    // A esfera sob o cursor vira a partida e fica até outra esfera ser apontada; perto de um ponto amarelo,
+    // o fantasma mostra o triângulo inteiro (R: só a barra).
+    const triangleStep = (ev: PointerEvent, rect: DOMRect, model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"]): boolean => {
+      const st = useApp.getState();
+      const dpx = (p: Vec3) => {
+        const q = toScreen(toWorld(p), rect);
+        return q.z > 1 ? Infinity : Math.hypot(q.x - ev.clientX, q.y - ev.clientY);
+      };
+      const anchor = st.triAnchor && model.nodes[st.triAnchor] ? st.triAnchor : null;
+      if (anchor) {
+        let best: { g: BarGuide; d: number } | null = null;
+        for (const g of barGuidesFor(model, code, inv, anchor)) {
+          const d = dpx(g.pos);
+          if (d < TRI_PX && (!best || d < best.d)) best = { g, d };
+        }
+        if (best) {
+          const g = best.g;
+          const k = `tri:${anchor}:${key(g.pos)}`;
+          if (lastSpot.current !== k) {
+            lastSpot.current = k;
+            if (st.rotIndex) useApp.setState({ rotIndex: 0 });
+          }
+          const fmt = (p: Vec3) => `(${p.map((v) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })).join("; ")})`;
+          const count = new Map<string, number>();
+          for (const c of g.closes) count.set(c.code, (count.get(c.code) ?? 0) + 1);
+          const closes = [...count].map(([c, n]) => (n > 1 ? `${n}× ${c}` : c)).join(" + ");
+          const nTxt = g.closes.length > 1 ? `as ${g.closes.length} barras que fecham (${closes})` : `a ${closes} que fecha`;
+          if (useApp.getState().rotIndex % 2 === 0) {
+            const { part, ids } = newPart(model, g.model);
+            st.setGhost(
+              { kind: "group", model: g.model, ids, part, keep: true, check: { ok: true, errors: [], warnings: [] } },
+              `Amarelo: ${g.text}. Clique: a ${code} e ${nTxt}. R: só a ${code}.`,
+            );
+          } else {
+            st.setGhost({ kind: "cand", cand: g.bar }, `Amarelo: só a ${code} até ${fmt(g.pos)} (${g.text}). R: com ${nTxt.replace(/ que fecham?/, "")}.`);
+          }
+          return true;
+        }
+      }
+      // esfera perto do cursor: vira a partida dos pontos amarelos
+      let near: { id: string; d: number } | null = null;
+      for (const n of Object.values(model.nodes)) {
+        const d = dpx(n.pos);
+        if (d < TRI_ANCHOR_PX && (!near || d < near.d)) near = { id: n.id, d };
+      }
+      if (near && near.id !== anchor) useApp.setState({ triAnchor: near.id });
+      else if (!anchor && st.triAnchor) useApp.setState({ triAnchor: null });
+      return false;
     };
 
     const inGizmo = (ev: PointerEvent, rect: DOMRect) =>
@@ -438,6 +513,11 @@ export function Placement() {
         const cand = supportCandidate(catalog, inv, model, choice.pos);
         return st.setGhost({ kind: "cand", cand }, cand.check.ok ? choice.hint : cand.check.errors[0]);
       }
+
+      // ---- barras: pontos amarelos (triângulos) ----
+      if (catalog.pieces[code]?.type === "bar" && st.guides.yellow && !tool.moving) {
+        if (triangleStep(ev, rect, model, code, inv)) return;
+      } else if (st.triAnchor) useApp.setState({ triAnchor: null });
 
       // ---- barras no modo Livre ----
       if (freeOn(st) && catalog.pieces[code]?.type === "bar") return freeBar(ev, rect, model, code, inv);
@@ -596,6 +676,9 @@ export function Placement() {
     let lastEv: PointerEvent | null = null;
     const track = (ev: PointerEvent) => ((lastEv = ev), update(ev));
     const unsub = useApp.subscribe((s, p) => {
+      if (s.tool !== p.tool && s.triAnchor && !(s.tool.kind === "place" && p.tool.kind === "place" && s.tool.code === p.tool.code)) {
+        useApp.setState({ triAnchor: null });
+      }
       if (s.history !== p.history || s.tool !== p.tool || s.barMode !== p.barMode) {
         freeAnchor = null;
         freeHold = s.history !== p.history && lastEv ? { x: lastEv.clientX, y: lastEv.clientY } : null;
