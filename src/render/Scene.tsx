@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { catalog } from "../core/catalog";
 import { boardsOf, componentOf, type Model, type Vec3 } from "../core/model";
 import { markerPos, type Candidate } from "../core/snapping";
-import { candidatesFor, guidesFor, nodeOptionsFor, Placement } from "../interaction/Placement";
+import { barGuidesFor, candidatesFor, guidesFor, nodeOptionsFor, Placement } from "../interaction/Placement";
 import { useApp, useDisplayModel, useModel, inclineOn, workingModel } from "../ui/store";
 import type { Sel } from "../core/edit";
 import { Bar, GroundConnection, Sphere, type Look } from "./pieces/pieces";
@@ -177,9 +177,16 @@ function Markers() {
   // GC: pontos azuis (a um vão de barra de outra GC) e amarelos (vértice de triângulo), nos dois modos de encaixe
   const present = useApp((s) => s.history.present);
   const show = useApp((s) => s.guides);
+  const triAnchor = useApp((s) => s.triAnchor);
   const { blue, yellow, guideKeys } = useMemo(() => {
     const empty = { blue: [] as THREE.Vector3[], yellow: [] as THREE.Vector3[], guideKeys: new Set<string>() };
     let guides;
+    // barras: pontos amarelos da esfera de partida (vértices de triângulos com esferas vizinhas)
+    if (code && catalog.pieces[code]?.type === "bar" && tool.kind === "place" && !tool.moving) {
+      if (!show.yellow || !triAnchor || !model.nodes[triAnchor]) return empty;
+      const g = barGuidesFor(model, code, inventory, triAnchor);
+      return { blue: [], yellow: g.map((x) => toWorld(x.pos)), guideKeys: new Set(g.map((x) => x.pos.join(","))) };
+    }
     if (code && catalog.pieces[code]?.type === "support") {
       const inv = tool.kind === "place" && tool.moving ? { ...inventory, unlimited: true } : inventory;
       guides = guidesFor(model, inv);
@@ -198,7 +205,7 @@ function Markers() {
       yellow: on.filter((g) => g.kind === "yellow").map((g) => lift(g.pos)),
       guideKeys: new Set(on.map((g) => g.pos.join(","))),
     };
-  }, [code, model, present, inventory, tool, show]);
+  }, [code, model, present, inventory, tool, show, triAnchor]);
   const { dots, rings } = useMemo(() => {
     if (tool.kind === "moveNode") {
       // mover só o nó: pontos verdes nas posições possíveis

@@ -318,3 +318,148 @@ export function allCandidates(cat: Catalog, inv: InventoryConfig, model: Model, 
   if (t === "connector") return ids.flatMap((id) => connectorCandidates(cat, inv, model, code, id));
   return ids.flatMap((id) => memberCandidates(cat, inv, model, code, id, opts));
 }
+
+/**
+ * Ponto amarelo para barras: a ponta de uma barra que sai da esfera `fromId` e forma triângulo com esferas vizinhas.
+ * `bar`: só a barra; `model`: a barra e as que fecham o triângulo (ou a pirâmide), já validadas em sequência.
+ */
+export interface BarGuide {
+  pos: Vec3;
+  text: string;
+  bar: Candidate;
+  closes: { code: string; fromId: string }[];
+  model: Model;
+}
+
+const NEAR_M = 13; // vizinhas: até um pouco mais que uma B12 (cobre a diagonal 6 × 12)
+const MAX_NEIGHBORS = 8;
+
+/**
+ * Pontos amarelos de uma barra `code` saindo de `fromId`. Os vértices P têm |PA| = vão da barra e |PB| = vão de uma
+ * barra (B4, B6, B12) para uma esfera vizinha B — triângulos equiláteros, isósceles ou quaisquer, com ângulos ≥ ao mínimo.
+ * O vértice de um triângulo gira num círculo em volta de AB; dele valem os pontos nos planos que contêm AB e um eixo
+ * (X, Y ou Z), e os pontos que também estão a um vão de barra de uma terceira esfera (pirâmides, treliças espaciais).
+ */
+export function barTriangleGuides(cat: Catalog, inv: InventoryConfig, model: Model, code: string, fromId: string): BarGuide[] {
+  const piece = cat.pieces[code];
+  const A = model.nodes[fromId];
+  if (!piece || piece.type !== "bar" || !piece.spanM || !A) return [];
+  const L = piece.spanM[0];
+  const s = cat.settings;
+  const tol = s.tolerancia_encaixe_mm / s.modulo_mm;
+  const minAng = (s.angulo_minimo_membros_graus * Math.PI) / 180 - 1e-6;
+  const bars = Object.values(cat.pieces)
+    .filter((p) => p.type === "bar" && p.spanM)
+    .map((p) => ({ code: p.code, span: p.spanM![0] }))
+    .sort((a, b) => a.span - b.span);
+  const maxSpan = Math.max(...bars.map((b) => b.span));
+  const neighbors = Object.values(model.nodes)
+    .filter((n) => n.id !== fromId)
+    .map((n) => ({ n, d: len(sub(n.pos, A.pos)) }))
+    .filter((x) => x.d > 1e-6 && x.d <= Math.min(NEAR_M, L + maxSpan) - 1e-6)
+    .sort((a, b) => a.d - b.d)
+    .slice(0, MAX_NEIGHBORS);
+
+  // pontos (arredondados) e as esferas que fecham neles
+  // `plane`: veio de um plano com eixo (vale com uma só vizinha); pontos só de pirâmide precisam fechar com duas
+  const pts = new Map<string, { pos: Vec3; plane: boolean; gens: Map<string, { id: string; code: string; span: number; dAB: number }> }>();
+  const round = (p: Vec3) => p.map((v) => Math.round(v * 1e4) / 1e4 + 0) as Vec3;
+  const angleAt = (p: Vec3, q: Vec3, r: Vec3) => {
+    const u = sub(q, p);
+    const v = sub(r, p);
+    return Math.acos(Math.max(-1, Math.min(1, dot(u, v) / (len(u) * len(v)))));
+  };
+  const addPoint = (raw: Vec3, gens: { id: string; code: string; span: number; dAB: number }[], plane: boolean) => {
+    const p = round(raw);
+    if (p[1] < 0.5) return; // abaixo da chapa (ou encostado nela)
+    if (findNodeAt(model, p, Math.max(1e-3, tol))) return; // esfera que já existe: o fechamento comum resolve
+    // as barras que chegam em P (de A e das vizinhas) também precisam de ângulo ≥ ao mínimo
+    for (const g of gens) if (angleAt(p, A.pos, model.nodes[g.id].pos) < minAng) return;
+    const k = p.map((v) => v.toFixed(3)).join(",");
+    let e = pts.get(k);
+    if (!e) pts.set(k, (e = { pos: p, plane, gens: new Map() }));
+    e.plane ||= plane;
+    for (const g of gens) if (!e.gens.has(g.id)) e.gens.set(g.id, g);
+  };
+
+  // 1) triângulos com uma vizinha: círculo em volta de AB, nos planos que contêm AB e um eixo
+  for (const { n: B, d } of neighbors) {
+    const u = scale(sub(B.pos, A.pos), 1 / d);
+    for (const b of bars) {
+      if (L + b.span <= d + 1e-6 || Math.abs(L - b.span) >= d - 1e-6) continue;
+      const x = (L * L - b.span * b.span + d * d) / (2 * d);
+      const h = Math.sqrt(Math.max(0, L * L - x * x));
+      const c = add(A.pos, scale(u, x));
+      for (const ax of [[1, 0, 0], [0, 1, 0], [0, 0, 1]] as Vec3[]) {
+        const w = sub(ax, scale(u, dot(ax, u)));
+        if (len(w) < 1e-3) continue;
+        const wn = norm(w);
+        for (const sg of [1, -1]) addPoint(add(c, scale(wn, sg * h)), [{ id: B.id, code: b.code, span: b.span, dAB: d }], true);
+      }
+    }
+  }
+
+  // 2) pirâmides: a um vão de barra de duas vizinhas ao mesmo tempo
+  for (let i = 0; i < neighbors.length; i++) {
+    for (let j = i + 1; j < neighbors.length; j++) {
+      const B = neighbors[i];
+      const C = neighbors[j];
+      const ex = scale(sub(B.n.pos, A.pos), 1 / B.d);
+      const ac = sub(C.n.pos, A.pos);
+      const ii = dot(ex, ac);
+      const eyRaw = sub(ac, scale(ex, ii));
+      const jj = len(eyRaw);
+      if (jj < 1e-3) continue; // A, B e C alinhadas
+      const ey = scale(eyRaw, 1 / jj);
+      const ez = cross(ex, ey);
+      for (const b of bars) {
+        for (const c of bars) {
+          const x = (L * L - b.span * b.span + B.d * B.d) / (2 * B.d);
+          const y = (L * L - c.span * c.span + ii * ii + jj * jj) / (2 * jj) - (ii / jj) * x;
+          const z2 = L * L - x * x - y * y;
+          if (z2 < 1e-6) continue;
+          const z = Math.sqrt(z2);
+          const base = add(A.pos, add(scale(ex, x), scale(ey, y)));
+          for (const sg of [1, -1]) {
+            addPoint(add(base, scale(ez, sg * z)), [
+              { id: B.n.id, code: b.code, span: b.span, dAB: B.d },
+              { id: C.n.id, code: c.code, span: c.span, dAB: C.d },
+            ], false);
+          }
+        }
+      }
+    }
+  }
+
+  const fmt = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+  const where = (p: Vec3) => `(${p.map(fmt).join("; ")})`;
+  const kind = (g: { code: string; span: number; dAB: number }) => {
+    const sides = [L, g.span, g.dAB];
+    const eq = (a: number, b: number) => Math.abs(a - b) <= tol;
+    if (eq(L, g.span) && eq(L, g.dAB)) return `triângulo equilátero de ${code}`;
+    const baseTxt = bars.find((b) => eq(b.span, g.dAB))?.code ?? `${fmt(g.dAB)} M`;
+    const iso = eq(sides[0], sides[1]) || eq(sides[0], sides[2]) || eq(sides[1], sides[2]);
+    return `triângulo ${iso ? "isósceles " : ""}${code}–${g.code}–${baseTxt}`;
+  };
+
+  const out: BarGuide[] = [];
+  for (const { pos, gens, plane } of pts.values()) {
+    const check = validateMember(cat, inv, model, code, fromId, pos, { free: true });
+    if (!check.ok) continue;
+    let m = addMember(model, code, fromId, pos).model;
+    const closes: BarGuide["closes"] = [];
+    const used: { code: string; span: number; dAB: number; id: string }[] = [];
+    for (const g of [...gens.values()].sort((a, b) => a.dAB - b.dAB)) {
+      if (!validateMember(cat, inv, m, g.code, g.id, pos, { free: true }).ok) continue;
+      m = addMember(m, g.code, g.id, pos).model;
+      closes.push({ code: g.code, fromId: g.id });
+      used.push(g);
+    }
+    if (!closes.length || (!plane && closes.length < 2)) continue;
+    const text = used.length === 1
+      ? `${kind(used[0])} com a esfera ${where(model.nodes[used[0].id].pos)}`
+      : `pirâmide (ou treliça) com ${used.length} esferas vizinhas`;
+    out.push({ pos, text, bar: { kind: "member", code, fromId, toPos: pos, inclined: true, check }, closes, model: m });
+  }
+  return out;
+}

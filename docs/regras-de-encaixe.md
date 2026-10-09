@@ -1,6 +1,6 @@
 # Regras de encaixe — siMOLAdor
 
-Versão 4.0 · 09/10/2026 (siMOLAdor 1.6) (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
+Versão 4.1 · 09/10/2026 (siMOLAdor 1.7) (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
 
 Uma regra **bloqueia** quando torna o encaixe inválido (fantasma vermelho, não deixa soltar). Uma regra **avisa** quando a montagem é possível, mas não é recomendada (fantasma verde, aviso na barra de status).
 
@@ -24,6 +24,7 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | B2 | Modos **Eixos** e **15°**: a barra sai na direção de um eixo, **ou** inclinada em múltiplos de `passo_inclinacao_graus` (15°) num plano ortogonal, **ou** fecha numa esfera existente que esteja à distância exata do vão. Modo **Livre**: qualquer direção 3D (o comprimento continua exato); a ponta encaixa em esferas à distância certa, em eixos/15°, no vértice de um triângulo com uma esfera vizinha (circunferência das duas esferas) e nas alturas existentes. | bloqueia (Eixos/15°) | E19, equipe 08–09/10 |
 | B3 | B6 do Kit 1 = B6 do Kit 2 (mesmo código, estoques somados). | estrutura | E01 |
 | B4 | Polaridade não é verificada. | — | E15 |
+| B5 | **Pontos amarelos de barras** (botão Triângulo, nos três modos de direção): com uma barra B4, B6 ou B12 na mão, a esfera sob o cursor vira a partida A e aparecem pontos amarelos P com \|PA\| = vão da barra e \|PB\| = vão de uma B4, B6 ou B12 até uma esfera vizinha B (até 13 módulos de A, as 8 mais perto): triângulos equiláteros, isósceles ou quaisquer. Do círculo de vértices em volta de AB valem os pontos nos planos que contêm AB e um eixo (X, Y ou Z); valem também os pontos a um vão de barra de duas vizinhas ao mesmo tempo (pirâmides, treliças espaciais). Só aparecem pontos acima da chapa, onde a barra é válida e pelo menos uma barra de fechamento é válida (ângulos ≥ 45°, folgas, estoque). **Clique** coloca a barra e as que fecham, numa só ação de desfazer; **R** alterna para só a barra. A partida fica até o cursor passar por outra esfera. | — | equipe 09/10 |
 
 ## 3. Diagonais (D4x6, D6x6, D6x12)
 

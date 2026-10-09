@@ -2,7 +2,7 @@
 
 Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (Mola Structural Model), feito pela equipe Poli Mola da Poli Building. Você monta a estrutura no navegador, com as peças e o estoque reais dos kits, e o programa vai gerar as pranchas (plantas e vistas) no padrão do Desafio Poli-USP.
 
-**Versão em uso:** https://polibuilding.github.io/simolador/ · versão atual **1.6** ("geométrica"); o que mudou em cada versão está em [CHANGELOG.md](CHANGELOG.md).
+**Versão em uso:** https://polibuilding.github.io/simolador/ · versão atual **1.7** ("geométrica"); o que mudou em cada versão está em [CHANGELOG.md](CHANGELOG.md).
 
 ## O que já funciona
 
@@ -12,6 +12,7 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 - **CC e CC90 nos 4 lados** da esfera (R troca o lado), menos onde chega uma barra transversal; o mesmo par aceita CC em vários lados.
 - **Planos inclinados**: placas, diagonais, RC90, CC e CC90 também em quadros inclinados (treliças), desde que as esferas estejam no mesmo plano e nas distâncias certas.
 - **Liga/desliga dos pontos** (Grade verde, Vão azul, Triângulo amarelo) ao lado de "Encaixe"; vale o ponto mais perto do cursor e **Tab** alterna entre pontos sobrepostos; com a grade desligada, a GC só vai para os pontos azuis/amarelos (malhas triangulares).
+- **Triângulos de barras** (botão Triângulo): com uma B4, B6 ou B12 na mão, passe o cursor numa esfera; os pontos amarelos são vértices de triângulos (equiláteros, isósceles) e pirâmides com as esferas vizinhas. Um clique coloca a barra e as que fecham; R deixa só a barra. Telhados e treliças espaciais em poucos cliques.
 - **Guias da ligação de base**: ao colocar ou mover uma GC, pontos **azuis** a um vão de barra (4, 6 ou 12 módulos) de outra GC e **amarelos** no vértice de um triângulo de barras. A GC encaixa neles mesmo no modo Livre.
 - **Coordenadas**: com uma GC selecionada, digite X e Z no painel (em módulos ou em mm); com uma esfera, X, Y e Z (só o nó anda, as barras acompanham); o painel mostra as distâncias às outras GC e quais batem com uma barra.
 - **Regras do kit**: comprimentos, ângulo mínimo de 45° entre barras, nada deitado na chapa, diagonais só no vão nominal, placas presas em 4 esferas, ligações nos cantos certos, placa e diagonal sem dividir o mesmo ponto da esfera, RC90 fora do canto de uma diagonal, estoque. O motivo de cada bloqueio aparece no rodapé.
