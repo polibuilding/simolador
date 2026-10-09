@@ -23,6 +23,8 @@ const CLICK_PX = 5;
 const DRAG_PX = 6;
 /** canto superior direito da cena ocupado pelo cubo de visualização */
 const GIZMO_PX = 175;
+/** canto inferior esquerdo ocupado pelos eixos X, Y, Z */
+const AXES_PX = 120;
 
 const key = (p: Vec3) => p.map((v) => v.toFixed(3)).join(",");
 
@@ -117,17 +119,48 @@ export function Placement() {
       return raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -yMm), new THREE.Vector3());
     };
 
-    const nearGuide = (guides: SupportGuide[], ev: PointerEvent, rect: DOMRect) => {
-      let best: { g: SupportGuide; d: number } | null = null;
-      for (const g of guides) {
-        const sp = toScreen(toWorld(g.pos), rect);
-        const d = Math.hypot(sp.x - ev.clientX, sp.y - ev.clientY);
-        if (d < GUIDE_PX && (!best || d < best.d)) best = { g, d };
+    // ---- GC: ponto de encaixe (grade, azul, amarelo): vale o mais perto do cursor; Tab alterna entre os sobrepostos ----
+    let lastChoiceKey = "";
+    const KIND_NAME = { grid: "Grade", blue: "Azul", yellow: "Amarelo" } as const;
+    const pickSupport = (ev: PointerEvent, rect: DOMRect, hit: { x: number; z: number }, guides: SupportGuide[]) => {
+      const st = useApp.getState();
+      const dist = (p: Vec3) => {
+        const sp = toScreen(toWorld(p), rect);
+        return Math.hypot(sp.x - ev.clientX, sp.y - ev.clientY);
+      };
+      type Choice = { pos: Vec3; kind: keyof typeof KIND_NAME; text: string | null; d: number };
+      const all: Choice[] = [];
+      if (st.snap) {
+        const g = supportPosition(catalog, hit, true);
+        all.push({ pos: g, kind: "grid", text: null, d: dist(g) });
       }
-      return best?.g ?? null;
+      for (const g of guides) {
+        if (!st.guides[g.kind]) continue;
+        const d = dist(g.pos);
+        if (d >= GUIDE_PX) continue;
+        // guia no mesmo ponto da grade: fica o guia (diz mais)
+        const same = all.findIndex((c) => c.kind === "grid" && Math.hypot(c.pos[0] - g.pos[0], c.pos[2] - g.pos[2]) < 1e-3);
+        if (same >= 0) all.splice(same, 1);
+        all.push({ pos: g.pos, kind: g.kind, text: g.text, d });
+      }
+      if (!all.length) return { pos: supportPosition(catalog, hit, false), hint: null as string | null };
+      all.sort((a, b) => a.d - b.d);
+      // pontos "disputados": os que estão quase tão perto quanto o mais perto
+      const near = all.filter((c) => c.d < Math.max(GUIDE_PX, all[0].d + 1));
+      const key = near.map((c) => c.pos.join(",")).join("|");
+      if (key !== lastChoiceKey) {
+        lastChoiceKey = key;
+        if (st.snapCycle) useApp.setState({ snapCycle: 0 });
+      }
+      const pick = near[useApp.getState().snapCycle % near.length];
+      const tail = near.length > 1 ? ` (${near.length} pontos aqui: Tab alterna)` : "";
+      if (pick.kind === "grid" && near.length === 1) return { pos: pick.pos, hint: null };
+      return { pos: pick.pos, hint: `${KIND_NAME[pick.kind]}${pick.text ? `: ${pick.text}` : ""}${tail}` };
     };
 
-    const inGizmo = (ev: PointerEvent, rect: DOMRect) => ev.clientX > rect.right - GIZMO_PX && ev.clientY < rect.top + GIZMO_PX;
+    const inGizmo = (ev: PointerEvent, rect: DOMRect) =>
+      (ev.clientX > rect.right - GIZMO_PX && ev.clientY < rect.top + GIZMO_PX) || // cubo de vistas
+      (ev.clientX < rect.left + AXES_PX && ev.clientY > rect.bottom - AXES_PX); // eixos X, Y, Z
 
     // ---- seleção por retângulo ----
     let boxStart: { x: number; y: number; shift: boolean } | null = null;
@@ -183,15 +216,13 @@ export function Placement() {
         if (!node) return st.disarm();
         const hit = planeHit(ev, rect, BASE_Y + node.pos[1] * M);
         if (!hit) return;
-        let target = supportPosition(catalog, { x: hit.x / M, z: hit.z / M }, st.snap);
-        let guide: SupportGuide | null = null;
-        if (node.kind === "support" && !tool.turns) {
-          guide = nearGuide(guidesFor(st.history.present, st.inventory, componentOf(st.history.present, tool.nodeId)), ev, rect);
-          if (guide) target = guide.pos;
-        }
+        const xz = { x: hit.x / M, z: hit.z / M };
+        const guides = node.kind === "support" && !tool.turns ? guidesFor(st.history.present, st.inventory, componentOf(st.history.present, tool.nodeId)) : [];
+        const choice = pickSupport(ev, rect, xz, guides);
+        const target = choice.pos;
         const delta: Vec3 = [target[0] - node.pos[0], 0, target[2] - node.pos[2]];
         const r = moveGroup(catalog, st.history.present, tool.nodeId, delta, tool.turns);
-        return st.setGhost({ kind: "group", model: r.model, ids: r.ids, check: r.check }, r.check.errors[0] ?? guide?.text ?? null);
+        return st.setGhost({ kind: "group", model: r.model, ids: r.ids, check: r.check }, r.check.errors[0] ?? choice.hint);
       }
 
       const code = tool.code;
@@ -201,11 +232,9 @@ export function Placement() {
       if (catalog.pieces[code]?.type === "support") {
         const hit = planeHit(ev, rect, 0);
         if (!hit) return st.setGhost(null, "Aponte para a chapa.");
-        let pos = supportPosition(catalog, { x: hit.x / M, z: hit.z / M }, st.snap);
-        const guide = nearGuide(guidesFor(model, inv), ev, rect);
-        if (guide) pos = guide.pos;
-        const cand = supportCandidate(catalog, inv, model, pos);
-        return st.setGhost({ kind: "cand", cand }, cand.check.ok ? guide?.text ?? null : cand.check.errors[0]);
+        const choice = pickSupport(ev, rect, { x: hit.x / M, z: hit.z / M }, guidesFor(model, inv));
+        const cand = supportCandidate(catalog, inv, model, choice.pos);
+        return st.setGhost({ kind: "cand", cand }, cand.check.ok ? choice.hint : cand.check.errors[0]);
       }
 
       // ---- demais peças: ponto de encaixe mais próximo ----
@@ -362,7 +391,7 @@ export function Placement() {
     let lastEv: PointerEvent | null = null;
     const track = (ev: PointerEvent) => ((lastEv = ev), update(ev));
     const unsub = useApp.subscribe((s, p) => {
-      if (lastEv && (s.rotIndex !== p.rotIndex || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
+      if (lastEv && (s.rotIndex !== p.rotIndex || s.snapCycle !== p.snapCycle || s.guides !== p.guides || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
         update(lastEv);
       }
     });

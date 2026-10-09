@@ -49,7 +49,8 @@ export function Toolbar() {
   const canRedo = useApp((s) => s.history.future.length > 0);
   const snap = useApp((s) => s.snap);
   const incline = useApp((s) => s.incline);
-  const { setName, undo, redo, setSnap, setIncline, setSheetsOpen, newProject, load, serialize } = useApp.getState();
+  const guides = useApp((s) => s.guides);
+  const { setName, undo, redo, setSnap, setGuides, setIncline, setSheetsOpen, newProject, load, serialize } = useApp.getState();
   const fileRef = useRef<HTMLInputElement>(null);
   const [stockOpen, setStockOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -98,20 +99,32 @@ export function Toolbar() {
         <button onClick={undo} disabled={!canUndo} title="Ctrl+Z">Desfazer</button>
         <button onClick={redo} disabled={!canRedo} title="Ctrl+Y">Refazer</button>
       </nav>
-      <div className="segmented" role="radiogroup" aria-label="Encaixe">
+      <div className="snap-chips" role="group" aria-label="Pontos de encaixe">
         <span>Encaixe</span>
-        {[true, false].map((v) => (
-          <button
-            key={String(v)}
-            role="radio"
-            aria-checked={snap === v}
-            className={snap === v ? "on" : ""}
-            onClick={() => setSnap(v)}
-            title={v ? "Pontos verdes nas posições possíveis; ligação de base na grade" : "Sem pontos; ligação de base em qualquer lugar da chapa"}
-          >
-            {v ? "Ligado" : "Livre"}
-          </button>
-        ))}
+        <button
+          aria-pressed={snap}
+          className={snap ? "on" : ""}
+          onClick={() => setSnap(!snap)}
+          title="Verde: pontos onde a peça escolhida encaixa e grade da chapa para a GC. Desligado = livre."
+        >
+          <i className="dot green" /> Grade
+        </button>
+        <button
+          aria-pressed={guides.blue}
+          className={guides.blue ? "on" : ""}
+          onClick={() => setGuides({ ...guides, blue: !guides.blue })}
+          title="Azul: GC a um vão de barra (4, 6 ou 12 módulos) de outra GC, em X ou Z"
+        >
+          <i className="dot blue" /> Vão
+        </button>
+        <button
+          aria-pressed={guides.yellow}
+          className={guides.yellow ? "on" : ""}
+          onClick={() => setGuides({ ...guides, yellow: !guides.yellow })}
+          title="Amarelo: GC no vértice de um triângulo de barras com duas GC"
+        >
+          <i className="dot yellow" /> Triângulo
+        </button>
       </div>
       <div className="segmented" role="radiogroup" aria-label="Barras">
         <span>Barras</span>

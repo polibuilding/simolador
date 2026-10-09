@@ -1,5 +1,5 @@
 import { Canvas, useThree } from "@react-three/fiber";
-import { Environment, GizmoHelper, GizmoViewcube, Lightformer, OrbitControls } from "@react-three/drei";
+import { Environment, GizmoHelper, GizmoViewcube, GizmoViewport, Lightformer, OrbitControls } from "@react-three/drei";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { catalog } from "../core/catalog";
@@ -155,6 +155,7 @@ function Markers() {
   const code = tool.kind === "place" ? tool.code : null;
   // GC: pontos azuis (a um vão de barra de outra GC) e amarelos (vértice de triângulo), nos dois modos de encaixe
   const present = useApp((s) => s.history.present);
+  const show = useApp((s) => s.guides);
   const { blue, yellow, guideKeys } = useMemo(() => {
     const empty = { blue: [] as THREE.Vector3[], yellow: [] as THREE.Vector3[], guideKeys: new Set<string>() };
     let guides;
@@ -169,12 +170,13 @@ function Markers() {
       w.y = 0.6;
       return w;
     };
+    const on = guides.filter((g) => show[g.kind]);
     return {
-      blue: guides.filter((g) => g.kind === "blue").map((g) => lift(g.pos)),
-      yellow: guides.filter((g) => g.kind === "yellow").map((g) => lift(g.pos)),
-      guideKeys: new Set(guides.map((g) => g.pos.join(","))),
+      blue: on.filter((g) => g.kind === "blue").map((g) => lift(g.pos)),
+      yellow: on.filter((g) => g.kind === "yellow").map((g) => lift(g.pos)),
+      guideKeys: new Set(on.map((g) => g.pos.join(","))),
     };
-  }, [code, model, present, inventory, tool]);
+  }, [code, model, present, inventory, tool, show]);
   const { dots, rings } = useMemo(() => {
     if (!code || !snap) return { dots: [] as THREE.Vector3[], rings: [] as THREE.Vector3[] };
     const inv = tool.kind === "place" && tool.moving ? { ...inventory, unlimited: true } : inventory;
@@ -324,6 +326,10 @@ export function Scene() {
             opacity={1}
           />
         </group>
+      </GizmoHelper>
+      {/* referência de eixos no canto inferior esquerdo (Y = vertical); clicar num eixo olha por ele */}
+      <GizmoHelper alignment="bottom-left" margin={[62, 62]} renderPriority={2}>
+        <GizmoViewport axisColors={["#e5484d", "#19a974", "#3d8bff"]} labelColor="#ffffff" axisHeadScale={0.95} font="bold 17px Arial" />
       </GizmoHelper>
       <OrbitControls
         makeDefault

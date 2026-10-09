@@ -29,6 +29,10 @@ interface State {
   sheet: SheetMeta;
   tool: Tool;
   snap: boolean;
+  /** guias da GC ligados: azul (vão de barra) e amarelo (vértice de triângulo) */
+  guides: { blue: boolean; yellow: boolean };
+  /** Tab: qual dos pontos sobrepostos perto do cursor vale */
+  snapCycle: number;
   /** barras inclinadas ligadas (botão na barra de ferramentas ou tecla I) */
   incline: boolean;
   /** Shift pressionado: inverte a inclinação enquanto estiver apertado */
@@ -71,6 +75,7 @@ interface State {
   undo: () => void;
   redo: () => void;
   setSnap: (v: boolean) => void;
+  setGuides: (g: State["guides"]) => void;
   /** leva a GC/esfera (e a estrutura ligada a ela) para a posição dada em módulos; devolve o erro, se houver */
   moveNodeTo: (nodeId: string, target: Vec3) => string | null;
   setIncline: (v: boolean) => void;
@@ -127,6 +132,8 @@ export const useApp = create<State>((set, get) => ({
   sheet: { line1: "MOLA STRUCTURAL MODEL", line2: String(catalog.settings.prancha_projeto ?? "") },
   tool: { kind: "select" },
   snap: catalog.settings.gc_encaixe_padrao !== "livre",
+  guides: { blue: true, yellow: true },
+  snapCycle: 0,
   incline: false,
   shiftHeld: false,
   lastCode: null,
@@ -250,6 +257,7 @@ export const useApp = create<State>((set, get) => ({
   undo: () => set((s) => ({ history: undo(s.history), selection: null, multi: [], ghost: null, tool: { kind: "select" } })),
   redo: () => set((s) => ({ history: redo(s.history), selection: null, multi: [], ghost: null, tool: { kind: "select" } })),
   setSnap: (snap) => set({ snap }),
+  setGuides: (guides) => set({ guides }),
   moveNodeTo: (nodeId, target) => {
     const { history } = get();
     const n = history.present.nodes[nodeId];
