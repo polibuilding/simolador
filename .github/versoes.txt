@@ -1,0 +1,8 @@
+# Versão do siMOLAdor e o commit em que ela fica. A publicação cria a etiqueta (tag) no Git se faltar.
+# Ao lançar uma versão nova: suba o "version" do package.json, escreva no CHANGELOG.md e acrescente a linha aqui.
+v1.0 7d848679017b5c2416a08e6136ca6871a962c2c2 Primeira versão
+v1.1 bcc1a97bd14d941bb7c273d0b1f786648d4da2e8 Kits 1 e 2 completos e pranchas
+v1.2 e939747b8102a8e9958ce1c990c24b781104528f Barras inclinadas e navegação de CAD
+v1.3 15fef7ad34866166413dc917392eb374a9e6a425 Planos inclinados, guias e edição fina
+v1.4 80b14bde175f1b268d771482048d7b6c4b52807f Produtividade e pranchas completas
+v1.5 5965015691d6780ecc244744fbd1ba03778cc2d5 Várias chapas
