@@ -14,7 +14,9 @@ export type Tool =
   /** colocar peça nova; `moving` = peça retirada para mudar de lugar (base = modelo sem ela) */
   | { kind: "place"; code: string; viaDrag: boolean; moving?: { base: Model } }
   /** mover a estrutura conectada a um nó */
-  | { kind: "moveGroup"; nodeId: string; turns: number; viaDrag: boolean };
+  | { kind: "moveGroup"; nodeId: string; turns: number; viaDrag: boolean }
+  /** mover só um nó: as barras presas a partes fixas giram em torno da ponta fixa */
+  | { kind: "moveNode"; nodeId: string; viaDrag: boolean };
 
 export type Ghost =
   | { kind: "cand"; cand: Candidate }
@@ -64,6 +66,8 @@ interface State {
   /** Espaço: arma de novo a última peça colocada */
   repeatLast: () => void;
   startMove: (viaDrag: boolean) => void;
+  /** N / botão "Mover só o nó" */
+  startMoveNode: (viaDrag: boolean) => void;
   select: (s: Sel | null) => void;
   toggleMulti: (s: Sel) => void;
   setMulti: (list: Sel[], add?: boolean) => void;
@@ -195,6 +199,12 @@ export const useApp = create<State>((set, get) => ({
     const history = chain ? { ...s.history, present: r.model } : push(s.history, r.model);
     const selection = selAfter(s.history.present, r.model, s.selection);
     set({ history, selection, rotChain: r.model, hint: "Girada. R de novo continua girando; Esc termina. Ctrl+Z volta à posição inicial." });
+  },
+
+  startMoveNode: (viaDrag) => {
+    const sel = get().selection;
+    if (sel?.kind !== "node") return set({ hint: "Selecione uma esfera ou ligação de base para mover só o nó." });
+    set({ tool: { kind: "moveNode", nodeId: sel.id, viaDrag }, ghost: null, hint: "Leve o nó até um dos pontos verdes: as barras acompanham. Esc cancela." });
   },
 
   startMove: (viaDrag) => {

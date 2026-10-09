@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { catalog } from "../core/catalog";
 import { componentOf, type Model, type Vec3 } from "../core/model";
 import { markerPos, type Candidate } from "../core/snapping";
-import { candidatesFor, guidesFor, Placement } from "../interaction/Placement";
+import { candidatesFor, guidesFor, nodeOptionsFor, Placement } from "../interaction/Placement";
 import { useApp, useModel, inclineOn, workingModel } from "../ui/store";
 import type { Sel } from "../core/edit";
 import { Bar, GroundConnection, GroundPlate, Sphere, type Look } from "./pieces/pieces";
@@ -131,7 +131,21 @@ function GhostView() {
   if (!ghost) return null;
   if (ghost.kind === "group") {
     const look: Look = ghost.check.ok ? "valid" : "invalid";
-    return <ModelGroup model={ghost.model} lookOf={() => look} interactive={false} />;
+    // só o que se move (e as barras presas a ele); as esferas fixas nas pontas já estão na cena
+    const ids = ghost.ids;
+    const g = ghost.model;
+    const members = Object.fromEntries(Object.entries(g.members).filter(([, m]) => ids.has(m.a) || ids.has(m.b)));
+    const used = new Set<string>([...ids]);
+    for (const m of Object.values(members)) (used.add(m.a), used.add(m.b));
+    const part: Model = {
+      ...g,
+      nodes: Object.fromEntries(Object.entries(g.nodes).filter(([k]) => used.has(k))),
+      members,
+      plates: Object.fromEntries(Object.entries(g.plates).filter(([, p]) => p.corners.every((c) => ids.has(c)))),
+      connectors: Object.fromEntries(Object.entries(g.connectors).filter(([, c]) => ids.has(c.node))),
+    };
+    const fixedEnds = new Set([...used].filter((k) => !ids.has(k)));
+    return <ModelGroup model={part} lookOf={() => look} interactive={false} hidden={fixedEnds} />;
   }
   const look: Look = ghost.cand.check.ok ? "valid" : "invalid";
   const { model } = candidateModel(base, ghost.cand);
@@ -172,12 +186,24 @@ function Markers() {
     };
     const on = guides.filter((g) => show[g.kind]);
     return {
-      blue: on.filter((g) => g.kind === "blue").map((g) => lift(g.pos)),
+      // ponto que é azul e amarelo ao mesmo tempo: desenha só o amarelo
+      blue: on.filter((g) => g.kind === "blue" && !(show.yellow && guides!.some((y) => y.kind === "yellow" && y.pos.join() === g.pos.join()))).map((g) => lift(g.pos)),
       yellow: on.filter((g) => g.kind === "yellow").map((g) => lift(g.pos)),
       guideKeys: new Set(on.map((g) => g.pos.join(","))),
     };
   }, [code, model, present, inventory, tool, show]);
   const { dots, rings } = useMemo(() => {
+    if (tool.kind === "moveNode") {
+      // mover só o nó: pontos verdes nas posições possíveis
+      const node = present.nodes[tool.nodeId];
+      const { options } = nodeOptionsFor(present, tool.nodeId);
+      const dots = options.filter((o) => o.check.ok).map((o) => {
+        const w = toWorld(o.pos);
+        if (node?.kind === "support") w.y = 0.4;
+        return w;
+      });
+      return { dots, rings: [] as THREE.Vector3[] };
+    }
     if (!code || !snap) return { dots: [] as THREE.Vector3[], rings: [] as THREE.Vector3[] };
     const inv = tool.kind === "place" && tool.moving ? { ...inventory, unlimited: true } : inventory;
     const { cands } = candidatesFor(model, code, inv, inclined);
@@ -197,7 +223,7 @@ function Markers() {
       (occupied.has(k) ? rings : dots).push(w);
     }
     return { dots, rings };
-  }, [code, snap, model, inventory, tool, inclined, guideKeys]);
+  }, [code, snap, model, inventory, tool, inclined, guideKeys, present]);
 
   useEffect(() => {
     const m = new THREE.Matrix4();

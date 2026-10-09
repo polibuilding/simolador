@@ -74,3 +74,13 @@ describe("guias da ligação de base", () => {
     expect(y[0].text).toMatch(/equilátero de B6/);
   });
 });
+
+describe("malha triangular", () => {
+  it("depois do primeiro vértice, os próximos amarelos aparecem (mesmo onde também há azul)", () => {
+    let m = emptyModel();
+    for (const p of [[3, 0, 2], [9, 0, 2], [6, 0, 7.1962]] as Vec3[]) m = addSupport(m, p).model;
+    const y = supportGuides(catalog, inv, m).filter((g) => g.kind === "yellow").map((g) => g.pos.join(";"));
+    expect(y).toContain("12;0;7.1962");
+    expect(y).toContain("0;0;7.1962");
+  });
+});

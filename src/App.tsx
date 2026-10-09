@@ -55,6 +55,8 @@ function useShortcuts() {
         st.redo();
       } else if (!mod && k === "r") {
         st.rotate();
+      } else if (!mod && k === "n" && st.selection?.kind === "node") {
+        st.startMoveNode(false);
       } else if (!mod && k === "m" && st.selection) {
         st.startMove(false);
       } else if (e.key === "Tab" && !mod && (st.tool.kind === "moveGroup" || (st.tool.kind === "place" && st.tool.code === "GC"))) {
