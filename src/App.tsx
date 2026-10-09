@@ -47,6 +47,19 @@ function useShortcuts() {
       } else if ((e.key === "Delete" || e.key === "Backspace") && (st.selection || st.multi.length)) {
         e.preventDefault();
         st.removeSelected();
+      } else if (mod && k === "c") {
+        st.copySelection();
+      } else if (mod && k === "x" && (st.selection || st.multi.length)) {
+        e.preventDefault();
+        st.startMoveSelection();
+      } else if (mod && k === "v") {
+        e.preventDefault();
+        st.startPaste();
+      } else if (st.tool.kind === "paste" && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+        e.preventDefault();
+        st.pasteAdjust({ dy: (e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 6 : 1) });
+      } else if (st.tool.kind === "paste" && !mod && (k === "x" || k === "z")) {
+        st.pasteAdjust({ flip: k });
       } else if (mod && k === "z" && !e.shiftKey) {
         e.preventDefault();
         st.undo();
@@ -57,6 +70,8 @@ function useShortcuts() {
         st.rotate();
       } else if (!mod && k === "n" && st.selection?.kind === "node") {
         st.startMoveNode(false);
+      } else if (!mod && k === "m" && st.multi.length) {
+        st.startMoveSelection();
       } else if (!mod && k === "m" && st.selection) {
         st.startMove(false);
       } else if (e.key === "Tab" && !mod && (st.tool.kind === "moveGroup" || (st.tool.kind === "place" && st.tool.code === "GC"))) {

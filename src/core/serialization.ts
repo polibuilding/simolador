@@ -8,6 +8,8 @@ export const VERSION = 2;
 export interface SheetMeta {
   line1: string; // ex.: MOLA STRUCTURAL MODEL
   line2: string; // ex.: DESAFIO POLI-USP 2026
+  /** etiquetas das pranchas arrastadas na tela: deslocamento (mm de papel) por chave */
+  labels?: Record<string, [number, number]>;
 }
 
 export interface MolaFile {

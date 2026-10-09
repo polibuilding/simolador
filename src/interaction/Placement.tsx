@@ -9,6 +9,7 @@ import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 import { catalog } from "../core/catalog";
 import { moveGroup, nodeMoveOptions } from "../core/edit";
+import { pasteClip, transformClip, type Clip, type PasteResult } from "../core/clipboard";
 import { findNodeAt, len, sub, type Model, type Vec3 } from "../core/model";
 import type { Sel } from "../core/edit";
 import {
@@ -84,6 +85,9 @@ export function guidesFor(model: Model, inv: ReturnType<typeof useApp.getState>[
   guideCache = { model, inv, key, guides: supportGuides(catalog, inv, model, ignore) };
   return guideCache.guides;
 }
+
+// colar: recalcula só quando muda a posição na grade, o giro, o espelho ou a altura
+let pasteCache: { base: Model; clip: Clip; key: string; r: PasteResult } | null = null;
 
 // opções de "mover só o nó" (recalcula quando muda o modelo ou o nó)
 let nodeMoveCache: { model: Model; nodeId: string; r: ReturnType<typeof nodeMoveOptions> } | null = null;
@@ -288,6 +292,28 @@ export function Placement() {
         return st.setGhost({ kind: "group", model: r.model, ids: r.ids, check: r.check }, r.check.errors[0] ?? choice.hint);
       }
 
+      // ---- colar / mover várias peças: a âncora segue o cursor (na grade) ----
+      if (tool.kind === "paste") {
+        const base = tool.moving ? tool.moving.base : st.history.present;
+        const clip = transformClip(tool.clip, tool.turns, tool.mirrorX, tool.mirrorZ);
+        const y = clip.anchor[1] + tool.dy;
+        if (y < 0) return st.setGhost(null, "Abaixo da chapa: ↑ sobe.");
+        const hit = planeHit(ev, rect, BASE_Y + y * M);
+        if (!hit) return;
+        const r2 = (v: number) => (st.snap ? Math.round(v) : Math.round(v * 100) / 100);
+        const target: Vec3 = [r2(hit.x / M), y, r2(hit.z / M)];
+        const key = `${target.join(",")}|${tool.turns}|${tool.mirrorX}|${tool.mirrorZ}|${tool.dy}`;
+        let r = pasteCache?.base === base && pasteCache.clip === tool.clip && pasteCache.key === key ? pasteCache.r : null;
+        if (!r) {
+          r = pasteClip(catalog, st.inventory, base, clip, target);
+          pasteCache = { base, clip: tool.clip, key, r };
+        }
+        const turn = tool.turns % 4 ? ` · girada ${(tool.turns % 4) * 90}°` : "";
+        const flip = tool.mirrorX || tool.mirrorZ ? ` · espelhada em ${[tool.mirrorX && "X", tool.mirrorZ && "Z"].filter(Boolean).join(" e ")}` : "";
+        const info = `${r.added} peças · altura ${tool.dy > 0 ? "+" : ""}${tool.dy} M${turn}${flip}. ↑/↓ altura (Shift: 6 M), R gira, X/Z espelha.`;
+        return st.setGhost({ kind: "group", model: r.model, ids: r.newNodes, check: r.check, part: r.part }, r.check.ok ? info : r.check.errors[0]);
+      }
+
       const code = tool.code;
       const inv = tool.moving ? { ...st.inventory, unlimited: true } : st.inventory;
 
@@ -428,7 +454,7 @@ export function Placement() {
         update(ev);
         const ok = inside && useApp.getState().commitGhost();
         const now = useApp.getState();
-        if (!ok && (now.tool.kind === "moveGroup" || now.tool.kind === "moveNode" || (now.tool.kind === "place" && now.tool.moving))) {
+        if (!ok && (now.tool.kind === "moveGroup" || now.tool.kind === "moveNode" || ((now.tool.kind === "place" || now.tool.kind === "paste") && now.tool.moving))) {
           now.disarm(); // movimento cancelado: nada mudou
           now.setGhost(null, "Movimento cancelado: o lugar não era válido.");
         } else if (now.tool.kind !== "select") now.disarm();
@@ -455,7 +481,7 @@ export function Placement() {
     let lastEv: PointerEvent | null = null;
     const track = (ev: PointerEvent) => ((lastEv = ev), update(ev));
     const unsub = useApp.subscribe((s, p) => {
-      if (lastEv && (s.rotIndex !== p.rotIndex || s.snapCycle !== p.snapCycle || s.guides !== p.guides || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
+      if (lastEv && (s.rotIndex !== p.rotIndex || (s.tool !== p.tool && s.tool.kind === "paste") || s.snapCycle !== p.snapCycle || s.guides !== p.guides || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
         update(lastEv);
       }
     });

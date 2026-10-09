@@ -5,7 +5,7 @@ export type Pt = [number, number];
 
 export type Layer =
   | "MOLA-ESFERA" | "MOLA-BARRA" | "MOLA-PLACA" | "MOLA-LIGACAO" | "MOLA-EIXO" | "MOLA-TEXTO" | "MOLA-CARIMBO"
-  | "MOLA-BASE" | "MOLA-DIAGONAL";
+  | "MOLA-BASE" | "MOLA-DIAGONAL" | "MOLA-COTA";
 
 export interface Style {
   layer: Layer;
@@ -19,7 +19,8 @@ export type Prim =
   | ({ t: "line"; a: Pt; b: Pt } & Style)
   | ({ t: "poly"; pts: Pt[]; closed: boolean } & Style)
   | ({ t: "circle"; c: Pt; r: number } & Style)
-  | ({ t: "text"; p: Pt; s: string; size: number; bold?: boolean; anchor?: "start" | "middle" | "end"; rot?: number } & Style)
+  /** `tag`: etiqueta arrastável na tela (chave da posição salva) */
+  | ({ t: "text"; p: Pt; s: string; size: number; bold?: boolean; anchor?: "start" | "middle" | "end"; rot?: number; tag?: string } & Style)
   /** imagem (foto renderizada da capa); o DXF ignora */
   | ({ t: "image"; x: number; y: number; w: number; h: number; href: string } & Style);
 

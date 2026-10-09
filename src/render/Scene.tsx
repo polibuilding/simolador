@@ -129,6 +129,12 @@ function GhostView() {
   const ghost = useApp((s) => s.ghost);
   const base = useModel();
   if (!ghost) return null;
+  if (ghost.kind === "group" && ghost.part) {
+    // colar: só as peças novas; esferas que já existem não são redesenhadas
+    const look: Look = ghost.check.ok ? "valid" : "invalid";
+    const old = new Set(Object.keys(ghost.part.nodes).filter((k) => !ghost.ids.has(k)));
+    return <ModelGroup model={ghost.part} lookOf={() => look} interactive={false} hidden={old} />;
+  }
   if (ghost.kind === "group") {
     const look: Look = ghost.check.ok ? "valid" : "invalid";
     // só o que se move (e as barras presas a ele); as esferas fixas nas pontas já estão na cena

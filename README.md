@@ -16,9 +16,10 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 - **Coordenadas**: com uma GC selecionada, digite X e Z no painel (em módulos ou em mm); o painel mostra as distâncias às outras GC e quais batem com uma barra.
 - **Regras do kit**: comprimentos, ângulo mínimo de 45° entre barras, nada deitado na chapa, diagonais só no vão nominal, placas presas em 4 esferas, ligações nos cantos certos, placa e diagonal sem dividir o mesmo ponto da esfera, RC90 fora do canto de uma diagonal, estoque. O motivo de cada bloqueio aparece no rodapé.
 - **Editar**: selecionar; **mover** (M, botão ou arrastar a peça); **girar** (R, R, R… a peça continua selecionada); remover; desfazer e refazer; **Espaço** repete a última peça. Mover uma ligação de base leva a estrutura inteira; **Mover só o nó** (N ou Alt + arrastar) deixa o resto parado e as barras inclinam para acompanhar, se as ligações deixarem.
+- **Copiar, colar, mover, espelhar e repetir**: Ctrl+C / Ctrl+V (a cópia segue o cursor; ↑/↓ altura, R gira, X/Z espelha), M move várias peças, e "Repetir" no painel cria N cópias com deslocamento. Esferas no mesmo lugar viram uma só (vãos e pavimentos se ligam sozinhos).
 - **Seleção por retângulo**: para a direita pega o que fica inteiro dentro; para a esquerda, o que tocar. O painel mostra a lista de peças e as medidas do trecho, copia a lista e apaga tudo de uma vez.
 - **Câmera**: cubo de vistas no canto (faces, arestas e cantos para isométricas) e Enquadrar (F), sem limite de altura; dá para olhar por baixo (a chapa fica translúcida); eixos X, Y, Z no canto.
-- **Pranchas**: capa com isométrica renderizada (ou em linhas) e lista de peças, plantas por pavimento e vistas A–D no padrão do Desafio Poli-USP; escala automática; carimbo editável; **PDF**, **DXF** (camadas MOLA-*) e SVG.
+- **Pranchas**: capa com isométrica renderizada (ou em linhas) e lista de peças, cotas entre eixos, totais e níveis, etiquetas que se arrastam na tela, logos no carimbo, plantas por pavimento e vistas A–D no padrão do Desafio Poli-USP; escala automática; carimbo editável; **PDF**, **DXF** (camadas MOLA-*) e SVG.
 - Estoque configurável (a paleta mostra só as peças dos kits escolhidos), arquivos `.mola`, salvamento automático no navegador.
 
 Exemplos em `examples/`: o pórtico simples e a **Estrutura 01 do Desafio 2022**, reconstruída a partir das pranchas originais.
@@ -32,6 +33,10 @@ Próximos passos: medidas reais da CC e da CC90, mover várias peças juntas, ge
 3. **Shift** segurado inclina a barra (o ângulo segue o cursor); **R** alterna as opções; **Esc** para de colocar peças; **M** move a peça selecionada; **Delete** remove; **Ctrl+Z / Ctrl+Y** desfazem e refazem; **F** enquadra.
 4. Na cena: botão **esquerdo** seleciona (arrastando, faz um retângulo de seleção); botão **direito** gira a vista; **Shift+direito** ou botão do meio move a vista; a roda dá zoom. O cubo no canto leva às vistas e isométricas. Shift+clique soma peças à seleção; Ctrl+A seleciona tudo.
 5. **Gerar pranchas** abre as folhas; dali saem o PDF e o DXF.
+
+## Logos do carimbo
+
+Coloque até duas imagens em `public/logos/`: `logo-mola.png` (à esquerda) e `logo-grupo.png` (à direita); também valem `.svg` e `.jpg`. Elas aparecem no canto inferior esquerdo de todas as pranchas (tela, PDF e SVG). Sem arquivos, fica o hexágono provisório.
 
 ## Medidas e quantidades das peças
 

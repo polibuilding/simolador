@@ -27,7 +27,8 @@ export function sheetToSvg(sheet: Sheet): string {
         case "text": {
           const anchor = p.anchor ?? "start";
           const tr = p.rot ? ` transform="rotate(${p.rot} ${f(p.p[0])} ${f(p.p[1])})"` : "";
-          return `<text x="${f(p.p[0])}" y="${f(p.p[1])}" font-family="Arial, Helvetica, sans-serif" font-size="${f(p.size)}" font-weight="${p.bold ? 700 : 400}" text-anchor="${anchor}" fill="${p.fill ?? "#000"}"${tr}>${esc(p.s)}</text>`;
+          const tag = p.tag ? ` data-tag="${esc(p.tag)}" style="cursor:move"` : "";
+          return `<text${tag} x="${f(p.p[0])}" y="${f(p.p[1])}" font-family="Arial, Helvetica, sans-serif" font-size="${f(p.size)}" font-weight="${p.bold ? 700 : 400}" text-anchor="${anchor}" fill="${p.fill ?? "#000"}"${tr}>${esc(p.s)}</text>`;
         }
       }
     })
@@ -60,7 +61,7 @@ export async function sheetsToPdf(sheets: Sheet[]): Promise<Blob> {
 
 const LAYER_COLORS: Record<string, number> = {
   "MOLA-ESFERA": 8, "MOLA-BARRA": 9, "MOLA-PLACA": 252, "MOLA-LIGACAO": 8, "MOLA-EIXO": 1,
-  "MOLA-TEXTO": 7, "MOLA-CARIMBO": 7, "MOLA-BASE": 7, "MOLA-DIAGONAL": 5,
+  "MOLA-TEXTO": 7, "MOLA-CARIMBO": 7, "MOLA-BASE": 7, "MOLA-DIAGONAL": 5, "MOLA-COTA": 4,
 };
 
 /** Todas as folhas num DXF, lado a lado (folha n começa em x = (n−1)·440 mm). Unidades: mm de papel. */

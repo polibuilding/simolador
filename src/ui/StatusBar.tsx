@@ -17,6 +17,8 @@ export function StatusBar() {
         ? "Mover estrutura"
         : tool.kind === "moveNode"
           ? "Mover só o nó"
+        : tool.kind === "paste"
+          ? tool.moving ? "Mover seleção" : "Colar"
         : `${tool.moving ? "Mover " : ""}${catalog.pieces[tool.code]?.name ?? tool.code}`;
   const ok = ghost ? (ghost.kind === "group" ? ghost.check.ok : ghost.cand.check.ok) : null;
   const state = ok === true ? "ok" : ok === false ? "bad" : hint ? "info" : "idle";

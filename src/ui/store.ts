@@ -8,6 +8,7 @@ import { emptyModel, membersAt, type Model, type Vec3 } from "../core/model";
 import { overlappingNodes, type Check } from "../core/rules";
 import { fromFile, toFile, type SheetMeta } from "../core/serialization";
 import { applyCandidate, type Candidate } from "../core/snapping";
+import { cutSelection, makeClip, repeatClip, type Clip } from "../core/clipboard";
 
 export type Tool =
   | { kind: "select" }
@@ -16,11 +17,14 @@ export type Tool =
   /** mover a estrutura conectada a um nó */
   | { kind: "moveGroup"; nodeId: string; turns: number; viaDrag: boolean }
   /** mover só um nó: as barras presas a partes fixas giram em torno da ponta fixa */
-  | { kind: "moveNode"; nodeId: string; viaDrag: boolean };
+  | { kind: "moveNode"; nodeId: string; viaDrag: boolean }
+  /** colar (ou mover várias peças: `moving.base` = modelo sem elas). R gira, X/Z espelha, ↑/↓ muda a altura */
+  | { kind: "paste"; clip: Clip; turns: number; mirrorX: boolean; mirrorZ: boolean; dy: number; viaDrag: false; moving?: { base: Model } };
 
 export type Ghost =
   | { kind: "cand"; cand: Candidate }
-  | { kind: "group"; model: Model; ids: Set<string>; check: Check };
+  /** `part`: só as peças novas (colar), para o fantasma */
+  | { kind: "group"; model: Model; ids: Set<string>; check: Check; part?: Model };
 
 export type CameraView = "fit" | "iso" | "front" | "side" | "top";
 
@@ -68,6 +72,17 @@ interface State {
   startMove: (viaDrag: boolean) => void;
   /** N / botão "Mover só o nó" */
   startMoveNode: (viaDrag: boolean) => void;
+  /** área de transferência (Ctrl+C) */
+  clip: Clip | null;
+  copySelection: () => void;
+  /** Ctrl+V */
+  startPaste: () => void;
+  /** M com várias peças / Ctrl+X: tira a seleção e cola em outro lugar */
+  startMoveSelection: () => void;
+  /** ↑/↓ e X/Z durante o colar */
+  pasteAdjust: (change: { dy?: number; flip?: "x" | "z" }) => void;
+  /** Repetir a seleção `times` vezes com deslocamento `step` (módulos) */
+  repeatSelection: (step: Vec3, times: number) => string | null;
   select: (s: Sel | null) => void;
   toggleMulti: (s: Sel) => void;
   setMulti: (list: Sel[], add?: boolean) => void;
@@ -126,7 +141,7 @@ function restore(): Partial<Pick<State, "history" | "inventory" | "name" | "shee
 
 /** Modelo sobre o qual se trabalha agora (sem a peça que está sendo movida). */
 export function workingModel(s: Pick<State, "history" | "tool">): Model {
-  return s.tool.kind === "place" && s.tool.moving ? s.tool.moving.base : s.history.present;
+  return (s.tool.kind === "place" || s.tool.kind === "paste") && s.tool.moving ? s.tool.moving.base : s.history.present;
 }
 
 export const useApp = create<State>((set, get) => ({
@@ -172,7 +187,9 @@ export const useApp = create<State>((set, get) => ({
     if (!ghost) return false;
     if (ghost.kind === "group") {
       if (!ghost.check.ok) return set({ hint: ghost.check.errors[0] }), false;
-      set({ history: push(history, ghost.model), ghost: null, tool: { kind: "select" }, hint: null });
+      // colar uma cópia: continua colando até Esc; mover: termina
+      const keep = tool.kind === "paste" && !tool.moving;
+      set({ history: push(history, ghost.model), ghost: null, ...(keep ? {} : { tool: { kind: "select" } as Tool }), hint: keep ? "Colado. Clique de novo para outra cópia; Esc termina." : null });
       return true;
     }
     if (!ghost.cand.check.ok) return set({ hint: ghost.cand.check.errors[0] }), false;
@@ -191,6 +208,7 @@ export const useApp = create<State>((set, get) => ({
     const s = get();
     if (s.tool.kind === "place") return set({ rotIndex: s.rotIndex + 1 });
     if (s.tool.kind === "moveGroup") return set({ tool: { ...s.tool, turns: s.tool.turns + 1 } });
+    if (s.tool.kind === "paste") return set({ tool: { ...s.tool, turns: s.tool.turns + 1 } });
     if (!s.selection) return set({ hint: "Selecione uma peça para girar, ou gire enquanto posiciona (R)." });
     const r = rotateSelection(catalog, s.inventory, s.history.present, s.selection, { inclined: inclineOn(s) });
     if (!r.model) return set({ hint: r.error ?? null });
@@ -205,6 +223,54 @@ export const useApp = create<State>((set, get) => ({
     const sel = get().selection;
     if (sel?.kind !== "node") return set({ hint: "Selecione uma esfera ou ligação de base para mover só o nó." });
     set({ tool: { kind: "moveNode", nodeId: sel.id, viaDrag }, ghost: null, hint: "Leve o nó até um dos pontos verdes: as barras acompanham. Esc cancela." });
+  },
+
+  clip: null,
+  copySelection: () => {
+    const s = get();
+    const sels = s.multi.length ? s.multi : s.selection ? [s.selection] : [];
+    const clip = makeClip(s.history.present, sels);
+    if (!clip) return set({ hint: "Selecione peças para copiar." });
+    const n = clip.members.length + clip.plates.length + clip.connectors.length + clip.nodes.length;
+    set({ clip, hint: `${n} peças copiadas. Ctrl+V cola (R gira, X/Z espelha, ↑/↓ muda a altura).` });
+  },
+  startPaste: () => {
+    const { clip } = get();
+    if (!clip) return set({ hint: "Nada copiado ainda: selecione peças e Ctrl+C." });
+    set({ tool: { kind: "paste", clip, turns: 0, mirrorX: false, mirrorZ: false, dy: 0, viaDrag: false }, selection: null, multi: [], ghost: null });
+  },
+  startMoveSelection: () => {
+    const s = get();
+    const sels = s.multi.length ? s.multi : s.selection ? [s.selection] : [];
+    const clip = makeClip(s.history.present, sels);
+    if (!clip) return;
+    const base = cutSelection(s.history.present, sels);
+    set({
+      tool: { kind: "paste", clip, turns: 0, mirrorX: false, mirrorZ: false, dy: 0, viaDrag: false, moving: { base } },
+      selection: null, multi: [], ghost: null,
+      hint: "Leve as peças até o novo lugar. R gira, X/Z espelha, ↑/↓ muda a altura. Esc cancela.",
+    });
+  },
+  pasteAdjust: ({ dy, flip }) => {
+    const t = get().tool;
+    if (t.kind !== "paste") return;
+    set({
+      tool: {
+        ...t,
+        dy: t.dy + (dy ?? 0),
+        mirrorX: flip === "x" ? !t.mirrorX : t.mirrorX,
+        mirrorZ: flip === "z" ? !t.mirrorZ : t.mirrorZ,
+      },
+    });
+  },
+  repeatSelection: (step, times) => {
+    const s = get();
+    const sels = s.multi.length ? s.multi : s.selection ? [s.selection] : [];
+    const clip = makeClip(s.history.present, sels);
+    if (!clip) return "Selecione peças para repetir.";
+    const r = repeatClip(catalog, s.inventory, s.history.present, clip, step, Math.max(1, Math.min(50, Math.round(times))));
+    if (r.done) set({ history: push(s.history, r.model), hint: `${r.done} ${r.done === 1 ? "cópia criada" : "cópias criadas"}.${r.error ? ` Parou: ${r.error}` : ""}` });
+    return r.done ? (r.error ? `Parou na cópia ${r.done + 1}: ${r.error}` : null) : r.error;
   },
 
   startMove: (viaDrag) => {
