@@ -8,7 +8,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 import { catalog } from "../core/catalog";
-import { moveGroup } from "../core/edit";
+import { moveGroup, nodeMoveOptions } from "../core/edit";
 import { findNodeAt, len, sub, type Model, type Vec3 } from "../core/model";
 import type { Sel } from "../core/edit";
 import {
@@ -85,8 +85,18 @@ export function guidesFor(model: Model, inv: ReturnType<typeof useApp.getState>[
   return guideCache.guides;
 }
 
+// opções de "mover só o nó" (recalcula quando muda o modelo ou o nó)
+let nodeMoveCache: { model: Model; nodeId: string; r: ReturnType<typeof nodeMoveOptions> } | null = null;
+export function nodeOptionsFor(model: Model, nodeId: string) {
+  if (nodeMoveCache && nodeMoveCache.model === model && nodeMoveCache.nodeId === nodeId) return nodeMoveCache.r;
+  nodeMoveCache = { model, nodeId, r: nodeMoveOptions(catalog, model, nodeId) };
+  return nodeMoveCache.r;
+}
+
 /** A GC sendo colocada/movida "puxa" para um ponto-guia perto do cursor (na tela), em qualquer modo de encaixe. */
 const GUIDE_PX = 18;
+/** com a grade desligada, os pontos azuis/amarelos puxam a GC de mais longe */
+const EXCLUSIVE_PX = 90;
 
 export function Placement() {
   const { camera, gl, controls } = useThree();
@@ -122,31 +132,50 @@ export function Placement() {
     // ---- GC: ponto de encaixe (grade, azul, amarelo): vale o mais perto do cursor; Tab alterna entre os sobrepostos ----
     let lastChoiceKey = "";
     const KIND_NAME = { grid: "Grade", blue: "Azul", yellow: "Amarelo" } as const;
-    const pickSupport = (ev: PointerEvent, rect: DOMRect, hit: { x: number; z: number }, guides: SupportGuide[]) => {
+    const pickSupport = (
+      ev: PointerEvent, rect: DOMRect, hit: { x: number; z: number }, guides: SupportGuide[],
+    ): { pos: Vec3 | null; hint: string | null } => {
       const st = useApp.getState();
+      // distância na tela medida na altura da chapa, onde os pontos são desenhados
       const dist = (p: Vec3) => {
-        const sp = toScreen(toWorld(p), rect);
+        const w = toWorld(p);
+        w.y = 0.6;
+        const sp = toScreen(w, rect);
         return Math.hypot(sp.x - ev.clientX, sp.y - ev.clientY);
       };
       type Choice = { pos: Vec3; kind: keyof typeof KIND_NAME; text: string | null; d: number };
+      const enabled = guides.filter((g) => st.guides[g.kind]);
+      // grade desligada e há pontos azuis/amarelos: a GC só vai para eles (raio maior)
+      const exclusive = !st.snap && enabled.length > 0;
+      const radius = exclusive ? EXCLUSIVE_PX : GUIDE_PX;
       const all: Choice[] = [];
       if (st.snap) {
         const g = supportPosition(catalog, hit, true);
         all.push({ pos: g, kind: "grid", text: null, d: dist(g) });
       }
-      for (const g of guides) {
-        if (!st.guides[g.kind]) continue;
+      for (const g of enabled) {
         const d = dist(g.pos);
-        if (d >= GUIDE_PX) continue;
-        // guia no mesmo ponto da grade: fica o guia (diz mais)
-        const same = all.findIndex((c) => c.kind === "grid" && Math.hypot(c.pos[0] - g.pos[0], c.pos[2] - g.pos[2]) < 1e-3);
-        if (same >= 0) all.splice(same, 1);
+        if (d >= radius) continue;
+        // mesmo ponto: amarelo > azul > grade (o que diz mais fica)
+        const rank = { grid: 0, blue: 1, yellow: 2 } as const;
+        const same = all.findIndex((c) => Math.hypot(c.pos[0] - g.pos[0], c.pos[2] - g.pos[2]) < 1e-3);
+        if (same >= 0) {
+          if (rank[all[same].kind] >= rank[g.kind]) continue;
+          all.splice(same, 1);
+        }
         all.push({ pos: g.pos, kind: g.kind, text: g.text, d });
       }
-      if (!all.length) return { pos: supportPosition(catalog, hit, false), hint: null as string | null };
+      if (!all.length) {
+        if (exclusive) {
+          const which = [st.guides.blue && "azul", st.guides.yellow && "amarelo"].filter(Boolean).join(" ou ");
+          return { pos: null, hint: `Grade desligada: leve o cursor até um ponto ${which}.` };
+        }
+        const none = !st.snap && (st.guides.blue || st.guides.yellow);
+        return { pos: supportPosition(catalog, hit, false), hint: none ? "Ainda não há pontos azuis/amarelos: a GC vai livre. Coloque duas GC a um vão de barra para surgirem os triângulos." : null };
+      }
       all.sort((a, b) => a.d - b.d);
       // pontos "disputados": os que estão quase tão perto quanto o mais perto
-      const near = all.filter((c) => c.d < Math.max(GUIDE_PX, all[0].d + 1));
+      const near = all.filter((c) => c.d < all[0].d + GUIDE_PX);
       const key = near.map((c) => c.pos.join(",")).join("|");
       if (key !== lastChoiceKey) {
         lastChoiceKey = key;
@@ -202,13 +231,46 @@ export function Placement() {
       if (st.tool.kind === "select" && st.pendingDrag) {
         if (Math.hypot(ev.clientX - st.pendingDrag.x, ev.clientY - st.pendingDrag.y) > DRAG_PX) {
           st.setPendingDrag(null);
-          st.startMove(true);
+          // Alt + arrastar um nó: move só o nó; sem Alt: a estrutura inteira
+          if (ev.altKey && st.selection?.kind === "node") st.startMoveNode(true);
+          else st.startMove(true);
         } else return;
       }
       const tool = useApp.getState().tool;
       if (tool.kind === "select") return;
       if (!insideOf(ev, rect)) return st.setGhost(null, tool.viaDrag ? "Solte a peça sobre a cena." : st.hint);
       const model = workingModel(useApp.getState());
+
+      // ---- mover só o nó: vale a posição possível mais perto do cursor ----
+      if (tool.kind === "moveNode") {
+        const present = st.history.present;
+        const node = present.nodes[tool.nodeId];
+        if (!node) return st.disarm();
+        const { options, locked } = nodeOptionsFor(present, tool.nodeId);
+        if (locked) return st.setGhost(null, locked);
+        let best: { o: (typeof options)[number]; d: number } | null = null;
+        for (const o of options) {
+          const w = toWorld(o.pos);
+          if (node.kind === "support") w.y = 0.6;
+          const sp = toScreen(w, rect);
+          const d = Math.hypot(sp.x - ev.clientX, sp.y - ev.clientY);
+          if (!best || d < best.d - (o.check.ok ? 0 : 4)) best = { o, d };
+        }
+        const nOk = options.filter((o) => o.check.ok).length;
+        if (!best || best.d > 90) return st.setGhost(null, `Leve o nó até um dos ${nOk} pontos verdes: as barras acompanham.`);
+        const o = best.o;
+        // inclinação das barras que giraram (a primeira), para o rodapé
+        const tie = Object.values(o.model.members).find((m) => (m.a === tool.nodeId) !== (m.b === tool.nodeId) && !(o.ids.has(m.a) && o.ids.has(m.b)));
+        let ang = "";
+        if (tie) {
+          const a = o.model.nodes[tie.a].pos;
+          const b = o.model.nodes[tie.b].pos;
+          const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+          const deg = Math.round((Math.asin(Math.min(1, Math.abs(b[1] - a[1]) / L)) * 180) / Math.PI);
+          ang = ` A ${tie.code} fica a ${deg}° da horizontal.`;
+        }
+        return st.setGhost({ kind: "group", model: o.model, ids: o.ids, check: o.check }, o.check.ok ? `Clique para levar o nó para ${`(${o.pos.map((v) => +v.toFixed(2)).join("; ")})`}.${ang}` : o.check.errors[0]);
+      }
 
       // ---- mover estrutura ----
       if (tool.kind === "moveGroup") {
@@ -219,6 +281,7 @@ export function Placement() {
         const xz = { x: hit.x / M, z: hit.z / M };
         const guides = node.kind === "support" && !tool.turns ? guidesFor(st.history.present, st.inventory, componentOf(st.history.present, tool.nodeId)) : [];
         const choice = pickSupport(ev, rect, xz, guides);
+        if (!choice.pos) return st.setGhost(null, choice.hint);
         const target = choice.pos;
         const delta: Vec3 = [target[0] - node.pos[0], 0, target[2] - node.pos[2]];
         const r = moveGroup(catalog, st.history.present, tool.nodeId, delta, tool.turns);
@@ -233,6 +296,7 @@ export function Placement() {
         const hit = planeHit(ev, rect, 0);
         if (!hit) return st.setGhost(null, "Aponte para a chapa.");
         const choice = pickSupport(ev, rect, { x: hit.x / M, z: hit.z / M }, guidesFor(model, inv));
+        if (!choice.pos) return st.setGhost(null, choice.hint);
         const cand = supportCandidate(catalog, inv, model, choice.pos);
         return st.setGhost({ kind: "cand", cand }, cand.check.ok ? choice.hint : cand.check.errors[0]);
       }
@@ -364,7 +428,7 @@ export function Placement() {
         update(ev);
         const ok = inside && useApp.getState().commitGhost();
         const now = useApp.getState();
-        if (!ok && (now.tool.kind === "moveGroup" || (now.tool.kind === "place" && now.tool.moving))) {
+        if (!ok && (now.tool.kind === "moveGroup" || now.tool.kind === "moveNode" || (now.tool.kind === "place" && now.tool.moving))) {
           now.disarm(); // movimento cancelado: nada mudou
           now.setGhost(null, "Movimento cancelado: o lugar não era válido.");
         } else if (now.tool.kind !== "select") now.disarm();

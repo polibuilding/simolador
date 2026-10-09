@@ -28,11 +28,16 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
   );
 }
 
-function Actions({ moveLabel, removeLabel }: { moveLabel: string; removeLabel: string }) {
-  const { startMove, rotate, removeSelected } = useApp.getState();
+function Actions({ moveLabel, removeLabel, nodeOnly }: { moveLabel: string; removeLabel: string; nodeOnly?: boolean }) {
+  const { startMove, startMoveNode, rotate, removeSelected } = useApp.getState();
   return (
     <div className="actions">
       <button onClick={() => startMove(false)} title="M, ou arraste a peça">{moveLabel}</button>
+      {nodeOnly && (
+        <button onClick={() => startMoveNode(false)} title="N, ou Alt + arrastar: o resto fica parado e as barras inclinam para acompanhar">
+          Mover só o nó
+        </button>
+      )}
       <button onClick={rotate} title="R">Girar</button>
       <button className="danger" onClick={removeSelected} title="Delete">{removeLabel}</button>
     </div>
@@ -152,7 +157,7 @@ function Selected() {
         </dl>
         <CoordEditor id={n.id} pos={n.pos} />
         {n.kind === "support" && <Distances id={n.id} />}
-        <Actions moveLabel="Mover estrutura" removeLabel={n.kind === "support" ? "Remover GC e o que sai dela" : "Remover esfera e peças ligadas"} />
+        <Actions nodeOnly moveLabel="Mover estrutura" removeLabel={n.kind === "support" ? "Remover GC e o que sai dela" : "Remover esfera e peças ligadas"} />
       </>
     );
   }

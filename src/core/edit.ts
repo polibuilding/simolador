@@ -2,10 +2,13 @@
 import type { Catalog } from "./catalog";
 import type { InventoryConfig } from "./inventory";
 import {
-  type Model, type Vec3, componentOf, removeConnector, removeMember, removeNode, removePlate, samePos, sub, transformNodes,
+  AXES, type Member, type Model, type Vec3, add, componentOf, cross, directionFrom, dot, len, membersAt, norm, removeConnector,
+  removeMember, removeNode, removePlate, samePos, scale, sub, transformNodes,
 } from "./model";
-import { validateMovedModel } from "./rules";
-import { applyCandidate, connectorCandidates, markerPos, memberCandidates, plateCandidates, type Candidate } from "./snapping";
+import { inclineStep as inclineStepOf, segmentHitsPlate, validateMovedModel, type Check } from "./rules";
+import {
+  applyCandidate, connectorCandidates, inclinedDirs, markerPos, memberCandidates, plateCandidates, type Candidate,
+} from "./snapping";
 
 export type Sel = { kind: "node" | "member" | "plate" | "connector"; id: string };
 
@@ -126,4 +129,179 @@ export function removeMany(model: Model, sels: Sel[]): Model {
     if (exists) m = removeSelection(m, s);
   }
   return m;
+}
+
+// ---------------- Mover só o nó: as barras acompanham, girando em torno das pontas fixas ----------------
+
+export interface NodeMove {
+  pos: Vec3;
+  model: Model;
+  /** nós que se movem (o nó e as partes soltas presas só a ele) */
+  ids: Set<string>;
+  check: Check;
+}
+
+/**
+ * Posições possíveis para um nó sem mexer o resto da estrutura.
+ * - As partes presas só a esse nó (sem ligação de base) vão junto, sem girar.
+ * - Cada barra/diagonal que liga o nó a uma parte fixa mantém o comprimento: gira em torno da ponta fixa.
+ *   1 barra → esfera (direções dos eixos e passos de 15°); 2 → círculo (passos de 15°); 3 ou mais → até 2 pontos.
+ * - Ligação de base fica na chapa (y = 0).
+ * - Rigidez: RC90/CC/CC90 numa barra que giraria travam o ângulo; placa presa a partes fixas trava o nó.
+ */
+export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): { options: NodeMove[]; locked?: string } {
+  const node = model.nodes[nodeId];
+  if (!node) return { options: [], locked: "Nó não encontrado." };
+  const s = cat.settings;
+  const fmtP = (p: Vec3) => `(${p.map((v) => +v.toFixed(2)).join("; ")})`;
+
+  // componentes do resto da estrutura sem o nó: as sem GC vão junto com ele
+  const adj = new Map<string, Set<string>>();
+  const link = (a: string, b: string) => {
+    if (a === nodeId || b === nodeId) return;
+    (adj.get(a) ?? adj.set(a, new Set()).get(a)!).add(b);
+    (adj.get(b) ?? adj.set(b, new Set()).get(b)!).add(a);
+  };
+  for (const m of Object.values(model.members)) link(m.a, m.b);
+  for (const p of Object.values(model.plates)) for (let i = 0; i < 4; i++) link(p.corners[i], p.corners[(i + 1) % 4]);
+  const moving = new Set<string>([nodeId]);
+  const seen = new Set<string>([nodeId]);
+  for (const start of Object.keys(model.nodes)) {
+    if (seen.has(start)) continue;
+    const comp: string[] = [];
+    const stack = [start];
+    seen.add(start);
+    while (stack.length) {
+      const k = stack.pop()!;
+      comp.push(k);
+      for (const nb of adj.get(k) ?? []) if (!seen.has(nb)) (seen.add(nb), stack.push(nb));
+    }
+    // só conta como "pendurada no nó" se encosta nele
+    const touches = Object.values(model.members).some((m) => (m.a === nodeId && comp.includes(m.b)) || (m.b === nodeId && comp.includes(m.a)));
+    const grounded = comp.some((k) => model.nodes[k].kind === "support");
+    if (touches && !grounded) comp.forEach((k) => moving.add(k));
+  }
+
+  // vínculos: peças entre o nó e as partes fixas
+  const ties = Object.values(model.members).filter((m) => (m.a === nodeId && !moving.has(m.b)) || (m.b === nodeId && !moving.has(m.a)));
+  if (!ties.length) return { options: [], locked: "Esse nó não está preso a nenhuma parte fixa: use Mover estrutura." };
+  for (const p of Object.values(model.plates)) {
+    const inside = p.corners.filter((c) => moving.has(c)).length;
+    if (inside && inside < 4) return { options: [], locked: `A placa ${p.code} prende esse nó às partes fixas: tire a placa para mover só o nó.` };
+  }
+  // rigidez das ligações
+  const tieDir = (m: Member, at: string) => directionFrom(model, m, at);
+  const touchesDir = (c: { code: string; dirs: Vec3[] }, d: Vec3) =>
+    c.code === "RC90" ? c.dirs.some((x) => samePos(x, d, 1e-3)) : c.dirs.some((x) => Math.abs(Math.abs(dot(x, d)) - 1) < 1e-3);
+  for (const m of ties) {
+    const other = m.a === nodeId ? m.b : m.a;
+    for (const c of Object.values(model.connectors)) {
+      const here = c.node === nodeId && touchesDir(c, tieDir(m, nodeId));
+      const there = c.node === other && touchesDir(c, tieDir(m, other));
+      if (here || there) {
+        return { options: [], locked: `A ${c.code} em ${fmtP(model.nodes[c.node].pos)} trava esse ângulo: tire a ligação para mover só o nó.` };
+      }
+    }
+  }
+
+  // posições possíveis
+  const cons = ties.map((m) => {
+    const c = model.nodes[m.a === nodeId ? m.b : m.a].pos;
+    return { c, L: len(sub(node.pos, c)) };
+  });
+  const support = node.kind === "support";
+  const step = (inclineStepOf(cat) || 15) * (Math.PI / 180);
+  const pts: Vec3[] = [];
+  const perpBasis = (u: Vec3, ref: Vec3): [Vec3, Vec3] => {
+    let e1 = sub(ref, scale(u, dot(ref, u)));
+    if (len(e1) < 1e-6) e1 = Math.abs(u[1]) < 0.9 ? cross(u, [0, 1, 0]) : cross(u, [1, 0, 0]);
+    e1 = norm(e1);
+    return [e1, norm(cross(u, e1))];
+  };
+  // A·cosθ + B·sinθ = C
+  const solve = (A: number, B: number, C: number) => {
+    const R = Math.hypot(A, B);
+    if (R < 1e-9 || Math.abs(C) > R + 1e-9) return [] as number[];
+    const base = Math.atan2(B, A);
+    const d = Math.acos(Math.max(-1, Math.min(1, C / R)));
+    return d < 1e-9 ? [base] : [base + d, base - d];
+  };
+  const onCircle = (p: Vec3, h: number, e1: Vec3, e2: Vec3, t: number): Vec3 => add(p, add(scale(e1, h * Math.cos(t)), scale(e2, h * Math.sin(t))));
+  const circleOf = (a: { c: Vec3; L: number }, b: { c: Vec3; L: number }) => {
+    const v = sub(b.c, a.c);
+    const d = len(v);
+    if (d < 1e-9) return null;
+    const u = scale(v, 1 / d);
+    const x = (a.L * a.L - b.L * b.L + d * d) / (2 * d);
+    const h2 = a.L * a.L - x * x;
+    if (h2 < -1e-9) return null;
+    const p = add(a.c, scale(u, x));
+    const [e1, e2] = perpBasis(u, sub(node.pos, p));
+    return { p, h: Math.sqrt(Math.max(0, h2)), e1, e2 };
+  };
+  if (cons.length === 1) {
+    const { c, L } = cons[0];
+    if (support) {
+      if (c[1] >= L) return { options: [], locked: "A barra é vertical e do tamanho da altura: a ligação de base não tem para onde ir sozinha." };
+      const r = Math.sqrt(L * L - c[1] * c[1]);
+      for (let k = 0; k < 24; k++) pts.push([c[0] + r * Math.cos(k * step), 0, c[2] + r * Math.sin(k * step)]);
+    } else {
+      for (const d of [...AXES, ...inclinedDirs(inclineStepOf(cat) || 15)]) pts.push(add(c, scale(d, L)));
+    }
+  } else {
+    const circ = circleOf(cons[0], cons[1]);
+    if (!circ) return { options: [], locked: "As barras não deixam esse nó sair do lugar." };
+    const { p, h, e1, e2 } = circ;
+    let ts: number[];
+    if (support) ts = solve(h * e1[1], h * e2[1], -p[1]);
+    else if (cons.length === 2) ts = Array.from({ length: Math.round((2 * Math.PI) / step) }, (_, k) => k * step);
+    else {
+      const w = sub(p, cons[2].c);
+      ts = solve(2 * h * dot(w, e1), 2 * h * dot(w, e2), cons[2].L * cons[2].L - dot(w, w) - h * h);
+    }
+    for (const t of ts) pts.push(onCircle(p, h, e1, e2, t));
+  }
+
+  const tol = s.tolerancia_encaixe_mm / s.modulo_mm;
+  const minA = s.angulo_minimo_membros_graus;
+  const options: NodeMove[] = [];
+  const done = new Set<string>();
+  for (const raw of pts) {
+    const pos = raw.map((v) => Math.round(v * 1e4) / 1e4 + 0) as Vec3;
+    if (support) pos[1] = 0;
+    const key = pos.map((v) => v.toFixed(3)).join(",");
+    if (done.has(key) || len(sub(pos, node.pos)) < 1e-3) continue;
+    done.add(key);
+    if (!cons.every(({ c, L }) => Math.abs(len(sub(pos, c)) - L) <= tol)) continue;
+    const delta = sub(pos, node.pos);
+    const next = transformNodes(model, moving, [0, 0, 0], 0, delta);
+    next.nodes[nodeId] = { ...next.nodes[nodeId], pos };
+    const errors: string[] = [];
+    if ([...moving].some((k) => next.nodes[k].pos[1] < -1e-6)) errors.push("O nó iria para baixo da chapa.");
+    const mv = validateMovedModel(cat, next, moving);
+    errors.push(...mv.errors);
+    // N3 no nó e nas pontas fixas das barras que giraram
+    for (const at of [nodeId, ...ties.map((m) => (m.a === nodeId ? m.b : m.a))]) {
+      const bars = membersAt(next, at).filter((m) => cat.pieces[m.code]?.type === "bar").map((m) => directionFrom(next, m, at));
+      for (let i = 0; i < bars.length && !errors.length; i++) {
+        for (let j = i + 1; j < bars.length; j++) {
+          const ang = (Math.acos(Math.max(-1, Math.min(1, dot(bars[i], bars[j])))) * 180) / Math.PI;
+          if (ang < minA - 0.5) {
+            errors.push(`Ângulo de ${ang.toFixed(0)}° entre barras em ${fmtP(next.nodes[at].pos)} (mínimo ${minA}°).`);
+            break;
+          }
+        }
+      }
+    }
+    // barras que giraram não furam placas
+    for (const m of ties) {
+      const a = next.nodes[m.a].pos;
+      const b = next.nodes[m.b].pos;
+      if (Object.values(next.plates).some((p) => !p.corners.includes(m.a) && !p.corners.includes(m.b) && segmentHitsPlate(a, b, p.corners.map((id) => next.nodes[id].pos)))) {
+        errors.push("Uma barra atravessaria uma placa.");
+      }
+    }
+    options.push({ pos, model: next, ids: moving, check: { ok: !errors.length, errors: [...new Set(errors)], warnings: [] } });
+  }
+  return { options };
 }

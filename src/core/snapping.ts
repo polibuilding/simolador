@@ -241,12 +241,14 @@ export function supportGuides(cat: Catalog, inv: InventoryConfig, model: Model, 
     .map((p) => ({ code: p.code, span: p.spanM![0] }));
   const gcs = Object.values(model.nodes).filter((n) => n.kind === "support" && !ignore.has(n.id));
   const out: SupportGuide[] = [];
-  const taken = new Set(Object.values(model.nodes).map((n) => n.pos.map((v) => v.toFixed(3)).join(",")));
+  // cada cor tem seus pontos: um vértice de triângulo que também está a um vão de barra aparece nas duas
+  const occupied = Object.values(model.nodes).map((n) => n.pos.map((v) => v.toFixed(3)).join(","));
+  const taken = { blue: new Set(occupied), yellow: new Set(occupied) };
   const push = (pos: Vec3, kind: SupportGuide["kind"], text: string) => {
     const p = pos.map((v) => Math.round(v * 1e4) / 1e4 + 0) as Vec3;
     const k = p.map((v) => v.toFixed(3)).join(",");
-    if (taken.has(k) || !validateSupport(cat, inv, model, p, ignore).ok) return;
-    taken.add(k);
+    if (taken[kind].has(k) || !validateSupport(cat, inv, model, p, ignore).ok) return;
+    taken[kind].add(k);
     out.push({ pos: p, kind, text });
   };
   const xz = (p: Vec3) => `(${[p[0], p[2]].map((v) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })).join("; ")})`;
