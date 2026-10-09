@@ -28,7 +28,7 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
       ["G", "grade (pontos verdes)"],
       ["V", "vão (pontos azuis)"],
       ["T", "triângulos (pontos amarelos e laranja)"],
-      ["Tab", "próximo ponto sobreposto (GC)"],
+      ["Tab", "barras: percorre os pontos amarelos e laranja da esfera (Shift+Tab volta); GC: próximo ponto sobreposto"],
     ],
   },
   {
