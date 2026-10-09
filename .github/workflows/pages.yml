@@ -45,3 +45,27 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # etiquetas das versões (v1.0, v1.1…) a partir de .github/versoes.txt
+  versoes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Criar as etiquetas que faltam
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          grep -v '^#' .github/versoes.txt | while read -r tag sha title; do
+            [ -z "$tag" ] && continue
+            if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+              echo "$tag já existe"
+            else
+              git tag -a "$tag" "$sha" -m "siMOLAdor ${tag#v} — $title"
+              git push origin "refs/tags/$tag"
+            fi
+          done
+
