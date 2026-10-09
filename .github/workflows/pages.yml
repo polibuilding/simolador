@@ -56,6 +56,8 @@ jobs:
         with:
           fetch-depth: 0
       - name: Criar as etiquetas que faltam
+        # precisa de Settings → Actions → General → Workflow permissions → "Read and write permissions"
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -65,7 +67,7 @@ jobs:
               echo "$tag já existe"
             else
               git tag -a "$tag" "$sha" -m "siMOLAdor ${tag#v} — $title"
-              git push origin "refs/tags/$tag"
+              git push origin "refs/tags/$tag" || { echo "::warning::Sem permissão para criar $tag: ligue 'Read and write permissions' em Settings → Actions → General."; exit 0; }
             fi
           done
 
