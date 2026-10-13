@@ -1,11 +1,13 @@
 import { useApp } from "./store";
 
-/** Embaixo do cubo de visualização: Enquadrar, inércia da vista e atalhos. */
+/** Embaixo do cubo de visualização: Enquadrar, inércia, sombras, renderização e atalhos. */
 export function ViewControls() {
   const setCamera = useApp((s) => s.setCamera);
   const inertia = useApp((s) => s.inertia);
   const setInertia = useApp((s) => s.setInertia);
   const setHelpOpen = useApp((s) => s.setHelpOpen);
+  const render = useApp((s) => s.render);
+  const shadows = useApp((s) => s.shadows);
   return (
     <nav className="view-controls" aria-label="Câmera">
       <button onClick={() => setCamera("fit")} title="Enquadrar: mostra a estrutura inteira (F)" aria-label="Enquadrar (F)">
@@ -29,6 +31,14 @@ export function ViewControls() {
         </svg>
         <span>{inertia ? "Inércia" : "Vista firme"}</span>
       </button>
+      <label className="view-check" title="Sombras das peças na chapa e no chão">
+        <input type="checkbox" checked={shadows} onChange={(e) => useApp.getState().setShadows(e.target.checked)} />
+        Sombras
+      </label>
+      <label className="view-check" title="Peças com acabamento: metal com reflexos e a hélice das molas. Desligado: versão simples, mais leve (padrão).">
+        <input type="checkbox" checked={render} onChange={(e) => useApp.getState().setRender(e.target.checked)} />
+        Renderização
+      </label>
       <button onClick={() => setHelpOpen(true)} title="Atalhos do teclado (? ou H)">
         <svg viewBox="0 0 16 16" aria-hidden>
           <rect x="1.5" y="4" width="13" height="8.5" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" />

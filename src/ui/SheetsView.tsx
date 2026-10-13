@@ -4,6 +4,7 @@ import { buildSheets } from "../drawings/sheets";
 import { sheetToSvg, sheetsToDxf, sheetsToPdf } from "../drawings/export";
 import { useApp } from "./store";
 import { boardsOf } from "../core/model";
+import { boardName } from "../core/boards";
 import { filterByBoards } from "../core/boards";
 import { renderIso, type IsoImage } from "../render/snapshot";
 import { loadLogos, type Logo } from "./logos";
@@ -154,8 +155,8 @@ export function SheetsView() {
             <span>Chapas</span>
             <button className={!sheetBoards ? "on" : ""} onClick={() => useApp.getState().setSheetBoards(null)}>Todas</button>
             {allBoards.map((b) => (
-              <button key={b.id} className={!sheetBoards || sheetBoards.includes(b.id) ? "on" : ""} onClick={() => toggleBoard(b.id)}>
-                {b.id.slice(1)}
+              <button key={b.id} className={!sheetBoards || sheetBoards.includes(b.id) ? "on" : ""} onClick={() => toggleBoard(b.id)} title={boardName(b)}>
+                {b.name ? boardName(b) : b.id.slice(1)}
               </button>
             ))}
           </div>

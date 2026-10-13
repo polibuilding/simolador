@@ -4,12 +4,15 @@ import { catalog } from "../core/catalog";
 import { codeOf, moveGroup, nodeMoveNearest, removeMany, removeSelection, rotateSelection, selAfter, type Sel } from "../core/edit";
 import { createHistory, push, redo, undo, type History } from "../core/history";
 import { defaultInventory, type InventoryConfig } from "../core/inventory";
-import { boardsOf, emptyModel, membersAt, rotateNodes, type Model, type Vec3 } from "../core/model";
+import { boardsOf, emptyModel, membersAt, rotateNodes, rotYRad, type Model, type Vec3 } from "../core/model";
 import { overlappingNodes, type Check } from "../core/rules";
 import { fromFile, toFile, type SheetMeta } from "../core/serialization";
 import { applyCandidate, type Candidate } from "../core/snapping";
 import { cutSelection, makeClip, pasteClip, repeatClip, type Clip } from "../core/clipboard";
-import { addBoard, boardAsModel, boardRad, boardSelection, filterByBoards, removeBoard, setBoardGap, setBoardPose, type Side } from "../core/boards";
+import {
+  addBoard, boardAsModel, boardCenter, boardName, boardRad, boardSelection, filterByBoards, moveBoards, removeBoard, renameBoard,
+  rotateBoard, setBoardCenter, setBoardsGap, type Side,
+} from "../core/boards";
 
 export type Tool =
   | { kind: "select" }
@@ -43,6 +46,11 @@ interface State {
   /** inércia da vista: a câmera desliza um pouco depois de soltar o mouse */
   inertia: boolean;
   setInertia: (on: boolean) => void;
+  /** peças com acabamento (metal, hélice das molas, reflexos); desligado = versão simples, mais leve */
+  render: boolean;
+  setRender: (on: boolean) => void;
+  shadows: boolean;
+  setShadows: (on: boolean) => void;
   /** painel de atalhos do teclado */
   helpOpen: boolean;
   setHelpOpen: (on: boolean) => void;
@@ -102,13 +110,23 @@ interface State {
   setHoverBoard: (id: string | null) => void;
   /** chapa selecionada (clique na chapa vazia): menu fixo até Esc; Delete apaga */
   selectedBoard: string | null;
+  /** outras chapas selecionadas com Ctrl+clique, na ordem (a primeira é `selectedBoard`) */
+  boardExtra: string[];
+  lastNudge: string;
+  lastNudgeAt: number;
   pinBoard: (id: string | null) => void;
+  /** Ctrl+clique numa chapa: põe ou tira da seleção */
+  toggleBoard: (id: string) => void;
   removeSelectedBoard: () => void;
   addBoardAt: (fromId: string, side: Side) => void;
   removeBoardId: (id: string) => string | null;
-  setBoardGapOf: (id: string, gap: number) => string | null;
-  /** distância, deslocamento ao longo do lado e giro (graus) da chapa; a estrutura de cima vai junto */
-  setBoardPoseOf: (id: string, pose: { gap?: number; shift?: number; rot?: number }) => string | null;
+  /** setas: desloca as chapas selecionadas nos eixos da primeira (módulos) */
+  nudgeBoards: (local: [number, number]) => void;
+  setBoardCenterOf: (id: string, cx: number, cz: number) => string | null;
+  rotateBoardOf: (id: string, deg: number) => string | null;
+  /** distância (módulos) entre as chapas selecionadas, na ordem em que foram escolhidas */
+  setBoardsGapOf: (gap: number) => string | null;
+  renameBoardOf: (id: string, name: string) => void;
   selectBoard: (id: string) => void;
   /** a estrutura da chapa como arquivo .mola (texto) */
   exportBoard: (id: string) => string;
@@ -211,6 +229,10 @@ export const useApp = create<State>((set, get) => ({
   triAnchor: null,
   inertia: readPref("simolador:inercia", true),
   setInertia: (inertia) => (writePref("simolador:inercia", inertia), set({ inertia, hint: inertia ? "Inércia ligada: a vista desliza um pouco depois de soltar o mouse (B)." : "Vista firme: para assim que você solta o mouse (B)." })),
+  render: readPref("simolador:render", false),
+  setRender: (render) => (writePref("simolador:render", render), set({ render })),
+  shadows: readPref("simolador:sombras", true),
+  setShadows: (shadows) => (writePref("simolador:sombras", shadows), set({ shadows })),
   helpOpen: false,
   setHelpOpen: (helpOpen) => set({ helpOpen }),
   cyclePiece: (dir, groups) => {
@@ -342,15 +364,27 @@ export const useApp = create<State>((set, get) => ({
     });
   },
   selectedBoard: null,
-  pinBoard: (selectedBoard) => set({ selectedBoard, selection: null, multi: [], hint: selectedBoard ? `Chapa ${selectedBoard.slice(1)} selecionada: Delete apaga, Esc solta.` : null }),
+  boardExtra: [],
+  lastNudge: "",
+  lastNudgeAt: 0,
+  pinBoard: (selectedBoard) => set({ selectedBoard, boardExtra: [], selection: null, multi: [], hint: selectedBoard ? `${boardName(boardsOf(get().history.present).find((b) => b.id === selectedBoard) ?? { id: selectedBoard, x: 0, z: 0 })} selecionada: setas movem, Ctrl+clique soma outra chapa, Delete apaga, Esc solta.` : null }),
+  toggleBoard: (id) => {
+    const s = get();
+    const cur = boardSel(s);
+    const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
+    set({ selectedBoard: next[0] ?? null, boardExtra: next.slice(1), selection: null, multi: [], hint: next.length > 1 ? `${next.length} chapas selecionadas: defina a distância entre elas no painel; as setas movem todas.` : null });
+  },
   removeSelectedBoard: () => {
     const s = get();
-    const id = s.selectedBoard;
-    if (!id) return;
-    const pieces = boardSelection(catalog, s.history.present, id).length;
-    if (pieces && !window.confirm(`Apagar a chapa ${id.slice(1)} e as ${pieces} peças que estão só nela?`)) return;
-    const err = s.removeBoardId(id);
-    if (err) set({ hint: err });
+    const ids = boardSel(s);
+    if (!ids.length) return;
+    const pieces = ids.reduce((n, id) => n + boardSelection(catalog, s.history.present, id).length, 0);
+    const names = ids.map((id) => boardName(boardsOf(s.history.present).find((b) => b.id === id)!)).join(", ");
+    if (pieces && !window.confirm(`Apagar ${names} e as ${pieces} peças que estão só ${ids.length > 1 ? "nelas" : "nela"}?`)) return;
+    for (const id of ids) {
+      const err = get().removeBoardId(id);
+      if (err) return set({ hint: err });
+    }
   },
   hoverBoard: null,
   setHoverBoard: (hoverBoard) => (get().hoverBoard === hoverBoard ? undefined : set({ hoverBoard })),
@@ -358,28 +392,62 @@ export const useApp = create<State>((set, get) => ({
     const s = get();
     const r = addBoard(catalog, s.history.present, fromId, side);
     if (!r.model) return set({ hint: r.error ?? null });
-    set({ history: push(s.history, r.model), hoverBoard: null, selectedBoard: r.id ?? null, selection: null, multi: [], hint: "Chapa nova (selecionada): ajuste a distância, o deslocamento e o giro no menu dela. Esc solta." });
+    set({ history: push(s.history, r.model), hoverBoard: null, selectedBoard: r.id ?? null, boardExtra: [], selection: null, multi: [], hint: "Chapa nova (selecionada): as setas movem; nome, centro e giro no painel; Ctrl+clique em outra chapa para a distância entre elas. Esc solta." });
   },
   removeBoardId: (id) => {
     const s = get();
     const r = removeBoard(catalog, s.history.present, id);
     if (!r.model) return r.error ?? null;
-    set({ history: push(s.history, r.model), hoverBoard: null, selectedBoard: null, selection: null, multi: [], hint: "Chapa apagada. Ctrl+Z desfaz." });
+    set({ history: push(s.history, r.model), hoverBoard: null, selectedBoard: null, boardExtra: [], selection: null, multi: [], hint: "Chapa apagada. Ctrl+Z desfaz." });
     return null;
   },
-  setBoardPoseOf: (id, pose) => {
+  nudgeBoards: (local) => {
     const s = get();
-    const r = setBoardPose(catalog, s.history.present, id, pose);
+    const ids = boardSel(s);
+    if (!ids.length) return;
+    const first = boardsOf(s.history.present).find((b) => b.id === ids[0]);
+    if (!first) return;
+    const v = rotYRad([local[0], 0, local[1]], boardRad(first));
+    const r = moveBoards(catalog, s.history.present, ids, [v[0], v[2]]);
+    if (!r.model) return set({ hint: r.error ?? null });
+    const b = boardsOf(r.model).find((x) => x.id === ids[0])!;
+    const [cx, cz] = boardCenter(catalog, b);
+    const f = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+    // setas seguidas na mesma chapa viram um passo só no desfazer
+    const merge = s.lastNudge === ids.join(",") && performance.now() - s.lastNudgeAt < 1500;
+    set({
+      history: merge ? { ...s.history, present: r.model } : push(s.history, r.model),
+      lastNudge: ids.join(","), lastNudgeAt: performance.now(),
+      hint: `${ids.length > 1 ? `${ids.length} chapas` : boardName(b)}: centro em (${f(cx)}; ${f(cz)}). Setas: 1 M · Shift: 6 M · Alt ou Ctrl: 1/4 M, nos eixos da chapa.`,
+    });
+  },
+  setBoardCenterOf: (id, cx, cz) => {
+    const s = get();
+    const r = setBoardCenter(catalog, s.history.present, id, cx, cz);
+    if (!r.model) return r.error ?? null;
+    set({ history: push(s.history, r.model), hint: null });
+    return null;
+  },
+  rotateBoardOf: (id, deg) => {
+    const s = get();
+    const r = rotateBoard(catalog, s.history.present, id, deg);
     if (!r.model) return r.error ?? null;
     set({ history: push(s.history, r.model), hint: r.note ?? null });
     return null;
   },
-  setBoardGapOf: (id, gap) => {
+  setBoardsGapOf: (gap) => {
     const s = get();
-    const r = setBoardGap(catalog, s.history.present, id, gap);
+    const r = setBoardsGap(catalog, s.history.present, boardSel(s), gap);
     if (!r.model) return r.error ?? null;
-    set({ history: push(s.history, r.model) });
+    set({ history: push(s.history, r.model), hint: null });
     return null;
+  },
+  renameBoardOf: (id, name) => {
+    const s = get();
+    const next = renameBoard(s.history.present, id, name);
+    const was = boardsOf(s.history.present).find((b) => b.id === id)?.name ?? "";
+    const now = boardsOf(next).find((b) => b.id === id)?.name ?? "";
+    if (was !== now) set({ history: push(s.history, next) });
   },
   selectBoard: (id) => {
     const sels = boardSelection(catalog, get().history.present, id);
@@ -389,7 +457,8 @@ export const useApp = create<State>((set, get) => ({
   exportBoard: (id) => {
     const s = get();
     const m = boardAsModel(catalog, s.history.present, id);
-    return JSON.stringify(toFile(m, s.inventory, `${s.name} - chapa ${id.slice(1)}`, catalog.settings.modulo_mm, s.sheet), null, 2);
+    const b = boardsOf(s.history.present).find((x) => x.id === id);
+    return JSON.stringify(toFile(m, s.inventory, `${s.name} - ${b ? boardName(b) : `chapa ${id.slice(1)}`}`, catalog.settings.modulo_mm, s.sheet), null, 2);
   },
   importToBoard: (id, raw) => {
     const s = get();
@@ -451,20 +520,20 @@ export const useApp = create<State>((set, get) => ({
     });
   },
 
-  select: (selection) => set({ selection, multi: [], hint: null, selectedBoard: null }),
+  select: (selection) => set({ selection, multi: [], hint: null, selectedBoard: null, boardExtra: [] }),
   toggleMulti: (s) =>
     set((st) => {
       const list = st.multi.length ? st.multi : st.selection ? [st.selection] : [];
       const has = list.some((x) => x.id === s.id);
       const multi = has ? list.filter((x) => x.id !== s.id) : [...list, s];
-      return multi.length === 1 ? { selection: multi[0], multi: [], selectedBoard: null } : { selection: null, multi, selectedBoard: null };
+      return multi.length === 1 ? { selection: multi[0], multi: [], selectedBoard: null, boardExtra: [] } : { selection: null, multi, selectedBoard: null, boardExtra: [] };
     }),
   setMulti: (list, addTo = false) =>
     set((st) => {
       const base = addTo ? (st.multi.length ? st.multi : st.selection ? [st.selection] : []) : [];
       const seen = new Set(base.map((x) => x.id));
       const multi = [...base, ...list.filter((x) => !seen.has(x.id))];
-      return multi.length === 1 ? { selection: multi[0], multi: [], selectedBoard: null } : { selection: null, multi, selectedBoard: null };
+      return multi.length === 1 ? { selection: multi[0], multi: [], selectedBoard: null, boardExtra: [] } : { selection: null, multi, selectedBoard: null, boardExtra: [] };
     }),
   selectAll: () =>
     set((st) => {
@@ -488,8 +557,8 @@ export const useApp = create<State>((set, get) => ({
     set({ history: push(history, removeSelection(history.present, selection)), selection: null });
   },
 
-  undo: () => set((s) => ({ history: undo(s.history), selection: null, multi: [], selectedBoard: null, ghost: null, tool: { kind: "select" } })),
-  redo: () => set((s) => ({ history: redo(s.history), selection: null, multi: [], selectedBoard: null, ghost: null, tool: { kind: "select" } })),
+  undo: () => set((s) => ({ history: undo(s.history), selection: null, multi: [], ...keepBoards(s, undo(s.history).present), ghost: null, tool: { kind: "select" } })),
+  redo: () => set((s) => ({ history: redo(s.history), selection: null, multi: [], ...keepBoards(s, redo(s.history).present), ghost: null, tool: { kind: "select" } })),
   setSnap: (snap) => set({ snap }),
   setGuides: (guides) => set({ guides }),
   moveNodeExact: (nodeId, target) => {
@@ -558,6 +627,16 @@ useApp.subscribe((s, prev) => {
 });
 
 /** Inclinação efetiva: o botão, invertido enquanto Shift estiver pressionado. */
+/** Desfazer/refazer: a seleção de chapas continua, se as chapas ainda existem (para seguir mexendo com as setas). */
+function keepBoards(s: Pick<State, "selectedBoard" | "boardExtra">, m: Model) {
+  const ids = new Set(boardsOf(m).map((b) => b.id));
+  const keep = boardSel(s).filter((id) => ids.has(id));
+  return { selectedBoard: keep[0] ?? null, boardExtra: keep.slice(1) };
+}
+
+/** Chapas selecionadas, na ordem (a primeira é a de referência). */
+export const boardSel = (s: Pick<State, "selectedBoard" | "boardExtra">) => (s.selectedBoard ? [s.selectedBoard, ...s.boardExtra] : []);
+
 export const inclineOn = (s: Pick<State, "incline" | "shiftHeld">) => s.incline !== s.shiftHeld;
 /** barras livres (qualquer direção 3D) */
 export const freeOn = (s: Pick<State, "barMode">) => s.barMode === "livre";

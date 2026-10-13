@@ -37,6 +37,8 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
       ["M", "mover a peça ou a seleção"],
       ["N", "mover só o nó (esfera selecionada)"],
       ["Delete", "apagar"],
+      ["Setas", "chapa selecionada: mover nos eixos dela (Shift: 6 M; Alt ou Ctrl: 1/4 M)"],
+      ["Ctrl + clique", "somar outra chapa à seleção (distância entre chapas)"],
       ["Ctrl + C / V / X", "copiar / colar / recortar e mover"],
       ["Ctrl + Z / Y", "desfazer / refazer"],
       ["Ctrl + A", "selecionar tudo"],

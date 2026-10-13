@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { catalog } from "../../core/catalog";
 import { COLORS, PLATE_D, PLATE_W, M } from "../units";
+import { useApp } from "../../ui/store";
 
 export type Look = "normal" | "valid" | "invalid" | "selected" | "hover";
 
@@ -11,12 +12,17 @@ const s = catalog.settings;
 export const SPHERE_R = s.esfera_diametro_mm / 2;
 const BAR_R = s.barra_diametro_mm / 2;
 
+/** Material da peça. Modo simples (padrão): cor fosca, sem reflexos; "Renderização" ligada: metal com reflexos do estúdio. */
 export function useMaterial(look: Look, base: string, metal: number, rough: number) {
+  const render = useApp((s) => s.render);
   return useMemo(() => {
     const ghost = look === "valid" || look === "invalid";
     const color =
       look === "valid" ? COLORS.valid : look === "invalid" ? COLORS.invalid
       : look === "selected" ? COLORS.select : look === "hover" ? COLORS.hover : base;
+    if (!render) {
+      return new THREE.MeshLambertMaterial({ color, transparent: ghost, opacity: ghost ? 0.55 : 1, depthWrite: !ghost });
+    }
     return new THREE.MeshStandardMaterial({
       color,
       metalness: ghost ? 0 : metal,
@@ -25,7 +31,7 @@ export function useMaterial(look: Look, base: string, metal: number, rough: numb
       opacity: ghost ? 0.55 : 1,
       depthWrite: !ghost,
     });
-  }, [look, base, metal, rough]);
+  }, [look, base, metal, rough, render]);
 }
 
 export interface Pickable {
@@ -42,10 +48,11 @@ export const pickProps = ({ onPick, onHover, onDown }: Pickable) => ({
 });
 
 export function Sphere({ position, look = "normal", ...p }: { position: THREE.Vector3; look?: Look } & Pickable) {
-  const mat = useMaterial(look, COLORS.steel, 0.95, 0.18);
+  const render = useApp((s) => s.render);
+  const mat = useMaterial(look, render ? COLORS.steel : "#b9c0c6", 0.95, 0.18);
   return (
     <mesh position={position} material={mat} castShadow {...pickProps(p)}>
-      <sphereGeometry args={[SPHERE_R, 32, 24]} />
+      <sphereGeometry args={render ? [SPHERE_R, 32, 24] : [SPHERE_R, 18, 12]} />
     </mesh>
   );
 }
@@ -91,12 +98,20 @@ export function Bar({
       quat: new THREE.Quaternion().setFromUnitVectors(Y, dir),
     };
   }, [a, b]);
-  const springMat = useMaterial(look, COLORS.springSteel, 0.9, 0.35);
+  const render = useApp((s) => s.render);
+  const springMat = useMaterial(look, render ? COLORS.springSteel : "#8f979e", 0.9, 0.35);
   const capMat = useMaterial(look, COLORS.cap, 0.8, 0.3);
   const hitMat = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
   return (
     <group position={mid} quaternion={quat} {...pickProps(p)}>
-      <mesh geometry={springGeometry(springLen)} material={springMat} castShadow />
+      {/* modo simples: a mola vira um cilindro liso (bem mais leve); com renderização, a hélice */}
+      {render ? (
+        <mesh key="helix" geometry={springGeometry(springLen)} material={springMat} castShadow dispose={null} />
+      ) : (
+        <mesh key="liso" material={springMat} castShadow>
+          <cylinderGeometry args={[BAR_R * 0.92, BAR_R * 0.92, springLen, 12]} />
+        </mesh>
+      )}
       {[-1, 1].map((sgn) => (
         <mesh key={sgn} position={[0, sgn * (length / 2 - CAP_LEN / 2), 0]} material={capMat} castShadow>
           <cylinderGeometry args={[BAR_R, BAR_R, CAP_LEN, 16]} />

@@ -254,6 +254,13 @@ dl { margin: 0 0 16px; }
   align-items: flex-start;
   gap: 2px;
 }
+.view-controls .view-check {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 7px;
+  font-size: 12px; color: var(--graphite); cursor: pointer; opacity: 0.85;
+  background: rgba(251, 252, 251, 0.55); border-radius: 3px;
+}
+.view-controls .view-check:hover { opacity: 1; color: var(--ink); }
+.view-controls .view-check input { margin: 0; width: 12px; height: 12px; accent-color: var(--ink); }
 .view-controls button.firm { opacity: 1; color: var(--ink); border-color: var(--rule); background: var(--panel); }
 .view-controls button {
   display: inline-flex; align-items: center; gap: 5px;
@@ -397,7 +404,7 @@ dl { margin: 0 0 16px; }
 .board-plus:hover { background: #fff; color: var(--ink); border-color: var(--ink); }
 .board-menu {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px; white-space: nowrap;
-  transform: translate(0, 14px);
+  transform: translate(0, 30px);
   background: rgba(251, 252, 251, 0.92); border: 1px solid var(--rule); border-radius: 4px;
   padding: 4px 6px; font-size: 12px; color: var(--graphite);
   box-shadow: 0 2px 6px rgba(29, 36, 34, 0.08);
@@ -495,3 +502,23 @@ dl { margin: 0 0 16px; }
   background: #fff; font: 600 11.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; color: var(--ink);
 }
 .shortcuts-foot { margin: 14px 0 0; font-size: 12px; color: var(--graphite); }
+
+/* ---------- chapa no painel ---------- */
+.props .board-name {
+  width: 100%; font: 600 20px/1.2 var(--font); color: var(--ink);
+  border: 1px solid transparent; border-radius: 3px; padding: 2px 4px; margin: 0 0 10px -5px; background: transparent;
+}
+.props .board-name:hover { border-color: var(--rule); }
+.props .board-name:focus { border-color: var(--ink); background: #fff; outline: none; }
+.board-fields { display: grid; gap: 8px; margin: 10px 0 6px; }
+.board-fields label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--graphite); }
+.board-fields .board-gap { display: inline-flex; align-items: center; gap: 2px; border: 0; padding: 0; margin: 0; }
+.board-fields label.stack { flex-direction: column; align-items: flex-start; gap: 4px; }
+.board-fields .board-gap button { font: inherit; font-size: 12px; min-width: 26px; padding: 3px 6px; border: 1px solid transparent; border-radius: 3px; background: transparent; cursor: pointer; color: var(--ink); }
+.board-fields .board-gap button:hover { border-color: var(--rule); background: #fff; }
+.board-fields .board-gap button.on { border-color: var(--ink); font-weight: 700; background: #fff; }
+.board-fields .num-field input { font-size: 13px; padding: 3px 5px; }
+.board-mm { margin: -4px 0 0; font-size: 12px; color: var(--graphite); text-align: right; }
+.board-list { margin: 4px 0 8px; padding-left: 20px; font-size: 13px; }
+.board-list li { margin: 2px 0; }
+.board-list span { color: var(--graphite); }

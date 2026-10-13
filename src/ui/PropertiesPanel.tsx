@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { catalog } from "../core/catalog";
 import { available, usage } from "../core/inventory";
 import { boardsOf, componentOf, len, sub, type Vec3 } from "../core/model";
-import { boardOffset, boardSelection, boardSize } from "../core/boards";
+import { boardCenter, boardName, boardSelection, boardSize, boardsGap } from "../core/boards";
+import { NumField } from "../render/Boards";
 import { useApp, useModel } from "./store";
 
 const M = catalog.settings.modulo_mm;
@@ -231,30 +232,100 @@ function Selected() {
   );
 }
 
-/** Chapa selecionada (clique na chapa vazia). */
+/** Chapa selecionada (clique na chapa vazia): nome, centro, giro; setas movem nos eixos dela. */
 function BoardSelected() {
   const model = useModel();
   const id = useApp((s) => s.selectedBoard)!;
+  const extra = useApp((s) => s.boardExtra);
   const b = boardsOf(model).find((x) => x.id === id);
+  const [name, setName] = useState(b ? boardName(b) : "");
+  useEffect(() => setName(b ? boardName(b) : ""), [b?.name, id]);
   if (!b) return null;
+  if (extra.length) return <BoardsSelected />;
+  const st = useApp.getState();
+  const err = (e: string | null) => (e && useApp.setState({ hint: e }), e);
   const pieces = boardSelection(catalog, model, id).length;
-  const off = boardOffset(catalog, model, b);
   const { w, d } = boardSize(catalog);
+  const [cx, cz] = boardCenter(catalog, b);
+  const rot = b.rot ?? 0;
   return (
     <>
-      <h2>Chapa {id.slice(1)}</h2>
+      <input
+        className="board-name"
+        value={name}
+        aria-label="Nome da chapa"
+        title="Nome da chapa (aparece no menu, nas pranchas e nos arquivos). Vazio = nome padrão."
+        onChange={(e) => setName(e.target.value)}
+        onBlur={() => st.renameBoardOf(id, name)}
+        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+      />
       <dl>
-        <Row k="Canto (módulos)" v={`(${fmt(b.x, Number.isInteger(b.x) ? 0 : 2)}; ${fmt(b.z, Number.isInteger(b.z) ? 0 : 2)})`} />
         <Row k="Tamanho" v={`${w} × ${d} módulos = ${fmt(w * M, 0)} × ${fmt(d * M, 0)} mm`} />
-        {off && <Row k="Distância da vizinha" v={`${fmt(off.gap, Number.isInteger(off.gap) ? 0 : 2)} módulos (${fmt(off.gap * M)} mm) da chapa ${b.attach!.to.slice(1)}`} />}
-        {off && off.shift !== 0 && <Row k="Deslocamento" v={`${fmt(off.shift, Number.isInteger(off.shift) ? 0 : 2)} módulos (${fmt(off.shift * M)} mm) ao longo do lado`} />}
-        <Row k="Giro" v={b.rot ? `${fmt(b.rot, Number.isInteger(b.rot) ? 0 : 2)}° (anti-horário visto de cima)` : "0°"} />
         <Row k="Peças em cima" v={pieces} />
       </dl>
-      <p className="multi-note">Distância, deslocamento, giro e as outras opções ficam no menu junto da chapa, na cena; os + nos lados acrescentam chapas. <strong>Delete</strong> apaga a chapa; <strong>Esc</strong> solta.</p>
+      <div className="board-fields">
+        <label>Centro X <NumField value={cx} onCommit={(v) => err(st.setBoardCenterOf(id, v, cz))} title="Centro da chapa em X, em módulos (decimais valem)" width={64} suffix=" M" /></label>
+        <label>Centro Z <NumField value={cz} onCommit={(v) => err(st.setBoardCenterOf(id, cx, v))} title="Centro da chapa em Z, em módulos (decimais valem)" width={64} suffix=" M" /></label>
+        <p className="board-mm">= ({fmt(cx * M, 1)}; {fmt(cz * M, 1)}) mm</p>
+        <label className="stack">Giro (graus, anti-horário visto de cima)
+          <span className="board-gap">
+            <button onClick={() => err(st.rotateBoardOf(id, rot - 15))} title="15° no sentido horário (visto de cima)">↻ 15°</button>
+            <button className={rot === 0 ? "on" : ""} onClick={() => err(st.rotateBoardOf(id, 0))}>0°</button>
+            <button onClick={() => err(st.rotateBoardOf(id, rot + 15))} title="15° no sentido anti-horário (visto de cima)">↺ 15°</button>
+            <NumField value={rot} onCommit={(v) => err(st.rotateBoardOf(id, v))} title="Giro livre em graus (anti-horário visto de cima), em torno do centro" suffix="°" />
+          </span>
+        </label>
+      </div>
+      <p className="multi-note">
+        <strong>Setas</strong> movem a chapa nos eixos dela (1 módulo; Shift: 6; Alt ou Ctrl: 1/4), com a estrutura de cima.
+        <strong> Ctrl+clique</strong> em outra chapa para definir a distância entre elas. <strong>Delete</strong> apaga; <strong>Esc</strong> solta.
+      </p>
       <div className="actions">
-        <button onClick={() => useApp.getState().selectBoard(id)}>Selecionar peças</button>
-        <button className="danger" onClick={() => useApp.getState().removeSelectedBoard()}>Apagar chapa</button>
+        <button onClick={() => st.selectBoard(id)}>Selecionar peças</button>
+        <button className="danger" onClick={() => st.removeSelectedBoard()}>Apagar chapa</button>
+      </div>
+    </>
+  );
+}
+
+/** Várias chapas (Ctrl+clique): distância entre elas, na ordem em que foram escolhidas. */
+function BoardsSelected() {
+  const model = useModel();
+  const first = useApp((s) => s.selectedBoard)!;
+  const extra = useApp((s) => s.boardExtra);
+  const st = useApp.getState();
+  const all = boardsOf(model);
+  const sel = [first, ...extra].map((id) => all.find((b) => b.id === id)).filter(Boolean) as typeof all;
+  const gaps = sel.slice(1).map((b, i) => boardsGap(catalog, sel[i], b).gap);
+  const same = gaps.every((g) => Math.abs(g - gaps[0]) < 1e-6);
+  const err = (e: string | null) => (e && useApp.setState({ hint: e }), e);
+  return (
+    <>
+      <h2>{sel.length} chapas</h2>
+      <ol className="board-list">
+        {sel.map((b, i) => (
+          <li key={b.id}>
+            <strong>{boardName(b)}</strong>
+            {i > 0 && <span> · {fmt(gaps[i - 1], Number.isInteger(gaps[i - 1]) ? 0 : 2)} M da anterior</span>}
+          </li>
+        ))}
+      </ol>
+      <div className="board-fields">
+        <label className="stack">Distância entre elas (módulos)
+          <span className="board-gap">
+            {[0, 4, 6, 12].map((g) => (
+              <button key={g} className={same && Math.abs(gaps[0] - g) < 1e-6 ? "on" : ""} onClick={() => err(st.setBoardsGapOf(g))} title={`${g} módulos (${fmt(g * M, 0)} mm)`}>{g}</button>
+            ))}
+            <NumField value={same ? gaps[0] : NaN} onCommit={(v) => err(st.setBoardsGapOf(v))} title="Distância livre entre as chapas, em módulos (decimais valem)" suffix=" M" />
+          </span>
+        </label>
+      </div>
+      <p className="multi-note">
+        A primeira fica parada; cada uma anda só na direção em que já está da anterior até ficar à distância escolhida (espaço livre entre as bordas).
+        <strong> Setas</strong> movem todas juntas nos eixos da primeira. <strong>Ctrl+clique</strong> tira ou põe uma chapa; <strong>Esc</strong> solta.
+      </p>
+      <div className="actions">
+        <button className="danger" onClick={() => st.removeSelectedBoard()}>Apagar as {sel.length} chapas</button>
       </div>
     </>
   );
