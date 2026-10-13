@@ -176,6 +176,15 @@ const radiusOf = (cat: Catalog, code: string) =>
 /** Folga entre o centro de uma esfera e o eixo de uma peça. */
 const sphereClear = (cat: Catalog, code: string) => cat.settings.esfera_diametro_mm / 2 / cat.settings.modulo_mm + radiusOf(cat, code);
 
+/** G12: inclinação máxima (a partir da vertical) de uma mola presa na GC. */
+export const gcTiltMax = (cat: Catalog) => Number(cat.settings.gc_inclinacao_max_graus ?? 40);
+/** Erro se a mola que sai da GC na direção `dir` inclina demais (null se está ok). */
+function gcTiltError(cat: Catalog, dir: Vec3): string | null {
+  const max = gcTiltMax(cat);
+  const a = (Math.acos(Math.max(-1, Math.min(1, dot(norm(dir), UP)))) * 180) / Math.PI;
+  return a > max + 0.5 ? `Na ligação de base (GC) a mola inclina no máximo ${max}° da vertical; aqui seriam ${a.toFixed(0)}°.` : null;
+}
+
 /** C7: uma esfera em `p` (que não é ponta da peça) encostaria no meio de alguma peça? */
 function sphereOnMember(cat: Catalog, model: Model, p: Vec3, skipNode?: string): string | null {
   for (const m of Object.values(model.members)) {
@@ -318,6 +327,15 @@ export function validateMember(
   if (cable && !target) errors.push("A diagonal liga duas esferas que já existem."); // D5
   const dir = scale(v, 1 / L);
   if (!cable) errors.push(...angleErrors(cat, model, fromId, dir, "origem"));
+  // G12: na GC a mola não inclina mais que gc_inclinacao_max_graus da vertical
+  if (!cable && from.kind === "support") {
+    const e = gcTiltError(cat, dir);
+    if (e) errors.push(e);
+  }
+  if (!cable && target?.kind === "support") {
+    const e = gcTiltError(cat, scale(dir, -1));
+    if (e) errors.push(e);
+  }
   if (target) {
     if (target.id === fromId) errors.push("As duas pontas estão no mesmo nó.");
     if (!cable) errors.push(...angleErrors(cat, model, target.id, scale(dir, -1), "outra ponta"));
@@ -583,6 +601,13 @@ export function validateMovedModel(cat: Catalog, model: Model, moved: Set<string
     const a = model.nodes[m.a].pos;
     const b = model.nodes[m.b].pos;
     if (onGround(a, b)) errors.push("Uma peça ficaria deitada na chapa.");
+    if (typeOf(cat, m.code) === "bar") {
+      for (const [end, other] of [[m.a, b], [m.b, a]] as const) {
+        if (model.nodes[end].kind !== "support") continue;
+        const e = gcTiltError(cat, sub(other, model.nodes[end].pos));
+        if (e) errors.push(e);
+      }
+    }
     const others = { ...model, members: Object.fromEntries(Object.entries(model.members).filter(([k]) => k !== m.id)) };
     errors.push(...collisionErrors(cat, others, a, b, m.a, m.b, cat.pieces[m.code]?.type === "cable"));
   }

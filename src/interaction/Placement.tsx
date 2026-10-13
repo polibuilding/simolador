@@ -10,7 +10,7 @@ import { useThree } from "@react-three/fiber";
 import { catalog } from "../core/catalog";
 import { moveGroup, nodeMoveOptions } from "../core/edit";
 import { pasteClip, transformClip, type Clip, type PasteResult } from "../core/clipboard";
-import { AXES, add, boardsOf, findNodeAt, len, norm, rotDir, scale, sub, type Model, type Vec3 } from "../core/model";
+import { AXES, add, boardsOf, findNodeAt, len, norm, rotDir, scale, sub, toDisp, type Model, type Vec3 } from "../core/model";
 import { frameRadAt } from "../core/boards";
 import { validateMember } from "../core/rules";
 import type { Sel } from "../core/edit";
@@ -262,7 +262,7 @@ export function Placement() {
         if (n.id === anchor.id || Math.abs(len(sub(n.pos, A)) - L) > tolM) continue;
         if (Object.values(model.members).some((m) => (m.a === anchor!.id && m.b === n.id) || (m.b === anchor!.id && m.a === n.id))) continue;
         const d = dpx(n.pos);
-        if (d < 20) snaps.push({ pos: n.pos, d: d - 10, label: `fecha na esfera (${n.pos.map((v) => +v.toFixed(2)).join("; ")})` });
+        if (d < 20) snaps.push({ pos: n.pos, d: d - 10, label: `fecha na esfera (${toDisp(n.pos).map((v) => +v.toFixed(2)).join("; ")})` });
       }
       // 2) eixos e passos de 15°
       const fr = frameRadAt(catalog, boardsOf(model), A[0], A[2]);
@@ -291,7 +291,7 @@ export function Placement() {
           const q = add(pc, scale(norm(inPlane), Math.sqrt(h2)));
           const d = dpx(q);
           const name = Object.values(catalog.pieces).find((p) => p.type === "bar" && p.spanM?.[0] === sB)?.code ?? "";
-          if (d < 12) snaps.push({ pos: q, d: d + 2, label: `fecha triângulo com a esfera (${B.pos.map((t) => +t.toFixed(2)).join("; ")}) usando ${name}` });
+          if (d < 12) snaps.push({ pos: q, d: d + 2, label: `fecha triângulo com a esfera (${toDisp(B.pos).map((t) => +t.toFixed(2)).join("; ")}) usando ${name}` });
         }
       }
       // 4) alturas que já existem
@@ -303,7 +303,7 @@ export function Placement() {
         const r = Math.sqrt(L * L - dy * dy);
         const q: Vec3 = [A[0] + hd[0] * r, y, A[2] + hd[2] * r];
         const d = dpx(q);
-        if (d < 10) snaps.push({ pos: q, d: d + 3, label: `na altura y = ${+y.toFixed(2)} M` });
+        if (d < 10) snaps.push({ pos: q, d: d + 3, label: `na altura z = ${+y.toFixed(2)} M` });
       }
       snaps.sort((a, b) => a.d - b.d);
       const pick = snaps[0];
@@ -316,7 +316,7 @@ export function Placement() {
       const dv = sub(end, A);
       const elev = deg(Math.asin(Math.max(-1, Math.min(1, dv[1] / L))));
       const azim = (deg(Math.atan2(-dv[2], dv[0])) + 360) % 360;
-      const info = `${pick ? `${pick.label} · ` : ""}${elev}° com a horizontal, ${azim}° em planta · ponta em y = ${end[1].toFixed(2).replace(".", ",")} M`;
+      const info = `${pick ? `${pick.label} · ` : ""}${elev}° com a horizontal, ${azim}° em planta · ponta em z = ${end[1].toFixed(2).replace(".", ",")} M`;
       st.setGhost({ kind: "cand", cand }, cand.check.ok ? `Livre: ${info}` : cand.check.errors[0]);
     };
 
@@ -367,7 +367,7 @@ export function Placement() {
             lastSpot.current = k;
             if (st.rotIndex) useApp.setState({ rotIndex: 0 });
           }
-          const fmt = (p: Vec3) => `(${p.map((v) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })).join("; ")})`;
+          const fmt = (p: Vec3) => `(${toDisp(p).map((v) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })).join("; ")})`;
           const count = new Map<string, number>();
           for (const c of g.closes) count.set(c.code, (count.get(c.code) ?? 0) + 1);
           const closes = [...count].map(([c, n]) => (n > 1 ? `${n}× ${c}` : c)).join(" + ");
@@ -465,7 +465,7 @@ export function Placement() {
           const o = pt && set.evalAt(pt);
           if (o) {
             const y = o.pos[1].toFixed(2).replace(".", ",");
-            return st.setGhost({ kind: "group", model: o.model, ids: o.ids, check: o.check }, o.check.ok ? `Livre: nó em (${o.pos.map((v) => +v.toFixed(2)).join("; ")}), altura y = ${y} M. Clique para deixar aí.` : o.check.errors[0]);
+            return st.setGhost({ kind: "group", model: o.model, ids: o.ids, check: o.check }, o.check.ok ? `Livre: nó em (${toDisp(o.pos).map((v) => +v.toFixed(2)).join("; ")}), altura z = ${y} M. Clique para deixar aí.` : o.check.errors[0]);
           }
         }
         let best: { o: (typeof options)[number]; d: number } | null = null;
@@ -489,7 +489,7 @@ export function Placement() {
           const deg = Math.round((Math.asin(Math.min(1, Math.abs(b[1] - a[1]) / L)) * 180) / Math.PI);
           ang = ` A ${tie.code} fica a ${deg}° da horizontal.`;
         }
-        return st.setGhost({ kind: "group", model: o.model, ids: o.ids, check: o.check }, o.check.ok ? `Clique para levar o nó para ${`(${o.pos.map((v) => +v.toFixed(2)).join("; ")})`}.${ang}` : o.check.errors[0]);
+        return st.setGhost({ kind: "group", model: o.model, ids: o.ids, check: o.check }, o.check.ok ? `Clique para levar o nó para ${`(${toDisp(o.pos).map((v) => +v.toFixed(2)).join("; ")})`}.${ang}` : o.check.errors[0]);
       }
 
       // ---- mover estrutura ----
@@ -525,8 +525,8 @@ export function Placement() {
           pasteCache = { base, clip: tool.clip, key, r };
         }
         const turn = tool.turns % 4 ? ` · girada ${(tool.turns % 4) * 90}°` : "";
-        const flip = tool.mirrorX || tool.mirrorZ ? ` · espelhada em ${[tool.mirrorX && "X", tool.mirrorZ && "Z"].filter(Boolean).join(" e ")}` : "";
-        const info = `${r.added} peças · altura ${tool.dy > 0 ? "+" : ""}${tool.dy} M${turn}${flip}. ↑/↓ altura (Shift: 6 M), R gira, X/Z espelha.`;
+        const flip = tool.mirrorX || tool.mirrorZ ? ` · espelhada em ${[tool.mirrorX && "X", tool.mirrorZ && "Y"].filter(Boolean).join(" e ")}` : "";
+        const info = `${r.added} peças · altura ${tool.dy > 0 ? "+" : ""}${tool.dy} M${turn}${flip}. ↑/↓ altura (Shift: 6 M), R gira, X/Y espelha.`;
         return st.setGhost({ kind: "group", model: r.model, ids: r.newNodes, check: r.check, part: r.part }, r.check.ok ? info : r.check.errors[0]);
       }
 

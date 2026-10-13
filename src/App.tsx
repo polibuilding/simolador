@@ -79,8 +79,9 @@ function useShortcuts() {
       } else if (st.tool.kind === "paste" && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
         e.preventDefault();
         st.pasteAdjust({ dy: (e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 6 : 1) });
-      } else if (st.tool.kind === "paste" && !mod && (k === "x" || k === "z")) {
-        st.pasteAdjust({ flip: k });
+      } else if (st.tool.kind === "paste" && !mod && (k === "x" || k === "y" || k === "z")) {
+        // na tela Z é a altura: Y espelha no eixo y da tela (o z do modelo); Z continua valendo como antes
+        st.pasteAdjust({ flip: k === "x" ? "x" : "z" });
       } else if (mod && k === "z" && !e.shiftKey) {
         e.preventDefault();
         st.undo();
@@ -130,6 +131,8 @@ function useShortcuts() {
       } else if (!mod && k === "t") {
         st.setGuides({ ...st.guides, yellow: !st.guides.yellow });
         useApp.setState({ hint: `Pontos amarelos e laranja (triângulos) ${!st.guides.yellow ? "ligados" : "desligados"} (T).` });
+      } else if (!mod && k === "p") {
+        st.setOrtho(!st.ortho);
       } else if (!mod && k === "b") {
         st.setInertia(!st.inertia);
       } else if (!mod && (e.key === "?" || k === "h")) {

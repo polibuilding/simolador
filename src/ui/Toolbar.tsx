@@ -1,6 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
-import { useApp } from "./store";
+import { minKits, usage } from "../core/inventory";
+import { useApp, useModel } from "./store";
+
+/** "2× K1 + 1× K2" */
+export const kitsText = (kits: Record<string, number>) =>
+  Object.entries(kits).filter(([, c]) => c > 0).map(([k, c]) => `${c}× K${k}`).join(" + ");
 
 function download(name: string, text: string) {
   const blob = new Blob([text], { type: "application/json" });
@@ -81,9 +86,12 @@ export function Toolbar() {
   const [fileOpen, setFileOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const step = catalog.settings.passo_inclinacao_graus ?? 15;
-  const kits = inventory.unlimited
-    ? "sem limite"
-    : Object.entries(inventory.kits).filter(([, c]) => c > 0).map(([k, c]) => `${c}× K${k}`).join(" + ") || "nenhum";
+  const model = useModel();
+  // modo sem limite: quantas caixas, no mínimo, a estrutura pede
+  const need = useMemo(() => (inventory.unlimited ? minKits(catalog, usage(model)) : null), [inventory.unlimited, model]);
+  const kits = need
+    ? need.total ? `sem limite · mín. ${kitsText(need.kits)}` : "sem limite"
+    : kitsText(inventory.kits) || "nenhum";
 
   const doNew = () => {
     const empty = Object.keys(useApp.getState().history.present.nodes).length === 0;
@@ -149,7 +157,7 @@ export function Toolbar() {
           <i className="dot green" /> Grade
         </button>
         <button aria-pressed={guides.blue} className={guides.blue ? "on" : ""} onClick={() => setGuides({ ...guides, blue: !guides.blue })}
-          title="Azul: GC a um vão de barra (4, 6 ou 12 módulos) de outra GC, em X ou Z (V)">
+          title="Azul: GC a um vão de barra (4, 6 ou 12 módulos) de outra GC, em X ou Y (V)">
           <i className="dot blue" /> Vão
         </button>
         <button aria-pressed={guides.yellow} className={guides.yellow ? "on" : ""} onClick={() => setGuides({ ...guides, yellow: !guides.yellow })}

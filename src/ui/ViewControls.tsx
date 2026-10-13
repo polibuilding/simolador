@@ -8,6 +8,7 @@ export function ViewControls() {
   const setHelpOpen = useApp((s) => s.setHelpOpen);
   const render = useApp((s) => s.render);
   const shadows = useApp((s) => s.shadows);
+  const ortho = useApp((s) => s.ortho);
   return (
     <nav className="view-controls" aria-label="Câmera">
       <button onClick={() => setCamera("fit")} title="Enquadrar: mostra a estrutura inteira (F)" aria-label="Enquadrar (F)">
@@ -31,6 +32,10 @@ export function ViewControls() {
         </svg>
         <span>{inertia ? "Inércia" : "Vista firme"}</span>
       </button>
+      <label className="view-check" title="Vista paralela (projeção ortográfica): linhas paralelas continuam paralelas e as medidas não encolhem com a distância. Desligada: perspectiva (P).">
+        <input type="checkbox" checked={ortho} onChange={(e) => useApp.getState().setOrtho(e.target.checked)} />
+        Vista paralela
+      </label>
       <label className="view-check" title="Sombras das peças na chapa e no chão">
         <input type="checkbox" checked={shadows} onChange={(e) => useApp.getState().setShadows(e.target.checked)} />
         Sombras

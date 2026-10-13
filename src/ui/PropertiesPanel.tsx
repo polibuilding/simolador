@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { catalog } from "../core/catalog";
-import { available, usage } from "../core/inventory";
-import { boardsOf, componentOf, len, sub, type Vec3 } from "../core/model";
+import { available, minKits, usage } from "../core/inventory";
+import { kitsText } from "./Toolbar";
+import { boardsOf, componentOf, DISP_AXIS, len, sub, toDisp, type Vec3 } from "../core/model";
 import { boardCenter, boardName, boardSelection, boardSize, boardsGap } from "../core/boards";
 import { NumField } from "../render/Boards";
 import { useApp, useModel } from "./store";
@@ -16,10 +17,11 @@ const STATUS_TEXT: Record<string, string> = {
   "a medir": "ainda a medir (formato provisório)",
 };
 const fmt = (n: number, d = 1) => n.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
-const posText = (p: Vec3) => `(${p.map((v) => fmt(v, Number.isInteger(v) ? 0 : 2)).join("; ")})`;
+// na tela, Z é a altura: (X, Y, Z) = (x, z, y) do modelo
+const posText = (p: Vec3) => `(${toDisp(p).map((v) => fmt(v, Number.isInteger(v) ? 0 : 2)).join("; ")})`;
 const SIDE_NAME = (d: Vec3) =>
-  d[1] > 0.5 ? "de cima" : d[1] < -0.5 ? "de baixo" : d[0] > 0.5 ? "+X" : d[0] < -0.5 ? "−X" : d[2] > 0.5 ? "+Z" : "−Z";
-const AXIS_NAME = (d: Vec3) => (Math.abs(d[0]) ? "X" : Math.abs(d[1]) ? "vertical (Y)" : "Z");
+  d[1] > 0.5 ? "de cima" : d[1] < -0.5 ? "de baixo" : d[0] > 0.5 ? "+X" : d[0] < -0.5 ? "−X" : d[2] > 0.5 ? "+Y" : "−Y";
+const AXIS_NAME = (d: Vec3) => (Math.abs(d[0]) > 0.99 ? "X" : Math.abs(d[1]) > 0.99 ? "vertical (Z)" : Math.abs(d[2]) > 0.99 ? "Y" : "inclinado");
 
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
@@ -59,11 +61,12 @@ const fieldText = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigi
 
 /**
  * Posição por coordenadas.
- * GC: X e Z levam junto a estrutura ligada (como Mover estrutura).
+ * Na tela, Z é a altura (índices do modelo: 0 = X, 2 = Y, 1 = Z).
+ * GC: X e Y levam junto a estrutura ligada (como Mover estrutura).
  * Esfera: X, Y e Z movem só o nó; as barras acompanham, e ele vai para o ponto possível mais perto.
  */
 function CoordEditor({ id, pos, support }: { id: string; pos: Vec3; support: boolean }) {
-  const axes = support ? ([0, 2] as const) : ([0, 1, 2] as const);
+  const axes = support ? ([0, 2] as const) : ([0, 2, 1] as const);
   const [vals, setVals] = useState<string[]>(pos.map(fieldText));
   const [err, setErr] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -84,7 +87,7 @@ function CoordEditor({ id, pos, support }: { id: string; pos: Vec3; support: boo
   const reset = () => (setVals(pos.map(fieldText)), setErr(null), setNote(null));
   const field = (k: 0 | 1 | 2) => (
     <label className="coord" key={k}>
-      <span>{"XYZ"[k]}</span>
+      <span>{DISP_AXIS[k]}</span>
       <input
         value={vals[k]}
         inputMode="decimal"
@@ -93,7 +96,7 @@ function CoordEditor({ id, pos, support }: { id: string; pos: Vec3; support: boo
           if (e.key === "Enter") apply();
           if (e.key === "Escape") (reset(), (e.target as HTMLInputElement).blur());
         }}
-        aria-label={`Coordenada ${"XYZ"[k]} em módulos`}
+        aria-label={`Coordenada ${DISP_AXIS[k]} em módulos`}
       />
     </label>
   );
@@ -105,7 +108,7 @@ function CoordEditor({ id, pos, support }: { id: string; pos: Vec3; support: boo
       </div>
       <p className="coords-help">
         Em módulos (1 M = {fmt(M, 2)} mm) ou em mm (ex.: 77,3 mm). Enter aplica.{" "}
-        {support ? "A estrutura ligada vai junto." : "Só a esfera anda; as barras inclinam para acompanhar (Y = altura)."}
+        {support ? "A estrutura ligada vai junto." : "Só a esfera anda; as barras inclinam para acompanhar (Z = altura)."}
       </p>
       {note && <p className="coords-help"><strong>{note}</strong></p>}
       {err && <p className="coords-err" role="alert">{err}</p>}
@@ -265,7 +268,7 @@ function BoardSelected() {
       </dl>
       <div className="board-fields">
         <label>Centro X <NumField value={cx} onCommit={(v) => err(st.setBoardCenterOf(id, v, cz))} title="Centro da chapa em X, em módulos (decimais valem)" width={64} suffix=" M" /></label>
-        <label>Centro Z <NumField value={cz} onCommit={(v) => err(st.setBoardCenterOf(id, cx, v))} title="Centro da chapa em Z, em módulos (decimais valem)" width={64} suffix=" M" /></label>
+        <label>Centro Y <NumField value={cz} onCommit={(v) => err(st.setBoardCenterOf(id, cx, v))} title="Centro da chapa em Y, em módulos (decimais valem)" width={64} suffix=" M" /></label>
         <p className="board-mm">= ({fmt(cx * M, 1)}; {fmt(cz * M, 1)}) mm</p>
         <label className="stack">Giro (graus, anti-horário visto de cima)
           <span className="board-gap">
@@ -370,6 +373,15 @@ function Summary() {
         <Row k="Planta" v={`${fmt(span(xs), 0)} × ${fmt(span(zs), 0)} mm`} />
         <Row k="Altura" v={`${fmt(span(ys), 0)} mm`} />
         <Row k="Níveis" v={levels} />
+        {inventory.unlimited && (() => {
+          const need = minKits(catalog, used);
+          return (
+            <Row
+              k="Kits necessários (mínimo)"
+              v={<>{need.total ? kitsText(need.kits) : "—"}{need.total ? ` (${need.total} ${need.total === 1 ? "caixa" : "caixas"})` : ""}{need.missing.length ? <span className="bad"> · fora dos kits: {need.missing.join(", ")}</span> : null}</>}
+            />
+          );
+        })()}
       </dl>
       <table className="bom">
         <thead>
@@ -421,15 +433,15 @@ function Repeat({ size }: { size: Vec3 }) {
       <h3>Repetir</h3>
       <div className="coords-row four">
         {field(0, "X")}
-        {field(1, "Y")}
-        {field(2, "Z")}
+        {field(2, "Y")}
+        {field(1, "Z")}
         <label className="coord">
           <span>Vezes</span>
           <input value={times} inputMode="numeric" onChange={(e) => setTimes(e.target.value)} onKeyDown={(e) => e.key === "Enter" && apply()} aria-label="Quantas cópias" />
         </label>
       </div>
       <button onClick={apply} className="repeat-go">Criar cópias</button>
-      <p className="coords-help">Cada cópia anda X, Y, Z módulos da anterior. Esferas no mesmo lugar viram uma só: um vão repetido com X = largura dele divide os pilares.</p>
+      <p className="coords-help">Cada cópia anda X, Y, Z módulos da anterior (Z = altura). Esferas no mesmo lugar viram uma só: um vão repetido com X = largura dele divide os pilares.</p>
       {err && <p className="coords-err" role="alert">{err}</p>}
     </div>
   );
@@ -501,7 +513,7 @@ function MultiSelected() {
         </tbody>
       </table>
       <div className="actions" style={{ marginTop: 14 }}>
-        <button onClick={() => useApp.getState().copySelection()} title="Ctrl+C; depois Ctrl+V cola (R gira, X/Z espelha, ↑/↓ altura)">Copiar peças</button>
+        <button onClick={() => useApp.getState().copySelection()} title="Ctrl+C; depois Ctrl+V cola (R gira, X/Y espelha, ↑/↓ altura)">Copiar peças</button>
         <button onClick={() => useApp.getState().startMoveSelection()} title="M ou Ctrl+X: leva as peças para outro lugar">Mover</button>
       </div>
       <Repeat size={[span(0) / M, span(1) / M, span(2) / M]} />

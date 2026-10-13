@@ -72,6 +72,15 @@ export const boardsOf = (model: Model): Board[] => (model.boards?.length ? model
 
 export const emptyModel = (): Model => ({ nodes: {}, members: {}, plates: {}, connectors: {}, nextId: 1 });
 
+/**
+ * Coordenadas mostradas ao usuário: Z é a altura. Por dentro (e nos arquivos .mola) o modelo continua com y para cima;
+ * na tela, (X, Y, Z) = (x, z, y). A troca é a mesma nos dois sentidos.
+ */
+export const toDisp = (p: Vec3): Vec3 => [p[0], p[2], p[1]];
+export const fromDisp = toDisp;
+/** Nome do eixo interno na tela: x → X, y → Z (altura), z → Y. */
+export const DISP_AXIS = ["X", "Z", "Y"] as const;
+
 export const EPS = 1e-6;
 /** Tolerância para comparar direções unitárias (posições inclinadas são arredondadas a 1e-4). */
 export const DIR_TOL = 1e-4;

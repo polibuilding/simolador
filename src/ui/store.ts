@@ -4,7 +4,7 @@ import { catalog } from "../core/catalog";
 import { codeOf, moveGroup, nodeMoveNearest, removeMany, removeSelection, rotateSelection, selAfter, type Sel } from "../core/edit";
 import { createHistory, push, redo, undo, type History } from "../core/history";
 import { defaultInventory, type InventoryConfig } from "../core/inventory";
-import { boardsOf, emptyModel, membersAt, rotateNodes, rotYRad, type Model, type Vec3 } from "../core/model";
+import { boardsOf, emptyModel, membersAt, rotateNodes, rotYRad, toDisp, type Model, type Vec3 } from "../core/model";
 import { overlappingNodes, type Check } from "../core/rules";
 import { fromFile, toFile, type SheetMeta } from "../core/serialization";
 import { applyCandidate, type Candidate } from "../core/snapping";
@@ -51,6 +51,9 @@ interface State {
   setRender: (on: boolean) => void;
   shadows: boolean;
   setShadows: (on: boolean) => void;
+  /** vista paralela (projeção ortográfica) em vez de perspectiva */
+  ortho: boolean;
+  setOrtho: (on: boolean) => void;
   /** painel de atalhos do teclado */
   helpOpen: boolean;
   setHelpOpen: (on: boolean) => void;
@@ -232,6 +235,8 @@ export const useApp = create<State>((set, get) => ({
   render: readPref("simolador:render", false),
   setRender: (render) => (writePref("simolador:render", render), set({ render })),
   shadows: readPref("simolador:sombras", true),
+  ortho: readPref("simolador:paralela", false),
+  setOrtho: (ortho) => (writePref("simolador:paralela", ortho), set({ ortho, hint: ortho ? "Vista paralela: sem perspectiva, as medidas não encolhem com a distância (P)." : "Vista em perspectiva (P)." })),
   setShadows: (shadows) => (writePref("simolador:sombras", shadows), set({ shadows })),
   helpOpen: false,
   setHelpOpen: (helpOpen) => set({ helpOpen }),
@@ -566,7 +571,7 @@ export const useApp = create<State>((set, get) => ({
     const r = nodeMoveNearest(catalog, history.present, nodeId, target);
     if (!r.move) return { error: r.error };
     set({ history: push(history, r.move.model), hint: null });
-    const p = r.move.pos.map((v) => +v.toFixed(2)).join("; ");
+    const p = toDisp(r.move.pos).map((v) => +v.toFixed(2)).join("; ");
     return r.off && r.off > 0.01 ? { note: `As barras não chegam exatamente lá: foi para o ponto possível mais perto, (${p}).` } : {};
   },
   moveNodeTo: (nodeId, target) => {

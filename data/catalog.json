@@ -2,7 +2,7 @@
   "_meta": {
     "generatedBy": "scripts/gerar-dados.mjs",
     "source": "data/parametros.xlsx",
-    "generatedAt": "2026-10-08T19:50:51.155Z",
+    "generatedAt": "2026-10-13T19:29:33.150Z",
     "doNotEdit": "Arquivo gerado. Edite data/parametros.xlsx e rode npm run dados."
   },
   "schemaVersion": 2,
@@ -30,11 +30,12 @@
     "prancha_escala": "auto",
     "prancha_formato": "A3",
     "prancha_projeto": "DESAFIO POLI-USP 2026",
-    "angulo_minimo_membros_graus": 45,
+    "angulo_minimo_membros_graus": 40,
     "max_membros_por_plano": 8,
     "gc_encaixe_padrao": "grade",
     "tolerancia_encaixe_mm": 0.5,
-    "passo_inclinacao_graus": 15
+    "passo_inclinacao_graus": 15,
+    "gc_inclinacao_max_graus": 40
   },
   "pieces": [
     {

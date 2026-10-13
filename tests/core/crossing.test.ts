@@ -62,3 +62,15 @@ describe("cruzamentos", () => {
     }
   });
 });
+
+describe("G12: mola na GC até 40° da vertical", () => {
+  it("30° passa, 45° não (saindo da GC e chegando nela)", () => {
+    const m = mk({ g: [0, 0, 0] });
+    const at = (deg: number): [number, number, number] => [6 * Math.sin((deg * Math.PI) / 180), 6 * Math.cos((deg * Math.PI) / 180), 0];
+    expect(validateMember(catalog, inv, m, "B6", "g", at(30)).ok).toBe(true);
+    expect(validateMember(catalog, inv, m, "B6", "g", at(45)).errors[0]).toMatch(/no máximo 40° da vertical/);
+    // chegando na GC a partir de uma esfera
+    const m2 = mk({ g: [0, 0, 0], s: at(45) });
+    expect(validateMember(catalog, inv, m2, "B6", "s", [0, 0, 0]).errors.join(" ")).toMatch(/no máximo 40° da vertical/);
+  });
+});

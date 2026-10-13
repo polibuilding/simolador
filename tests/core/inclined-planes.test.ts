@@ -70,8 +70,9 @@ describe("guias da ligação de base", () => {
     m = addSupport(m, [9, 0, 3]).model;
     const y = supportGuides(catalog, inv, m).filter((g) => g.kind === "yellow");
     // (6; 3 + 5,196) — o de (6; 3 − 5,196) cai fora da chapa
-    expect(y.map((g) => g.pos)).toEqual([[6, 0, 8.1962]]);
-    expect(y[0].text).toMatch(/equilátero de B6/);
+    // com 40° de ângulo mínimo entram também triângulos B4–B6–B6 e parecidos; o equilátero continua lá
+    const eq = y.find((g) => g.pos.join(",") === "6,0,8.1962");
+    expect(eq?.text).toMatch(/equilátero de B6/);
   });
 });
 
