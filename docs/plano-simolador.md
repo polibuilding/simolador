@@ -40,7 +40,7 @@ Regras a validar (`rules.ts`): a lista completa, com a origem de cada regra, est
 
 - comprimento do membro igual à distância entre nós (tolerância em `parametros.xlsx`); três diagonais fixas, sem uso fora do vão nominal;
 - estoque configurável: o usuário escolhe quantos kits de cada tipo tem (Q03);
-- ângulo mínimo de 40° entre molas numa esfera (era 45° até 13/10; E13, E14); na GC, mola até 40° da vertical;
+- ângulo mínimo de 40° entre molas numa esfera (era 45° até 13/10; E13, E14); na GC, mola a pelo menos 40° da chapa (até 50° da vertical);
 - RC90: uma por canto entre dois membros a 90°; entre GC e pilar, uma, ou uma de cada lado se o usuário quiser (E04);
 - CC: exige esfera, liga dois membros alinhados (E05); CC90: vai sobre uma CC e trava o par perpendicular, formando um X (E06);
 - placa: liga nas 4 esferas do vão; barras no contorno recomendadas, com aviso se faltarem (E07, E08); horizontal ou vertical (E09);

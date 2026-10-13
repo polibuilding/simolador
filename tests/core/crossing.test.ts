@@ -63,14 +63,15 @@ describe("cruzamentos", () => {
   });
 });
 
-describe("G12: mola na GC até 40° da vertical", () => {
-  it("30° passa, 45° não (saindo da GC e chegando nela)", () => {
+describe("G12: mola na GC a pelo menos 40° da chapa (até 50° da vertical)", () => {
+  it("45° e 50° da vertical passam; 55° não (saindo da GC e chegando nela)", () => {
     const m = mk({ g: [0, 0, 0] });
     const at = (deg: number): [number, number, number] => [6 * Math.sin((deg * Math.PI) / 180), 6 * Math.cos((deg * Math.PI) / 180), 0];
-    expect(validateMember(catalog, inv, m, "B6", "g", at(30)).ok).toBe(true);
-    expect(validateMember(catalog, inv, m, "B6", "g", at(45)).errors[0]).toMatch(/no máximo 40° da vertical/);
+    expect(validateMember(catalog, inv, m, "B6", "g", at(45), { free: true }).ok).toBe(true);
+    expect(validateMember(catalog, inv, m, "B6", "g", at(50), { free: true }).ok).toBe(true);
+    expect(validateMember(catalog, inv, m, "B6", "g", at(55), { free: true }).errors[0]).toMatch(/no mínimo 40° com a chapa/);
     // chegando na GC a partir de uma esfera
-    const m2 = mk({ g: [0, 0, 0], s: at(45) });
-    expect(validateMember(catalog, inv, m2, "B6", "s", [0, 0, 0]).errors.join(" ")).toMatch(/no máximo 40° da vertical/);
+    const m2 = mk({ g: [0, 0, 0], s: at(60) });
+    expect(validateMember(catalog, inv, m2, "B6", "s", [0, 0, 0]).errors.join(" ")).toMatch(/no mínimo 40° com a chapa/);
   });
 });
