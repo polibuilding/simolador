@@ -70,6 +70,12 @@ function useShortcuts() {
       } else if (mod && k === "v") {
         e.preventDefault();
         st.startPaste();
+      } else if (st.tool.kind === "select" && st.selectedBoard && e.key.startsWith("Arrow")) {
+        // chapa selecionada: as setas movem nos eixos dela (1 M; Shift: 6 M; Alt ou Ctrl: 1/4 M)
+        e.preventDefault();
+        const step = e.shiftKey ? 6 : e.altKey || mod ? 0.25 : 1;
+        const d: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+        st.nudgeBoards(d[e.key]);
       } else if (st.tool.kind === "paste" && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
         e.preventDefault();
         st.pasteAdjust({ dy: (e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 6 : 1) });

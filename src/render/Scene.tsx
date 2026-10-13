@@ -373,6 +373,8 @@ function KeyCamera() {
 export function Scene() {
   const select = useApp((s) => s.select);
   const inertia = useApp((s) => s.inertia);
+  const render = useApp((s) => s.render);
+  const shadows = useApp((s) => s.shadows);
   return (
     <Canvas
       shadows
@@ -387,11 +389,13 @@ export function Scene() {
     >
       <color attach="background" args={["#eef1f0"]} />
       <SnapshotHook />
-      <ambientLight intensity={0.35} />
+      <ambientLight intensity={render ? 0.35 : 0.55} />
+      {/* modo simples: sem reflexos do estúdio; uma luz de céu/chão deixa as peças legíveis */}
+      {!render && <hemisphereLight args={["#ffffff", "#9aa3a0", 0.9]} />}
       <directionalLight
         position={[PLATE_W / 2 + 150, 520, PLATE_D / 2 + 220]}
-        intensity={1.6}
-        castShadow
+        intensity={render ? 1.6 : 1.1}
+        castShadow={shadows}
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-500}
         shadow-camera-right={500}
@@ -400,7 +404,7 @@ export function Scene() {
         shadow-camera-far={3000}
         shadow-bias={-0.0004}
       />
-      <Environment resolution={256}>
+      {render && <Environment resolution={256}>
         {/* fundo claro do "estúdio": dá o tom prateado ao aço */}
         <mesh scale={100} raycast={() => null}>
           <sphereGeometry args={[1, 32, 16]} />
@@ -409,8 +413,8 @@ export function Scene() {
         <Lightformer intensity={2} position={[0, 5, -9]} scale={[10, 10, 1]} />
         <Lightformer intensity={1.2} position={[-5, 1, -1]} rotation-y={Math.PI / 2} scale={[20, 1, 1]} />
         <Lightformer intensity={1.2} position={[10, 1, 0]} rotation-y={-Math.PI / 2} scale={[20, 1, 1]} />
-      </Environment>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[PLATE_W / 2, -3.01, PLATE_D / 2]} receiveShadow raycast={() => null}>
+      </Environment>}
+      <mesh visible={shadows} rotation={[-Math.PI / 2, 0, 0]} position={[PLATE_W / 2, -3.01, PLATE_D / 2]} receiveShadow raycast={() => null}>
         <planeGeometry args={[8000, 8000]} />
         <shadowMaterial opacity={0.12} />
       </mesh>

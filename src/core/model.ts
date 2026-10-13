@@ -52,6 +52,8 @@ export interface Board {
   z: number;
   /** giro em torno do eixo vertical, em graus (positivo = anti-horário visto de cima); a grade e os eixos da chapa giram junto */
   rot?: number;
+  /** nome dado pelo usuário (padrão: "Chapa N") */
+  name?: string;
   attach?: { to: string; side: "+x" | "-x" | "+z" | "-z" };
 }
 

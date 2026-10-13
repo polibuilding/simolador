@@ -14,8 +14,14 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
-## Próxima versão (já publicada, sem número próprio)
-- **Tab nos pontos amarelos e laranja**: com uma barra na mão e a esfera de partida escolhida, Tab percorre os pontos dela, do mais perto do cursor ao mais longe (Shift+Tab volta), sem precisar mirar; o rodapé diz "ponto 3 de 31". Mexer o cursor ou colocar a peça volta ao normal.
+## 1.9 — Vista simples e chapas soltas · 13/10/2026
+- **Sombras** e **Renderização** (caixas de marcar embaixo do cubo, junto de Enquadrar e Inércia). Padrão: peças simples (molas lisas, cores foscas, sem reflexos), mais leves; Renderização liga o metal com reflexos e a hélice das molas. As escolhas ficam guardadas no navegador.
+- **Chapas independentes**: a chapa criada pelo + não fica mais "ao lado da chapa X". Com a chapa selecionada, as **setas** movem nos eixos dela (1 módulo; Shift: 6; Alt ou Ctrl: 1/4), com a estrutura de cima.
+- Painel da chapa: **nome** editável (aparece no menu, nas pranchas e nos arquivos), **centro X e Z** em módulos (decimais valem) e **giro**.
+- **Ctrl+clique** soma chapas à seleção: o painel define a **distância entre elas** (0, 4, 6, 12 ou livre), na ordem em que foram escolhidas; a primeira fica parada. As setas movem todas juntas; Delete apaga todas. Uma estrutura que liga duas chapas anda junto quando as duas estão selecionadas.
+- Girar uma chapa que bateria em outra a afasta o mínimo, na direção entre os centros, e avisa.
+- **Tab nos pontos amarelos e laranja**: percorre os pontos da esfera de partida, do mais perto do cursor ao mais longe (Shift+Tab volta).
+- O menu da chapa na cena ficou só com as ações; os + ficam por cima dele.
 
 ## 1.8 — Chapas giradas, cruzamentos e atalhos · 09/10/2026
 - **Regras novas**: barras não se cruzam (nem barra com diagonal; duas diagonais em X podem); a esfera nova não cai em cima de uma barra ("mola não cruza bola"); RC90 não se cruzam e nenhuma peça passa por dentro de uma RC90. Valem ao colocar, mover, colar e girar chapas; os exemplos continuam válidos.
