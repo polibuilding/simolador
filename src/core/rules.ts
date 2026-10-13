@@ -176,13 +176,15 @@ const radiusOf = (cat: Catalog, code: string) =>
 /** Folga entre o centro de uma esfera e o eixo de uma peça. */
 const sphereClear = (cat: Catalog, code: string) => cat.settings.esfera_diametro_mm / 2 / cat.settings.modulo_mm + radiusOf(cat, code);
 
-/** G12: inclinação máxima (a partir da vertical) de uma mola presa na GC. */
-export const gcTiltMax = (cat: Catalog) => Number(cat.settings.gc_inclinacao_max_graus ?? 40);
-/** Erro se a mola que sai da GC na direção `dir` inclina demais (null se está ok). */
+/** G12: menor ângulo entre uma mola presa na GC e a chapa (a base). 40° → até 50° a partir da vertical. */
+export const gcMinBase = (cat: Catalog) => Number(cat.settings.gc_angulo_minimo_base_graus ?? 40);
+/** Erro se a mola que sai da GC na direção `dir` fica baixa demais (null se está ok). */
 function gcTiltError(cat: Catalog, dir: Vec3): string | null {
-  const max = gcTiltMax(cat);
-  const a = (Math.acos(Math.max(-1, Math.min(1, dot(norm(dir), UP)))) * 180) / Math.PI;
-  return a > max + 0.5 ? `Na ligação de base (GC) a mola inclina no máximo ${max}° da vertical; aqui seriam ${a.toFixed(0)}°.` : null;
+  const min = gcMinBase(cat);
+  const elev = (Math.asin(Math.max(-1, Math.min(1, norm(dir)[1]))) * 180) / Math.PI; // ângulo com a chapa
+  return elev < min - 0.5
+    ? `Na ligação de base (GC) a mola faz no mínimo ${min}° com a chapa (até ${90 - min}° a partir da vertical); aqui seriam ${elev.toFixed(0)}° com a chapa.`
+    : null;
 }
 
 /** C7: uma esfera em `p` (que não é ponta da peça) encostaria no meio de alguma peça? */
@@ -327,7 +329,7 @@ export function validateMember(
   if (cable && !target) errors.push("A diagonal liga duas esferas que já existem."); // D5
   const dir = scale(v, 1 / L);
   if (!cable) errors.push(...angleErrors(cat, model, fromId, dir, "origem"));
-  // G12: na GC a mola não inclina mais que gc_inclinacao_max_graus da vertical
+  // G12: na GC a mola faz pelo menos gc_angulo_minimo_base_graus com a chapa (até 50° da vertical)
   if (!cable && from.kind === "support") {
     const e = gcTiltError(cat, dir);
     if (e) errors.push(e);

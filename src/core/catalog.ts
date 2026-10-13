@@ -31,8 +31,8 @@ export interface Settings {
   chapa_modulos_y: number;
   chapa_espessura_mm: number;
   angulo_minimo_membros_graus: number;
-  /** inclinação máxima (graus, a partir da vertical) de uma mola presa na GC; sem o parâmetro, 40 */
-  gc_inclinacao_max_graus: number;
+  /** menor ângulo (graus) entre uma mola presa na GC e a chapa; sem o parâmetro, 40 (= até 50° da vertical) */
+  gc_angulo_minimo_base_graus: number;
   max_membros_por_plano: number;
   tolerancia_encaixe_mm: number;
   gc_encaixe_padrao: string;

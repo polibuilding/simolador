@@ -32,15 +32,22 @@ describe("pontos amarelos de barras (triângulos)", () => {
     expect(Object.keys(top!.model.members).length).toBe(5);
   });
 
-  it("B6: nada fecha na GC inclinando mais de 40°; nada abaixo da chapa; ângulos pequenos ficam de fora", () => {
+  it("B6: nada fecha na GC a menos de 40° da chapa; nada abaixo da chapa; ângulos pequenos ficam de fora", () => {
     const g = barTriangleGuides(catalog, inv, portico, "B6", "n3");
-    // o triângulo equilátero com o pilar pediria uma mola a 60° da vertical saindo da GC
+    // o triângulo equilátero com o pilar pediria uma mola a 30° da chapa saindo da GC
     expect(g.some((x) => x.closes.some((c) => c.fromId === "n1"))).toBe(false);
     // 6–6–12 é degenerado e 6–12–12 faria 29° com a viga na outra ponta
     expect(g.some((x) => x.closes.some((c) => c.fromId === "n4"))).toBe(false);
     for (const x of g) expect(x.bar.check.ok).toBe(true);
     for (const x of g) expect(x.pos[1]).toBeGreaterThan(0.4);
-    expect(barTriangleGuides(catalog, inv, portico, "B4", "n3")).toEqual([]);
+    // B4: triângulos isósceles B4–B4 no pilar de B6; a mola chega na GC a 48,6° da chapa (≥ 40°)
+    const b4 = barTriangleGuides(catalog, inv, portico, "B4", "n3");
+    expect(b4.length).toBe(4);
+    for (const x of b4) {
+      expect(x.text).toMatch(/isósceles B4–B4–B6/);
+      expect(x.closes).toEqual([{ code: "B4", fromId: "n1" }]);
+      expect((Math.asin(x.pos[1] / 4) * 180) / Math.PI).toBeGreaterThanOrEqual(40);
+    }
   });
 
   it("isósceles: B12 até um ponto a B6 da outra esfera (sem viga entre elas)", () => {
