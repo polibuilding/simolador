@@ -9,6 +9,7 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
       ["Shift + W A S D", "arrastar a vista"],
       ["F", "enquadrar a estrutura"],
       ["B", "inércia da vista (liga/desliga o freio)"],
+      ["P", "vista paralela / perspectiva"],
     ],
   },
   {

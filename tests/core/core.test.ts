@@ -123,3 +123,14 @@ describe("arquivo .mola e histórico", () => {
     expect(Object.keys(h.present.members)).toHaveLength(3);
   });
 });
+
+import { minKits } from "../../src/core/inventory";
+describe("kits mínimos (modo sem limite)", () => {
+  it("cobre as peças com o menor número de caixas", () => {
+    // 18 B4 só existem no Kit 2; 40 B6 = 24 (K1) + 30 (K2) ou 2× K2
+    expect(minKits(catalog, { B4: 18 }).kits).toEqual({ 2: 1 });
+    expect(minKits(catalog, { B6: 40, B12: 6 }).total).toBe(2);
+    expect(minKits(catalog, { C: 40 }).total).toBe(3); // 12 + 18 por caixa
+    expect(minKits(catalog, {}).total).toBe(0);
+  });
+});

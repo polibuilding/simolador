@@ -4,7 +4,7 @@ import type { InventoryConfig } from "./inventory";
 import { boardAt, boardSize, frameRadAt, fromBoardLocal, nearestBoard, toBoardLocal } from "./boards";
 import {
   AXES, DEFAULT_BOARD, DIR_TOL, EPS, UP, type Board, type Model, boardsOf, type Vec3, add, addConnector, addMember, addPlate, addSupport, canonicalDir, cross, dot,
-  findNodeAt, len, membersAt, directionFrom, norm, plateKey, rotDir, samePos, scale, sidesAround, sub,
+  findNodeAt, len, membersAt, directionFrom, norm, plateKey, rotDir, samePos, scale, sidesAround, sub, toDisp,
 } from "./model";
 import {
   inclineStep, validateConnector, validateMember, validatePlate, validateSupport,
@@ -441,7 +441,7 @@ export function barTriangleGuides(cat: Catalog, inv: InventoryConfig, model: Mod
   }
 
   const fmt = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
-  const where = (p: Vec3) => `(${p.map(fmt).join("; ")})`;
+  const where = (p: Vec3) => `(${toDisp(p).map(fmt).join("; ")})`;
   const kind = (g: { code: string; span: number; dAB: number }) => {
     const sides = [L, g.span, g.dAB];
     const eq = (a: number, b: number) => Math.abs(a - b) <= tol;

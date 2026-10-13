@@ -14,6 +14,14 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.10 — Vista paralela, Z para cima e 40° · 13/10/2026
+- **Vista paralela** (caixa embaixo do cubo, tecla P): projeção sem perspectiva para modelar; a troca mantém a direção e o enquadramento. Fica guardada no navegador.
+- **Z é a altura** na tela: painéis, coordenadas, mensagens e eixos do canto mostram (X, Y, Z) com Z para cima. Os arquivos .mola não mudam (por dentro, y continua para cima). Ao colar, X e Y espelham (Z também vale, como antes).
+- **Ângulo mínimo entre molas: 40°** (era 45°), na planilha `parametros.xlsx`.
+- **Mola na GC até 40° da vertical** (parâmetro novo `gc_inclinacao_max_graus`): o aparato rígido em volta da esfera não deixa inclinar mais.
+- Pontos amarelos e laranja com os 40°: pirâmides de base triangular de B6 com lados de B4 (tetraedro baixo) num clique. Pirâmides de base pequena com lados grandes (B4 com B6, B6 com B12) continuam fora: no topo, as molas vizinhas ficam abaixo de 40°.
+- **Kits mínimos**: no modo sem limite, o botão de estoque e o resumo mostram quantas caixas, no mínimo, a estrutura pede (ex.: 1× K1 + 1× K2).
+
 ## 1.9 — Vista simples e chapas soltas · 13/10/2026
 - **Sombras** e **Renderização** (caixas de marcar embaixo do cubo, junto de Enquadrar e Inércia). Padrão: peças simples (molas lisas, cores foscas, sem reflexos), mais leves; Renderização liga o metal com reflexos e a hélice das molas. As escolhas ficam guardadas no navegador.
 - **Chapas independentes**: a chapa criada pelo + não fica mais "ao lado da chapa X". Com a chapa selecionada, as **setas** movem nos eixos dela (1 módulo; Shift: 6; Alt ou Ctrl: 1/4), com a estrutura de cima.

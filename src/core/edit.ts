@@ -3,7 +3,7 @@ import type { Catalog } from "./catalog";
 import type { InventoryConfig } from "./inventory";
 import { frameRadAt } from "./boards";
 import {
-  AXES, boardsOf, rotDir, type Member, type Model, type Vec3, add, componentOf, cross, directionFrom, dot, len, membersAt, norm, removeConnector,
+  AXES, boardsOf, rotDir, toDisp, type Member, type Model, type Vec3, add, componentOf, cross, directionFrom, dot, len, membersAt, norm, removeConnector,
   removeMember, removeNode, removePlate, samePos, scale, sub, transformNodes,
 } from "./model";
 import { inclineStep as inclineStepOf, segmentHitsPlate, validateMovedModel, type Check } from "./rules";
@@ -163,7 +163,7 @@ export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): Nod
   const node = model.nodes[nodeId];
   if (!node) return { options: [], locked: "Nó não encontrado." };
   const s = cat.settings;
-  const fmtP = (p: Vec3) => `(${p.map((v) => +v.toFixed(2)).join("; ")})`;
+  const fmtP = (p: Vec3) => `(${toDisp(p).map((v) => +v.toFixed(2)).join("; ")})`;
 
   // componentes do resto da estrutura sem o nó: as sem GC vão junto com ele
   const adj = new Map<string, Set<string>>();

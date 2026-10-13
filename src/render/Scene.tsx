@@ -294,7 +294,7 @@ function BoardsView() {
 /** Câmera: enquadrar a estrutura e vistas prontas (A = frente, B = esquerda, topo). */
 function CameraRig() {
   const cmd = useApp((s) => s.camera);
-  const { camera, controls } = useThree();
+  const { camera, controls, size } = useThree();
   useEffect(() => {
     if (!controls) return;
     const ctl = controls as unknown as { target: THREE.Vector3; update: () => void };
@@ -310,8 +310,9 @@ function CameraRig() {
     box.expandByScalar(25);
     const center = box.getCenter(new THREE.Vector3());
     const radius = box.getSize(new THREE.Vector3()).length() / 2;
-    const fov = ((camera as THREE.PerspectiveCamera).fov * Math.PI) / 180;
+    const fov = (FOV * Math.PI) / 180;
     const dist = radius / Math.sin(fov / 2);
+    const ortho = (camera as THREE.OrthographicCamera).isOrthographicCamera === true;
     const dirs: Record<string, THREE.Vector3> = {
       iso: new THREE.Vector3(0.62, 0.62, 0.9),
       fit: camera.position.clone().sub(ctl.target),
@@ -322,9 +323,65 @@ function CameraRig() {
     const dir = dirs[cmd.view].normalize();
     ctl.target.copy(center);
     camera.position.copy(center.clone().add(dir.multiplyScalar(dist)));
+    if (ortho) {
+      // paralela: o zoom faz a esfera que envolve a estrutura caber na tela
+      const c = camera as THREE.OrthographicCamera;
+      c.zoom = Math.min(size.width, size.height) / (2 * radius);
+    }
     camera.updateProjectionMatrix();
     ctl.update();
   }, [cmd, camera, controls]);
+  return null;
+}
+
+/** abertura da câmera em perspectiva (graus) */
+const FOV = 35;
+
+/**
+ * Vista paralela × perspectiva: troca a câmera da cena mantendo a direção, o alvo e o tamanho aparente
+ * (a altura visível no alvo é a mesma nas duas).
+ */
+function Projection() {
+  const ortho = useApp((s) => s.ortho);
+  const set = useThree((s) => s.set);
+  const get = useThree((s) => s.get);
+  const controls = useThree((s) => s.controls);
+  const pending = useRef<THREE.Vector3 | null>(null);
+  useEffect(() => {
+    const { camera: prev, size } = get();
+    const ctl = get().controls as unknown as { target: THREE.Vector3 } | null;
+    const target = ctl ? ctl.target.clone() : new THREE.Vector3(PLATE_W / 2, 40, PLATE_D / 2);
+    const isOrtho = (prev as THREE.OrthographicCamera).isOrthographicCamera === true;
+    if (ortho === isOrtho) return;
+    const tanHalf = Math.tan(((FOV / 2) * Math.PI) / 180);
+    const dir = prev.position.clone().sub(target);
+    let cam: THREE.Camera;
+    if (ortho) {
+      const visH = 2 * dir.length() * tanHalf;
+      const c = new THREE.OrthographicCamera(-size.width / 2, size.width / 2, size.height / 2, -size.height / 2, -60000, 60000);
+      c.zoom = size.height / Math.max(1, visH);
+      c.position.copy(prev.position);
+      cam = c;
+    } else {
+      const visH = size.height / Math.max(1e-6, (prev as THREE.OrthographicCamera).zoom);
+      const d = Math.min(12000, Math.max(40, visH / (2 * tanHalf)));
+      const c = new THREE.PerspectiveCamera(FOV, size.width / size.height, 1, 60000);
+      c.position.copy(target.clone().add(dir.setLength(d)));
+      cam = c;
+    }
+    cam.up.copy(prev.up);
+    cam.lookAt(target);
+    (cam as THREE.PerspectiveCamera).updateProjectionMatrix();
+    pending.current = target; // os controles nascem de novo com a câmera: o alvo volta no efeito abaixo
+    set({ camera: cam as THREE.PerspectiveCamera });
+  }, [ortho, get, set]);
+  useEffect(() => {
+    const ctl = controls as unknown as { target: THREE.Vector3; update: () => void } | null;
+    if (!ctl || !pending.current) return;
+    ctl.target.copy(pending.current);
+    pending.current = null;
+    ctl.update();
+  }, [controls]);
   return null;
 }
 
@@ -348,7 +405,8 @@ function KeyCamera() {
       if (e.shiftKey) {
         const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
         const up = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1);
-        const step = off.length() * 0.08;
+        const oc = camera as THREE.OrthographicCamera;
+        const step = oc.isOrthographicCamera ? ((oc.top - oc.bottom) / oc.zoom) * 0.08 : off.length() * 0.08;
         const d = k === "a" ? right.multiplyScalar(-step) : k === "d" ? right.multiplyScalar(step) : k === "w" ? up.multiplyScalar(step) : up.multiplyScalar(-step);
         camera.position.add(d);
         ctl.target.add(d);
@@ -379,7 +437,7 @@ export function Scene() {
     <Canvas
       shadows
       dpr={[1, 2]}
-      camera={{ position: [PLATE_W / 2 + 230, 260, PLATE_D / 2 + 330], fov: 35, near: 1, far: 60000 }}
+      camera={{ position: [PLATE_W / 2 + 230, 260, PLATE_D / 2 + 330], fov: FOV, near: 1, far: 60000 }}
       onPointerMissed={(e) => {
         // o clique que encerra um retângulo de seleção não apaga a seleção
         if (performance.now() - useApp.getState().boxEndedAt < 250) return;
@@ -439,8 +497,10 @@ export function Scene() {
       </GizmoHelper>
       {/* referência de eixos no canto inferior esquerdo (Y = vertical); clicar num eixo olha por ele */}
       <GizmoHelper alignment="bottom-left" margin={[62, 62]} renderPriority={2}>
-        <GizmoViewport axisColors={["#e5484d", "#19a974", "#3d8bff"]} labelColor="#ffffff" axisHeadScale={0.95} font="bold 17px Arial" />
+        {/* Z é a altura: o eixo vertical da cena se chama Z (azul) e o de profundidade, Y (verde) */}
+        <GizmoViewport axisColors={["#e5484d", "#3d8bff", "#19a974"]} labels={["X", "Z", "Y"]} labelColor="#ffffff" axisHeadScale={0.95} font="bold 17px Arial" />
       </GizmoHelper>
+      <Projection />
       <KeyCamera />
       <OrbitControls
         makeDefault

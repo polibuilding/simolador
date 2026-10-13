@@ -32,7 +32,7 @@ Todo o núcleo trabalha em **módulos (M)**. Milímetros só entram na hora de d
 1. O usuário arrasta uma peça da paleta para a cena.
 2. Enquanto arrasta, o programa procura o nó mais próximo do cursor (raycast) que tenha conexão livre.
 3. Para aquele nó, calcula as posições candidatas da outra ponta: todos os pontos a exatamente L módulos (B6 → 6 nas três direções; D6x12 → vetores (6,12,0) e permutações).
-4. Mostra uma "peça fantasma": verde se o encaixe é válido, vermelha se não é (colisão, estoque esgotado, ângulo menor que 45° com outra peça).
+4. Mostra uma "peça fantasma": verde se o encaixe é válido, vermelha se não é (colisão, estoque esgotado, ângulo menor que 40° com outra peça).
 5. Ao soltar, cria o membro e, se não existir, a esfera na outra ponta.
 6. Atalhos: girar a candidata (R), alternar candidatas (Tab), desfazer (Ctrl+Z).
 
@@ -40,7 +40,7 @@ Regras a validar (`rules.ts`): a lista completa, com a origem de cada regra, est
 
 - comprimento do membro igual à distância entre nós (tolerância em `parametros.xlsx`); três diagonais fixas, sem uso fora do vão nominal;
 - estoque configurável: o usuário escolhe quantos kits de cada tipo tem (Q03);
-- ângulo mínimo de 45° entre peças numa esfera, o que dá no máximo 8 por plano (E13, E14);
+- ângulo mínimo de 40° entre molas numa esfera (era 45° até 13/10; E13, E14); na GC, mola até 40° da vertical;
 - RC90: uma por canto entre dois membros a 90°; entre GC e pilar, uma, ou uma de cada lado se o usuário quiser (E04);
 - CC: exige esfera, liga dois membros alinhados (E05); CC90: vai sobre uma CC e trava o par perpendicular, formando um X (E06);
 - placa: liga nas 4 esferas do vão; barras no contorno recomendadas, com aviso se faltarem (E07, E08); horizontal ou vertical (E09);
@@ -222,7 +222,7 @@ Análise estrutural: fora do escopo (Q09).
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0`, `v1.1`…).
 
-- **1.x — geométrica** (atual: 1.9): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.10): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: o módulo extra ajustável.
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
