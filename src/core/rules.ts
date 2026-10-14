@@ -1,9 +1,10 @@
 // Regras de encaixe. Numeração conforme docs/regras-de-encaixe.md.
 // Nenhum número fixo aqui: tudo vem de catalog.settings (data/parametros.xlsx).
 import type { Catalog } from "./catalog";
-import { remaining, type InventoryConfig } from "./inventory";
+import { available, remaining, type InventoryConfig } from "./inventory";
 import { boardAt, frameRadAt } from "./boards";
 import { pointSegDist, polygonsCross, rc90Outline, segmentHitsPolygon, segSegDist } from "./geom";
+import { ropeInfo, ropeMinMm, ropePlan, ROPE, ROPE_CLIP, ROPE_CONN, stiffenerFor, ballsPerRoll, ropeSpec } from "./rope";
 import {
   DIR_TOL, EPS, UP, type Model, boardsOf, type Vec3, type Member, add, cross, dot, findNodeAt, len, membersAt,
   directionFrom, memberAlong, norm, plateKey, rotYRad, samePos, scale, sub,
@@ -18,6 +19,9 @@ export interface Check {
 const result = (errors: string[], warnings: string[] = []): Check => ({ ok: errors.length === 0, errors, warnings });
 const typeOf = (cat: Catalog, code: string) => cat.pieces[code]?.type;
 const isBarM = (cat: Catalog) => (m: Member) => typeOf(cat, m.code) === "bar";
+/** peças finas (diagonal ou cabo de bolinhas): podem se cruzar entre si, não com molas */
+const isThin = (cat: Catalog, code: string) => typeOf(cat, code) === "cable" || typeOf(cat, code) === "rope";
+const thinName = (cat: Catalog, code: string) => (typeOf(cat, code) === "rope" ? "um cabo" : "uma diagonal");
 
 function stockErrors(cat: Catalog, inv: InventoryConfig, model: Model, code: string): string[] {
   return remaining(cat, inv, model, code) < 1 ? [`Acabaram as ${code} do estoque.`] : [];
@@ -72,7 +76,7 @@ function angleErrors(cat: Catalog, model: Model, nodeId: string, dir: Vec3, wher
 }
 
 /** C1: o segmento não pode sobrepor um membro colinear nem atravessar um nó. */
-function collisionErrors(cat: Catalog, model: Model, a: Vec3, b: Vec3, fromId: string, targetId?: string, cable = false): string[] {
+function collisionErrors(cat: Catalog, model: Model, a: Vec3, b: Vec3, fromId: string, targetId?: string, cable: boolean | "rope" = false): string[] {
   const s = cat.settings;
   const d = sub(b, a);
   const L = len(d);
@@ -98,7 +102,8 @@ function collisionErrors(cat: Catalog, model: Model, a: Vec3, b: Vec3, fromId: s
     }
   }
   // C5: a peça não passa por dentro de uma esfera (folga = raio da esfera + raio da mola ou do cabo)
-  const clear = (s.esfera_diametro_mm / 2 + (cable ? s.cabo_diametro_mm : s.barra_diametro_mm) / 2) / s.modulo_mm;
+  const thinD = cable === "rope" ? Number(s.cabo_bolinha_mm ?? 2.4) : s.cabo_diametro_mm;
+  const clear = (s.esfera_diametro_mm / 2 + (cable ? thinD : s.barra_diametro_mm) / 2) / s.modulo_mm;
   for (const n of Object.values(model.nodes)) {
     if (n.id === fromId || n.id === targetId) continue;
     const { t, perp } = onSegment(n.pos);
@@ -110,16 +115,16 @@ function collisionErrors(cat: Catalog, model: Model, a: Vec3, b: Vec3, fromId: s
     if (hit) return [hit];
   }
   // C3: molas não se cruzam (nem mola com diagonal); duas diagonais podem se cruzar (cabos finos, em X)
-  const rNew = ((cable ? s.cabo_diametro_mm : s.barra_diametro_mm) / 2) / s.modulo_mm;
+  const rNew = ((cable ? thinD : s.barra_diametro_mm) / 2) / s.modulo_mm;
   for (const m of Object.values(model.members)) {
     if (m.a === fromId || m.b === fromId || (targetId && (m.a === targetId || m.b === targetId))) continue;
-    const other = typeOf(cat, m.code) === "cable";
+    const other = isThin(cat, m.code);
     if (cable && other) continue;
     const pa = model.nodes[m.a].pos;
     const pb = model.nodes[m.b].pos;
     if (samePos(pa, b, 1e-3) || samePos(pb, b, 1e-3) || samePos(pa, a, 1e-3) || samePos(pb, a, 1e-3)) continue;
     if (segSegDist(a, b, pa, pb) < rNew + radiusOf(cat, m.code) - 1e-6) {
-      return [cable ? "A diagonal cruzaria uma barra." : other ? "A barra cruzaria uma diagonal." : "A barra cruzaria outra barra."];
+      return [cable === "rope" ? "O cabo cruzaria uma barra." : cable ? "A diagonal cruzaria uma barra." : other ? `A barra cruzaria ${thinName(cat, m.code)}.` : "A barra cruzaria outra barra."];
     }
   }
   for (const m of Object.values(model.members)) {
@@ -172,7 +177,8 @@ export function inclinedPanel(model: Model, p: Vec3, q: Vec3, a: number, b: numb
 /** Ângulo (graus) abaixo do qual duas peças disputam o mesmo ponto de ligação na esfera. */
 /** Raio da peça (módulos): mola ou cabo. */
 const radiusOf = (cat: Catalog, code: string) =>
-  (typeOf(cat, code) === "cable" ? cat.settings.cabo_diametro_mm : cat.settings.barra_diametro_mm) / 2 / cat.settings.modulo_mm;
+  (typeOf(cat, code) === "rope" ? Number(cat.settings.cabo_bolinha_mm ?? 2.4) : typeOf(cat, code) === "cable" ? cat.settings.cabo_diametro_mm : cat.settings.barra_diametro_mm) /
+  2 / cat.settings.modulo_mm;
 /** Folga entre o centro de uma esfera e o eixo de uma peça. */
 const sphereClear = (cat: Catalog, code: string) => cat.settings.esfera_diametro_mm / 2 / cat.settings.modulo_mm + radiusOf(cat, code);
 
@@ -195,7 +201,7 @@ function sphereOnMember(cat: Catalog, model: Model, p: Vec3, skipNode?: string):
     const b = model.nodes[m.b].pos;
     if (samePos(a, p, 1e-3) || samePos(b, p, 1e-3)) continue;
     if (pointSegDist(p, a, b) < sphereClear(cat, m.code) - 1e-6) {
-      return typeOf(cat, m.code) === "cable" ? "A esfera ficaria em cima de uma diagonal." : "A esfera ficaria em cima de uma barra.";
+      return isThin(cat, m.code) ? `A esfera ficaria em cima de ${thinName(cat, m.code)}.` : "A esfera ficaria em cima de uma barra.";
     }
   }
   return null;
@@ -455,7 +461,7 @@ export function validatePlate(cat: Catalog, inv: InventoryConfig, model: Model, 
       const pa = model.nodes[m.a].pos;
       const pb = model.nodes[m.b].pos;
       if (segmentHitsPlate(pa, pb, g.corners)) {
-        errors.push(isCable ? "Há uma diagonal nesse vão: placa e diagonal usam os mesmos pontos das esferas." : "Uma barra atravessa esse vão.");
+        errors.push(isCable ? "Há uma diagonal nesse vão: placa e diagonal usam os mesmos pontos das esferas." : typeOf(cat, m.code) === "rope" ? "Um cabo atravessa esse vão." : "Uma barra atravessa esse vão.");
         break;
       }
       if (isCable) {
@@ -520,13 +526,12 @@ export function validateConnector(cat: Catalog, inv: InventoryConfig, model: Mod
         errors.push("Essa RC90 cruzaria outra RC90.");
       }
       const hitM = Object.values(model.members).find((m) => segmentHitsPolygon(model.nodes[m.a].pos, model.nodes[m.b].pos, poly));
-      if (hitM) errors.push(typeOf(cat, hitM.code) === "cable" ? "Uma diagonal passa por esse canto: a RC90 não cabe." : "Uma barra passa por esse canto: a RC90 não cabe.");
+      if (hitM) errors.push(isThin(cat, hitM.code) ? `${thinName(cat, hitM.code).replace(/^u/, "U")} passa por esse canto: a RC90 não cabe.` : "Uma barra passa por esse canto: a RC90 não cabe.");
     }
     // L7: canto por onde sai uma diagonal não recebe RC90
-    const cables = membersAt(model, spec.node).filter((m) => cat.pieces[m.code]?.type === "cable");
-    if (cables.some((m) => inRc90Corner(spec.dirs, directionFrom(model, m, spec.node)))) {
-      errors.push("Nesse canto sai uma diagonal: a RC90 não cabe.");
-    }
+    const cables = membersAt(model, spec.node).filter((m) => isThin(cat, m.code));
+    const out = cables.find((m) => inRc90Corner(spec.dirs, directionFrom(model, m, spec.node)));
+    if (out) errors.push(`Nesse canto sai ${thinName(cat, out.code)}: a RC90 não cabe.`);
   } else if (spec.code === "CC" || spec.code === "CC90") {
     const ax = spec.dirs[0];
     if (!ax || !barAlong(ax) || !barAlong(scale(ax, -1))) errors.push(`A ${spec.code} precisa de duas barras alinhadas no nó.`);
@@ -611,7 +616,8 @@ export function validateMovedModel(cat: Catalog, model: Model, moved: Set<string
       }
     }
     const others = { ...model, members: Object.fromEntries(Object.entries(model.members).filter(([k]) => k !== m.id)) };
-    errors.push(...collisionErrors(cat, others, a, b, m.a, m.b, cat.pieces[m.code]?.type === "cable"));
+    errors.push(...collisionErrors(cat, others, a, b, m.a, m.b, typeOf(cat, m.code) === "rope" ? "rope" : typeOf(cat, m.code) === "cable"));
+    if (typeOf(cat, m.code) === "rope" && !ropeInfo(cat, a, b)) errors.push("Um cabo ficaria curto demais para as ligações das pontas.");
   }
   return result([...new Set(errors)]);
 }
@@ -625,4 +631,79 @@ export function overlappingNodes(cat: Catalog, model: Model): [string, string][]
     for (let j = i + 1; j < ns.length; j++) if (len(sub(ns[i].pos, ns[j].pos)) < minD) out.push([ns[i].id, ns[j].id]);
   }
   return out;
+}
+
+// ---------------- Cabo e enrijecedor (Kit 3) ----------------
+
+/**
+ * K1–K6: cabo de bolinhas entre duas esferas que já existem (dois cliques). O pedaço sai da distância entre elas;
+ * as ligações de cabo (CABLE C) e os clipes (CABLE CLIP C) das pontas entram sozinhos.
+ */
+export function validateRope(cat: Catalog, inv: InventoryConfig, model: Model, aId: string, bId: string): Check {
+  const s = cat.settings;
+  const errors: string[] = [];
+  const A = model.nodes[aId];
+  const B = model.nodes[bId];
+  if (!A || !B) return result(["Escolha duas esferas."]);
+  if (aId === bId) return result(["Escolha outra esfera para a outra ponta do cabo."]);
+  if (Object.values(model.members).some((m) => (m.a === aId && m.b === bId) || (m.a === bId && m.b === aId))) {
+    return result(["Já existe uma peça entre essas duas esferas."]);
+  }
+  const fmt = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+  // K1: comprimento mínimo (as duas ligações de cabo e os clipes já ocupam um tanto)
+  const info = ropeInfo(cat, A.pos, B.pos);
+  if (!info) {
+    const d = len(sub(B.pos, A.pos)) * s.modulo_mm;
+    return result([`Curto demais para um cabo: as ligações das pontas pedem ${fmt(ropeMinMm(cat))} mm entre os centros das esferas; aqui são ${fmt(d)} mm.`]);
+  }
+  if (onGround(A.pos, B.pos)) errors.push("Nada pode ficar deitado na chapa."); // G6
+  // K2: lugar da CABLE C em cada esfera (ângulo mínimo com as outras peças)
+  const minA = Number(s.cabo_angulo_minimo_graus ?? 20);
+  const d = norm(sub(B.pos, A.pos));
+  for (const [id, dir] of [[aId, d], [bId, scale(d, -1)]] as const) {
+    for (const m of membersAt(model, id)) {
+      const ang = angleDeg(directionFrom(model, m, id), dir);
+      if (ang < minA - 0.5) {
+        errors.push(`O cabo ficaria a ${ang.toFixed(0)}° de outra peça na esfera (mínimo ${minA}°): a ligação de cabo não teria lugar.`);
+        break;
+      }
+    }
+    if (Object.values(model.connectors).some((c) => c.node === id && c.code === "RC90" && inRc90Corner(c.dirs, dir))) {
+      errors.push("O cabo sairia pelo canto de uma RC90.");
+    }
+  }
+  // K3: não atravessa esferas nem molas (pode cruzar diagonais e outros cabos)
+  errors.push(...collisionErrors(cat, model, A.pos, B.pos, aId, bId, "rope"));
+  // K4: não atravessa placas nem RC90
+  if (Object.values(model.plates).some((p) => segmentHitsPlate(A.pos, B.pos, p.corners.map((id) => model.nodes[id].pos)))) errors.push("O cabo atravessaria uma placa.");
+  if (rc90Polys(cat, model).some(({ poly }) => segmentHitsPolygon(A.pos, B.pos, poly))) errors.push("O cabo passaria por dentro de uma RC90.");
+  // K5: estoque — cabo pelos rolos (plano de corte) e as peças das pontas
+  if (!inv.unlimited) {
+    const rolls = available(cat, inv, ROPE);
+    if (rolls < 1) errors.push("Não há cabo no estoque: o cabo vem no Kit 3.");
+    else {
+      const plan = ropePlan(cat, model, { id: "_novo", balls: info.balls, cutMm: info.cutMm });
+      const cap = ballsPerRoll(ropeSpec(cat));
+      if (info.balls > cap) errors.push(`Esse cabo pede ${info.balls} bolinhas; um rolo inteiro tem ${cap}.`);
+      else if (plan.rolls.length > rolls) {
+        errors.push(`Acabou o cabo: esse pedaço (${info.balls} bolinhas) não cabe no que sobrou ${rolls > 1 ? `dos ${rolls} rolos` : "do rolo"}.`);
+      }
+    }
+    for (const code of [ROPE_CONN, ROPE_CLIP]) {
+      if (remaining(cat, inv, model, code) < 2) errors.push(`Acabaram as ${cat.pieces[code]?.name ?? code} do estoque (o cabo usa duas).`);
+    }
+  }
+  return result(errors);
+}
+
+/** K7: enrijecedor numa mola (clique na mola): B6 → BS6, B12 → BS12. Clicar numa mola enrijecida tira o enrijecedor. */
+export function validateStiffener(cat: Catalog, inv: InventoryConfig, model: Model, memberId: string): Check & { code?: string; remove?: boolean } {
+  const m = model.members[memberId];
+  if (!m) return result(["Clique numa mola."]);
+  if (typeOf(cat, m.code) !== "bar") return result([typeOf(cat, m.code) === "rope" ? "O enrijecedor vai numa mola, não no cabo." : "O enrijecedor vai numa mola, não na diagonal."]);
+  const code = stiffenerFor(cat, m.code);
+  if (!code) return result([`Não há enrijecedor para a ${m.code} (só para B6 e B12).`]);
+  if (m.stiff) return { ...result([]), code, remove: true };
+  const errors = inv.unlimited ? [] : remaining(cat, inv, model, code) < 1 ? [`Acabaram os enrijecedores ${code} do estoque.`] : [];
+  return { ...result(errors), code };
 }

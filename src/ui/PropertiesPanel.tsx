@@ -5,6 +5,7 @@ import { boardsOf, componentOf, DISP_AXIS, len, sub, toDisp, type Vec3 } from ".
 import { boardCenter, boardName, boardSelection, boardSize, boardsGap } from "../core/boards";
 import { NumField } from "../render/Boards";
 import { Chevrons } from "./Palette";
+import { ballsPerRoll, ropePlan, ropeSpec, ropeText, ropeInfo, stiffenerFor } from "../core/rope";
 import { useApp, useModel } from "./store";
 
 const M = catalog.settings.modulo_mm;
@@ -221,6 +222,35 @@ function Selected() {
     const lengthMm = Number(cable ? p?.geometry.cableLengthMm : p?.geometry.lengthMm);
     const atEnd = (id: string) => Object.values(model.members).filter((x) => x.id !== m.id && (x.a === id || x.b === id)).map((x) => x.code);
     const conns = Object.values(model.connectors).filter((c) => c.node === m.a || c.node === m.b);
+    if (p?.type === "rope") {
+      const info = ropeInfo(catalog, A, B);
+      const cut = ropePlan(catalog, model).cuts.findIndex((c) => c.id === m.id);
+      return (
+        <>
+          <h2>Cabo <span className="code-chip">CABLE</span></h2>
+          <Section title="Posição e geometria">
+            <dl>
+              <Row k="Entre os centros das esferas" v={`${fmt(span, 2)} módulos = ${fmt(span * M)} mm`} />
+              <Row k="Pedaço de cabo" v={info ? ropeText(info.balls, info.cutMm) : "curto demais"} />
+              {info && <Row k="Esticador (CABLE C)" v={`absorve ${fmt(info.slackMm)} mm`} />}
+              {cut >= 0 && <Row k="No plano de corte" v={`pedaço ${cut + 1}`} />}
+              <Row k="Direção" v={directionText(A, B)} />
+              <Row k="De" v={posText(A)} />
+              <Row k="Até" v={posText(B)} />
+            </dl>
+          </Section>
+          <Section title="Ligações">
+            <dl>
+              <Row k="Montagem" v="esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera" />
+              <Row k={`Na ponta ${posText(A)}`} v={atEnd(m.a).length ? countText(atEnd(m.a)) : "só este cabo"} />
+              <Row k={`Na ponta ${posText(B)}`} v={atEnd(m.b).length ? countText(atEnd(m.b)) : "só este cabo"} />
+            </dl>
+          </Section>
+          <Actions removeLabel="Remover cabo" />
+        </>
+      );
+    }
+    const bs = m.stiff ? stiffenerFor(catalog, m.code) : null;
     return (
       <>
         <h2>{p?.name ?? m.code} <span className="code-chip">{m.code}</span></h2>
@@ -228,6 +258,7 @@ function Selected() {
           <dl>
             <Row k="Vão (centro a centro)" v={`${fmt(span, cable ? 2 : Number.isInteger(span) ? 0 : 2)} módulos = ${fmt(span * M)} mm`} />
             <Row k={cable ? "Comprimento do cabo" : "Comprimento da mola"} v={`${fmt(lengthMm)} mm`} />
+            {bs && <Row k="Enrijecedor" v={`${bs} (mola rígida)`} />}
             <Row k="Direção" v={directionText(A, B)} />
             <Row k="De" v={posText(A)} />
             <Row k="Até" v={posText(B)} />
@@ -430,6 +461,17 @@ function Summary() {
         <tbody>
           {codes.map((c) => {
             const total = available(catalog, inventory, c);
+            if (c === "CABLE") {
+              const plan = ropePlan(catalog, model);
+              const rest = Number.isFinite(total) ? total * ropeSpec(catalog).roll - plan.mm : Infinity;
+              return (
+                <tr key={c} className={rest < 0 ? "over" : ""}>
+                  <td>{c}</td>
+                  <td>{plan.cuts.length} {plan.cuts.length === 1 ? "pedaço" : "pedaços"}</td>
+                  {!inventory.unlimited && <td>{Number.isFinite(rest) ? `${fmt(rest / 10, 0)} cm` : "∞"}</td>}
+                </tr>
+              );
+            }
             return (
               <tr key={c} className={Number.isFinite(total) && total - used[c] < 0 ? "over" : ""}>
                 <td>{c}</td>
@@ -440,10 +482,53 @@ function Summary() {
           })}
         </tbody>
       </table>
+      <RopeSummary />
       <Section title="Estabilidade" className="future">
         <p className="soon">Em breve</p>
       </Section>
     </>
+  );
+}
+
+/** Cabo (Kit 3): quanto foi usado (cm | bolinhas) e o plano de corte de cada rolo. */
+export function RopeSummary() {
+  const model = useModel();
+  const inventory = useApp((s) => s.inventory);
+  const plan = ropePlan(catalog, model);
+  if (!plan.cuts.length) return null;
+  const sp = ropeSpec(catalog);
+  const rolls = available(catalog, inventory, "CABLE");
+  const limited = Number.isFinite(rolls);
+  const cm = (mm: number) => fmt(mm / 10, 1);
+  const order = new Map(plan.cuts.map((c, i) => [c.id, i + 1]));
+  return (
+    <Section title="Cabo">
+      <p className="rope-total">
+        {limited ? (
+          <>
+            <b>{cm(plan.mm)}</b>/{cm(rolls * sp.roll)} cm | <b>{plan.balls}</b>/{rolls * ballsPerRoll(sp)} bolinhas
+          </>
+        ) : (
+          <>
+            <b>{cm(plan.mm)}</b> cm | <b>{plan.balls}</b> bolinhas · {plan.rolls.length} {plan.rolls.length === 1 ? "rolo" : "rolos"}
+          </>
+        )}
+      </p>
+      {plan.rolls.map((r, i) => (
+        <div key={i} className="rope-roll">
+          <p className="rope-roll-title">
+            Rolo {i + 1}: cortar {r.length} {r.length === 1 ? "pedaço" : "pedaços"} · sobram {ballsPerRoll(sp) - r.reduce((n, c) => n + c.balls, 0)} bolinhas
+          </p>
+          <ol>
+            {r.map((c) => (
+              <li key={c.id} value={order.get(c.id)}>
+                {ropeText(c.balls, c.cutMm)}
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
+    </Section>
   );
 }
 
@@ -608,6 +693,13 @@ export function SelectionTag() {
     const code = sel.kind === "member" ? model.members[sel.id]?.code : sel.kind === "plate" ? model.plates[sel.id]?.code : model.connectors[sel.id]?.code;
     const name = code ? catalog.pieces[code]?.name : undefined;
     if (code) text = !name || name === code ? code : name.includes(code) ? name : `${code} · ${name}`;
+    if (sel.kind === "member" && model.members[sel.id]) {
+      const mb = model.members[sel.id];
+      if (catalog.pieces[mb.code]?.type === "rope") {
+        const info = ropeInfo(catalog, model.nodes[mb.a].pos, model.nodes[mb.b].pos);
+        text = `Cabo${info ? ` · ${ropeText(info.balls, info.cutMm)}` : ""}`;
+      } else if (mb.stiff) text += " · com enrijecedor";
+    }
     if (sel.kind === "connector" && model.connectors[sel.id]) text += ` · ${posText(model.nodes[model.connectors[sel.id].node]?.pos ?? [0, 0, 0])}`;
   } else if (board) {
     const b = boardsOf(model).find((x) => x.id === board);

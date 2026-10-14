@@ -2,7 +2,8 @@
 import catalogJson from "../../data/catalog.json";
 import kitsJson from "../../data/kits.json";
 
-export type PieceType = "node" | "support" | "connector" | "bar" | "cable" | "plate" | "ground";
+/** cable = diagonal (Kit 1/2); rope = cabo de bolinhas (Kit 3); accessory = ligações, clipes e anéis de cabo (entram sozinhos); stiffener = enrijecedor */
+export type PieceType = "node" | "support" | "connector" | "bar" | "cable" | "plate" | "ground" | "rope" | "accessory" | "stiffener";
 
 export interface PieceDef {
   code: string;

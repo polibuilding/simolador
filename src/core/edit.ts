@@ -181,7 +181,9 @@ export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): Nod
     (adj.get(a) ?? adj.set(a, new Set()).get(a)!).add(b);
     (adj.get(b) ?? adj.set(b, new Set()).get(b)!).add(a);
   };
-  for (const m of Object.values(model.members)) link(m.a, m.b);
+  // cabos (Kit 3) não seguram a forma: esticam ou encolhem com o nó (o pedaço é recortado)
+  const rigid = Object.values(model.members).filter((m) => cat.pieces[m.code]?.type !== "rope");
+  for (const m of rigid) link(m.a, m.b);
   for (const p of Object.values(model.plates)) for (let i = 0; i < 4; i++) link(p.corners[i], p.corners[(i + 1) % 4]);
   const moving = new Set<string>([nodeId]);
   const seen = new Set<string>([nodeId]);
@@ -196,13 +198,13 @@ export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): Nod
       for (const nb of adj.get(k) ?? []) if (!seen.has(nb)) (seen.add(nb), stack.push(nb));
     }
     // só conta como "pendurada no nó" se encosta nele
-    const touches = Object.values(model.members).some((m) => (m.a === nodeId && comp.includes(m.b)) || (m.b === nodeId && comp.includes(m.a)));
+    const touches = rigid.some((m) => (m.a === nodeId && comp.includes(m.b)) || (m.b === nodeId && comp.includes(m.a)));
     const grounded = comp.some((k) => model.nodes[k].kind === "support");
     if (touches && !grounded) comp.forEach((k) => moving.add(k));
   }
 
   // vínculos: peças entre o nó e as partes fixas
-  const ties = Object.values(model.members).filter((m) => (m.a === nodeId && !moving.has(m.b)) || (m.b === nodeId && !moving.has(m.a)));
+  const ties = rigid.filter((m) => (m.a === nodeId && !moving.has(m.b)) || (m.b === nodeId && !moving.has(m.a)));
   if (!ties.length) return { options: [], locked: "Esse nó não está preso a nenhuma parte fixa: use Mover estrutura." };
   for (const p of Object.values(model.plates)) {
     const inside = p.corners.filter((c) => moving.has(c)).length;

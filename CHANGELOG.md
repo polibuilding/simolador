@@ -14,6 +14,14 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.18 — Kit 3: cabo e enrijecedor · 13/10/2026
+- **Kit 3 no estoque** (azul): C 18, RC90 12, GC 8, 2 chapas, B6 30, B12 9, D6x6 9, D6x12 9, cabo (rolo de 3,35 m), 24 ligações de cabo, 50 clipes, 4 clipes múltiplos, 20 anéis e 9 enrijecedores. As bolinhas azuis na paleta mostram o que vem dele.
+- **Cabo** (CABLE, grupo "Cabos" da paleta): clique numa esfera e depois em outra. O programa monta esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera (ligações e clipes entram sozinhos) e diz o pedaço em **bolinhas** e cm. O cabo aparece como corrente de bolinhas, com as ligações nas pontas. Regras: mínimo de duas bolinhas, lugar da ligação na esfera (20° das outras peças), não atravessa esferas, molas, placas nem RC90; em Mover só o nó ele estica junto (só tração).
+- **Quanto cabo**: o resumo mostra "n/m cm | y/x bolinhas" e o **plano de corte** de cada rolo; a capa das pranchas lista os cortes. O cabo acaba quando um pedaço não cabe no que sobrou dos rolos; as ligações (24 por kit) limitam a 12 cabos por Kit 3. Nas vistas, o cabo é uma linha fina com o clip marcado nas pontas ("CABO").
+- **Enrijecedor** (BS): clique numa mola B6 ou B12 para pôr o tubo transparente (BS6 ou BS12); clicar de novo tira.
+- Medidas do cabo, das ligações e do enrijecedor **estimadas pelas fotos** (em `parametros.xlsx`, seção "Cabos e enrijecedores"): conferir com o kit.
+- Paleta um pouco mais compacta (cabem os grupos novos); o cabo mostra quantos centímetros restam.
+
 ## 1.17 — Resumo só pelas setas · 13/10/2026
 - **Clicar ou dar duplo clique numa peça não abre mais o resumo** (ele ia e voltava a cada clique). O resumo abre e fecha só pelas setas « »; aberto, mostra a peça selecionada; fechar não solta a seleção. O duplo clique mostra o caminho de movimento direto na cena.
 - **Nome da peça selecionada** bem de leve no canto de baixo, à direita, antes da versão (esfera e GC com a posição; molas, placas e ligações pelo nome; chapas; quantas peças na seleção). Some quando o resumo está aberto.

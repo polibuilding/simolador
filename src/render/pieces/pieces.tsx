@@ -89,8 +89,8 @@ const Y = new THREE.Vector3(0, 1, 0);
 
 /** Barra entre dois centros de esfera. O comprimento físico vem do catálogo (regra ou medido). */
 export function Bar({
-  a, b, code, look = "normal", ...p
-}: { a: THREE.Vector3; b: THREE.Vector3; code: string; look?: Look } & Pickable) {
+  a, b, code, look = "normal", stiff = false, ...p
+}: { a: THREE.Vector3; b: THREE.Vector3; code: string; look?: Look; stiff?: boolean } & Pickable) {
   const length = Number(catalog.pieces[code]?.geometry.lengthMm ?? a.distanceTo(b) - 2 * SPHERE_R);
   const springLen = Math.max(1, length - 2 * CAP_LEN);
   const { mid, quat } = useMemo(() => {
@@ -119,11 +119,27 @@ export function Bar({
           <cylinderGeometry args={[BAR_R, BAR_R, CAP_LEN, 16]} />
         </mesh>
       ))}
+      {/* enrijecedor (Kit 3): tubo transparente em volta da mola */}
+      {stiff && <StiffTube length={springLen} look={look} />}
       {/* volume invisível, mais gordo, para facilitar o clique */}
       <mesh material={hitMat}>
         <cylinderGeometry args={[BAR_R + 2, BAR_R + 2, length, 8]} />
       </mesh>
     </group>
+  );
+}
+
+/** Enrijecedor: tubo transparente (acrílico) em volta da mola. */
+function StiffTube({ length, look }: { length: number; look: Look }) {
+  const r = Number(s.enrijecedor_diametro_mm ?? 9) / 2;
+  const mat = useMemo(() => {
+    const tint = look === "valid" ? COLORS.valid : look === "invalid" ? COLORS.invalid : look === "selected" ? COLORS.select : look === "hover" ? COLORS.hover : "#dfe9f0";
+    return new THREE.MeshStandardMaterial({ color: tint, transparent: true, opacity: look === "normal" ? 0.32 : 0.45, roughness: 0.15, metalness: 0, depthWrite: false, side: THREE.DoubleSide });
+  }, [look]);
+  return (
+    <mesh material={mat} renderOrder={2}>
+      <cylinderGeometry args={[r, r, length, 24, 1, true]} />
+    </mesh>
   );
 }
 

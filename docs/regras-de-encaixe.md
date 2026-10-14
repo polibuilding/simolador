@@ -1,6 +1,6 @@
 # Regras de encaixe — siMOLAdor
 
-Versão 4.8 · 13/10/2026 (siMOLAdor 1.16) (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
+Versão 4.9 · 13/10/2026 (siMOLAdor 1.18) (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
 
 Uma regra **bloqueia** quando torna o encaixe inválido (fantasma vermelho, não deixa soltar). Uma regra **avisa** quando a montagem é possível, mas não é recomendada (fantasma verde, aviso na barra de status).
 
@@ -85,6 +85,19 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | S3 | A paleta mostra só as peças que existem nos kits escolhidos (ou que já estão no modelo). Zerar um kit tira as peças dele; voltar o kit traz de volta. | — | equipe 08/10 |
 | S2 | Ao esgotar uma peça, ela fica cinza na paleta e o encaixe bloqueia. Existe um modo "sem limite", para projetos livres. | bloqueia (modo padrão) | Q03 |
 
+## 7b. Cabo e enrijecedor (Kit 3, desde 1.18)
+
+Montagem padrão do cabo: **esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera**. A ligação de cabo (CABLE C) prende na esfera pelo ímã e tem um anel na outra ponta; o clip (CABLE CLIP C) segura o anel numa ponta e a bolinha da ponta do cabo na outra. As ligações e os clipes **entram sozinhos** (2 de cada por cabo); na paleta só se escolhem o **cabo** e o **enrijecedor**. Medidas em `parametros.xlsx` (seção "Cabos e enrijecedores"), por enquanto **estimadas pelas fotos**.
+
+| # | Regra | Tipo | Origem |
+|---|---|---|---|
+| K1 | **Cabo em dois cliques**: com CABLE na mão, clicar numa esfera (ou GC) e depois em outra. O pedaço sai da distância entre os centros: cabo = distância − 2 × (raio da esfera + `cabo_ligacao_mm` + `cabo_clip_mm`), contado em **bolinhas** (`cabo_passo_mm`); a sobra de menos de uma bolinha fica no esticador da CABLE C. Mínimo: duas bolinhas (hoje ≈ 68 mm entre centros). O rodapé e o painel mostram "N bolinhas · L cm". | bloqueia (curto demais) | equipe 13/10 |
+| K2 | **Lugar da CABLE C na esfera**: o cabo faz pelo menos `cabo_angulo_minimo_graus` (20°, a confirmar) com as outras peças da esfera, e não sai pelo canto de uma RC90. | bloqueia | estimado |
+| K3 | **Cabo não atravessa esferas nem molas** (C3/C5/C7 com o raio da bolinha); pode cruzar diagonais e outros cabos (finos). Não atravessa placas nem RC90. Nada deitado na chapa (G6). Um par de esferas tem no máximo uma peça. | bloqueia | — |
+| K4 | **O cabo só trabalha à tração** e **não segura a forma**: em Mover só o nó, ele estica ou encolhe com a esfera (o pedaço é recortado); só molas e diagonais prendem o nó. | estrutura | equipe 13/10 |
+| K5 | **Estoque do cabo**: cada Kit 3 traz um rolo de `cabo_rolo_mm` (3,35 m). Os pedaços são tirados dos rolos pelo **plano de corte** (maiores primeiro, no primeiro rolo onde couber); o cabo acaba quando um pedaço não cabe no que sobrou. CABLE C (24 por kit) e CABLE CLIP C (50) limitam o número de cabos (12 por Kit 3). O resumo mostra "n/m cm \| y/x bolinhas" e os cortes de cada rolo; a capa das pranchas lista os cortes. | bloqueia (modo padrão) | equipe 13/10 |
+| K6 | **Enrijecedor** (BAR STIFFENER): com BS na mão, clicar numa mola **B6** (usa BS6) ou **B12** (usa BS12): o tubo transparente aparece em volta dela. Clicar numa mola enrijecida tira o enrijecedor. B4 e diagonais não têm. | bloqueia (sem estoque) | equipe 13/10 |
+
 ## 8. Colisões
 
 | # | Regra | Tipo | Origem |
@@ -122,6 +135,8 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | E8 | **Cubo de vistas** no canto da cena: clicar numa face dá a vista ortogonal, numa aresta ou canto, as vistas a 45° e isométricas. **Enquadrar** (F), Paralela, Sombras, Render, Inércia e Atalhos ficam na barra de baixo da cena (grupo "Vista"). O cubo segue a projeção: em perspectiva, ele também aparece em perspectiva. | equipe 13/10 |
 
 ## Perguntas que ainda podem mudar estas regras
+
+- Kit 3: passo do cabo (bolinhas em 10 cm), comprimento da CABLE C e do clip, ângulo mínimo do cabo na esfera; o enrijecedor convive com RC90/CC na mesma mola?
 
 - Medidas da CC e da CC90, para desenhá-las.
 - RC90 e CC podem conviver no mesmo nó (ex.: viga contínua com pilar travado por RC90)?

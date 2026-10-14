@@ -2,7 +2,7 @@
   "_meta": {
     "generatedBy": "scripts/gerar-dados.mjs",
     "source": "data/parametros.xlsx",
-    "generatedAt": "2026-10-13T23:19:56.027Z",
+    "generatedAt": "2026-10-14T02:09:43.895Z",
     "doNotEdit": "Arquivo gerado. Edite data/parametros.xlsx e rode npm run dados."
   },
   "schemaVersion": 2,
@@ -42,6 +42,30 @@
         "G": 1
       },
       "totalCount": 145
+    },
+    "3": {
+      "name": "Mola Structural Kit 3",
+      "color": "#2F6FD6",
+      "officialCount": 205,
+      "pieces": {
+        "C": 18,
+        "GC": 8,
+        "RC90": 12,
+        "B6": 30,
+        "B12": 9,
+        "D6x6": 9,
+        "D6x12": 9,
+        "G": 2,
+        "CABLE": 1,
+        "CABLE-C": 24,
+        "CLIP-C": 50,
+        "MCLIP-C": 4,
+        "RING-P": 10,
+        "RING-M": 10,
+        "BS6": 3,
+        "BS12": 6
+      },
+      "totalCount": 205
     }
   }
 }

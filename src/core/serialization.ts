@@ -68,7 +68,7 @@ export function fromFile(raw: unknown): { model: Model; inventory: InventoryConf
   const members: Model["members"] = {};
   for (const m of f.members) {
     if (!nodes[m.a] || !nodes[m.b]) throw new MolaFileError(`Peça ${m.id} liga um nó que não existe.`);
-    members[m.id] = { id: m.id, code: m.code, a: m.a, b: m.b };
+    members[m.id] = { id: m.id, code: m.code, a: m.a, b: m.b, ...(m.stiff ? { stiff: true } : {}) };
   }
   const plates: Model["plates"] = {};
   for (const p of f.plates ?? []) {

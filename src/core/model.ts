@@ -12,12 +12,14 @@ export interface MolaNode {
   pos: Vec3;
 }
 
-/** Barra (B4, B6, B12) ou diagonal (D4x6, D6x6, D6x12) entre dois nós. */
+/** Barra (B4, B6, B12), diagonal (D4x6, D6x6, D6x12) ou cabo (CABLE, Kit 3) entre dois nós. */
 export interface Member {
   id: string;
   code: string;
   a: string;
   b: string;
+  /** mola com enrijecedor (Kit 3: tubo transparente em volta; B6 → BS6, B12 → BS12) */
+  stiff?: boolean;
 }
 
 /** Placa ligada a 4 esferas (cantos em ordem ao redor do retângulo). */

@@ -28,7 +28,8 @@ describe("catálogo e estoque", () => {
     expect(catalog.pieces.B12.type).toBe("bar");
   });
   it("soma estoque de 1 Kit 1 + 1 Kit 2 e respeita várias caixas (Q03)", () => {
-    expect(available(catalog, inv, "B6")).toBe(54);
+    expect(available(catalog, { kits: { "1": 1, "2": 1 }, unlimited: false }, "B6")).toBe(54);
+    expect(available(catalog, inv, "B6")).toBe(84); // padrão: uma caixa de cada kit (1, 2 e 3)
     expect(available(catalog, { kits: { "1": 2, "2": 0 }, unlimited: false }, "B6")).toBe(48);
     expect(available(catalog, { kits: {}, unlimited: true }, "B6")).toBe(Infinity);
   });
