@@ -23,3 +23,4 @@ v1.19 e92b637 Enter, destaque e resumo no duplo clique
 v1.20 92d146a Configurações e biblioteca
 v1.21 888d2ef Girar o conjunto em torno das GC, atalhos novos
 v1.22 59871df Rigidez: a estrutura acompanha ou trava
+v1.23 77a69c4 O que mexe junto (Tab amplia) e GC perto da estrutura
