@@ -106,17 +106,52 @@ export const Icon = ({ d }: { d: JSX.Element }) => (
   </svg>
 );
 
-/** Logos pequenas (public/logos) e o nome do programa. Sem as imagens, só o nome. */
+/**
+ * Símbolo do siMOLAdor: o hexágono do Mola (seis triângulos em volta do centro) pintado como um cubo,
+ * com o azul e o amarelo da Poli Building (topo amarelo, lado esquerdo azul, lado direito amarelo escuro).
+ */
+export function SoftwareMark({ size = 22 }: { size?: number }) {
+  // hexágono de vértice para cima, centro (16, 16)
+  const V = [[16, 3], [27.3, 9.5], [27.3, 22.5], [16, 29], [4.7, 22.5], [4.7, 9.5]] as const;
+  const tri = (i: number, j: number) => `M16 16L${V[i][0]} ${V[i][1]}L${V[j][0]} ${V[j][1]}Z`;
+  const fills: [number, number, string][] = [
+    [5, 0, "#F6B035"], [0, 1, "#F6B035"], // topo
+    [1, 2, "#E0981E"], [2, 3, "#E0981E"], // lado direito
+    [3, 4, "#165078"], [4, 5, "#165078"], // lado esquerdo
+  ];
+  return (
+    <svg className="soft-mark" viewBox="0 0 32 32" width={size} height={size} aria-hidden>
+      {fills.map(([i, j, c]) => <path key={`${i}${j}`} d={tri(i, j)} fill={c} />)}
+      <g fill="none" stroke="#1d2422" strokeWidth="1.6" strokeLinejoin="round">
+        <path d={`M${V.map((v) => v.join(" ")).join("L")}Z`} />
+        <path d="M16 3V29M4.7 9.5 27.3 22.5M27.3 9.5 4.7 22.5" />
+      </g>
+      {[...V, [16, 16] as const].map(([x, y], k) => <circle key={k} cx={x} cy={y} r="1.9" fill="#1d2422" />)}
+    </svg>
+  );
+}
+
+/** Logos do Mola e da Poli Building (links) e o símbolo + nome do programa. Sem as imagens, só o símbolo e o nome. */
 function Brand() {
   const [ok, setOk] = useState<Record<string, boolean>>({ "logo-mola": true, "logo-grupo": true });
+  const links = {
+    "logo-mola": { href: "https://br.molamodel.com/", alt: "Mola Model", title: "Mola Structural Model (abre o site)" },
+    "logo-grupo": { href: "https://www.instagram.com/polibuilding/?hl=pt-br", alt: "Poli Building", title: "Poli Building no Instagram" },
+  } as const;
   return (
-    <div className="brand" aria-label="siMOLAdor">
+    <div className="brand">
       {(["logo-mola", "logo-grupo"] as const).map((n) =>
         ok[n] ? (
-          <img key={n} src={`${import.meta.env.BASE_URL}logos/${n}.png`} alt={n === "logo-mola" ? "Mola" : "Poli Building"} onError={() => setOk((o) => ({ ...o, [n]: false }))} />
+          <a key={n} className="brand-logo" href={links[n].href} target="_blank" rel="noopener noreferrer" title={links[n].title}>
+            <img src={`${import.meta.env.BASE_URL}logos/${n}.png`} alt={links[n].alt} onError={() => setOk((o) => ({ ...o, [n]: false }))} />
+          </a>
         ) : null,
       )}
-      <span className="brand-name">si<b>MOLA</b>dor</span>
+      <span className="brand-sep" aria-hidden />
+      <span className="brand-app" aria-label="siMOLAdor">
+        <SoftwareMark />
+        <span className="brand-name">si<b>MOLA</b>dor</span>
+      </span>
     </div>
   );
 }
