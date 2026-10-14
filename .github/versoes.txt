@@ -17,3 +17,4 @@ v1.13 9d81f6649efec3e1cea2794fa0e3ad266d45f05a Mover com o mouse e painel da pe�
 v1.14 735c0b8 Paleta recolhível e marca do siMOLAdor
 v1.15 ae8b933 Paleta e resumo deslizando, Arquivo em ícones, Kit 3 e Kit A no estoque
 v1.16 0dd49d2 Caminho azul e vermelho, resumo deslizando
+v1.17 be76004 Resumo só pelas setas
