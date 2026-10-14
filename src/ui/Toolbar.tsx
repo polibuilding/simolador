@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
 import { minKits, usage } from "../core/inventory";
+import { ConfigPanel, LibraryPanel } from "./Config";
 import { useApp, useModel } from "./store";
 
 /** "2× K1 + 1× K2" */
@@ -111,6 +112,8 @@ const Ico = {
       <circle cx="12" cy="12" r="3" />
     </g>
   ),
+  /** biblioteca: livros na estante */
+  library: <path d="M2.5 2.5v11M5.5 2.5v11M8.5 3.2l3.2 10.1M2 13.5h12" />,
   /** simulação: onda (resposta da estrutura) com o "play" de rodar */
   sim: (
     <>
@@ -180,24 +183,14 @@ function SimPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** Configurações (por enquanto só mostra os valores internos; as opções entram depois). */
-function ConfigPanel({ onClose }: { onClose: () => void }) {
+function ConfigMenu({ onClose }: { onClose: () => void }) {
   const ref = useDismiss(onClose);
-  const s = catalog.settings;
-  const f = (n: number) => n.toLocaleString("pt-BR");
-  return (
-    <div ref={ref} className="popover left" role="dialog" aria-label="Configurações">
-      <p className="popover-title">Configurações</p>
-      <p className="popover-text">As configurações do programa vão ficar aqui. Por enquanto, os valores usados (vêm de <code>data/parametros.xlsx</code>):</p>
-      <dl className="config-list">
-        <div><dt>Módulo</dt><dd>{f(s.modulo_mm)} mm</dd></div>
-        <div><dt>Ângulo mínimo entre molas</dt><dd>{f(s.angulo_minimo_membros_graus)}°</dd></div>
-        <div><dt>Mola na GC (mínimo com a chapa)</dt><dd>{f(Number(s.gc_angulo_minimo_base_graus ?? 40))}°</dd></div>
-        <div><dt>Passo das inclinadas</dt><dd>{f(Number(s.passo_inclinacao_graus ?? 15))}°</dd></div>
-        <div><dt>Chapa</dt><dd>{s.chapa_modulos_x} × {s.chapa_modulos_y} módulos</dd></div>
-      </dl>
-    </div>
-  );
+  return <ConfigPanel onClose={onClose} dismissRef={ref} />;
+}
+
+function LibraryMenu({ onClose }: { onClose: () => void }) {
+  const ref = useDismiss(onClose);
+  return <LibraryPanel onClose={onClose} dismissRef={ref} />;
 }
 
 export function Toolbar() {
@@ -210,6 +203,8 @@ export function Toolbar() {
   const [stockOpen, setStockOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [simOpen, setSimOpen] = useState(false);
+  const [libOpen, setLibOpen] = useState(false);
+  const closeLib = useCallback(() => setLibOpen(false), []);
   const closeStock = useCallback(() => setStockOpen(false), []);
   const closeConfig = useCallback(() => setConfigOpen(false), []);
   const closeSim = useCallback(() => setSimOpen(false), []);
@@ -252,7 +247,13 @@ export function Toolbar() {
           <button className="icon ghost" onClick={() => setConfigOpen((o) => !o)} aria-expanded={configOpen} title="Configurações" aria-label="Configurações">
             <Icon d={Ico.gear} />
           </button>
-          {configOpen && <ConfigPanel onClose={closeConfig} />}
+          {configOpen && <ConfigMenu onClose={closeConfig} />}
+        </div>
+        <div className="menu">
+          <button className="icon ghost lib-btn" onClick={() => setLibOpen((o) => !o)} aria-expanded={libOpen} title="Biblioteca de modelos (em breve; por enquanto, os exemplos)" aria-label="Biblioteca">
+            <Icon d={Ico.library} />
+          </button>
+          {libOpen && <LibraryMenu onClose={closeLib} />}
         </div>
         <span className="tb-sep" />
         <button className="icon ghost" onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)" aria-label="Desfazer"><Icon d={Ico.undo} /></button>

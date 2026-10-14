@@ -68,6 +68,8 @@ interface State {
   setPropsOpen: (on: boolean) => void;
   /** painel de atalhos do teclado */
   helpOpen: boolean;
+  /** janela das configurações avançadas */
+  settingsOpen: boolean;
   setHelpOpen: (on: boolean) => void;
   /** Q/E: peça anterior/seguinte do mesmo grupo da paleta */
   cyclePiece: (dir: 1 | -1, groups: string[][]) => void;
@@ -265,6 +267,7 @@ export const useApp = create<State>((set, get) => ({
   toolHover: null,
   setPropsOpen: (propsOpen) => (writePref("simolador:resumo", propsOpen), set({ propsOpen })),
   helpOpen: false,
+  settingsOpen: false,
   setHelpOpen: (helpOpen) => set({ helpOpen }),
   cyclePiece: (dir, groups) => {
     const s = get();
@@ -641,6 +644,12 @@ export const useApp = create<State>((set, get) => ({
 
   load: (raw) => {
     const f = fromFile(raw);
+    // arquivo feito com outro módulo (configurações): as posições valem em módulos, as medidas em mm mudam
+    const fileM = Number((raw as { moduleMm?: unknown })?.moduleMm);
+    const mNote =
+      Number.isFinite(fileM) && Math.abs(fileM - catalog.settings.modulo_mm) > 1e-6
+        ? `Arquivo feito com módulo de ${fileM.toLocaleString("pt-BR")} mm; o programa está com ${catalog.settings.modulo_mm.toLocaleString("pt-BR")} mm (posições em módulos iguais, medidas em mm diferentes).`
+        : null;
     set((s) => ({
       history: createHistory(f.model),
       inventory: f.inventory,
@@ -653,6 +662,7 @@ export const useApp = create<State>((set, get) => ({
       tool: { kind: "select" },
       camera: { view: "fit", n: s.camera.n + 1 },
       ...overlapReport(f.model),
+      ...(mNote ? { hint: mNote } : {}),
     }));
   },
 

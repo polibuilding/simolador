@@ -918,6 +918,7 @@ export function Placement() {
       project: (p: Vec3) => toScreen(toWorld(p), el.getBoundingClientRect()),
       projectPlate: (x: number, z: number) => toScreen(new THREE.Vector3(x * M, 0, z * M), el.getBoundingClientRect()),
       cameraY: () => camera.position.y,
+      catalog,
     };
 
     // R também atualiza o fantasma sem mexer o mouse
@@ -935,7 +936,7 @@ export function Placement() {
         t.blur();
       }
       const st = useApp.getState();
-      if (st.sheetsOpen || st.helpOpen) return;
+      if (st.sheetsOpen || st.helpOpen || st.settingsOpen) return;
       if (st.tool.kind !== "select") {
         if (!lastEv || !insideOf(lastEv, el.getBoundingClientRect())) return;
         ev.preventDefault();

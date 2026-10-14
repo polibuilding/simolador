@@ -2,7 +2,7 @@
 
 Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (Mola Structural Model), feito pela equipe Poli Mola da Poli Building. Você monta a estrutura no navegador, com as peças e o estoque reais dos kits, e o programa vai gerar as pranchas (plantas e vistas) no padrão do Desafio Poli-USP.
 
-**Versão em uso:** https://polibuilding.github.io/simolador/ · versão atual **1.19** ("geométrica"); o que mudou em cada versão está em [CHANGELOG.md](CHANGELOG.md).
+**Versão em uso:** https://polibuilding.github.io/simolador/ · versão atual **1.20** ("geométrica"); o que mudou em cada versão está em [CHANGELOG.md](CHANGELOG.md).
 
 ## O que já funciona
 
@@ -28,6 +28,7 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 - **Pranchas** (A3 ou A4): desenhos, títulos e tabela arrastáveis; capa com isométrica renderizada (ou em linhas) e lista de peças, cotas entre eixos, totais e níveis (liga/desliga), etiquetas que se arrastam na tela, logos no carimbo, todas as chapas ou só algumas, plantas por pavimento e vistas A–D no padrão do Desafio Poli-USP; escala automática; carimbo editável; **PDF**, **DXF** (camadas MOLA-*) e SVG.
 - **Paleta e resumo recolhíveis** (1.14–1.15): a seta « no alto da paleta a transforma num menu pequeno só com os símbolos das peças (» volta); o resumo recolhe com » e volta com « (1.17: só pelas setas; selecionar uma peça não o abre, e o nome dela aparece de leve no canto de baixo). A cena não muda de tamanho: a estrutura desliza junto. As bolinhas ao lado do código mostram de que kit vem cada peça.
 - **Kit 3** (1.18): **cabo** em dois cliques (esfera e esfera; ligações e clipes de cabo automáticos), pedaço em bolinhas e plano de corte dos rolos; **enrijecedor** clicando na mola B6 ou B12.
+- **Configurações** (1.20): módulo, ângulos mínimos, passo das inclinadas e tamanho da chapa no menu da engrenagem; medidas e pesos das peças nas avançadas. Protegidas contra valores que quebram o programa (`?padrao` no endereço abre sem elas). **Biblioteca**: exemplos (a biblioteca online vem depois).
 - Estoque configurável (a paleta mostra só as peças dos kits escolhidos; no modo sem limite, o programa diz quantos kits, no mínimo, a estrutura pede), arquivos `.mola`, salvamento automático no navegador.
 
 Exemplos em `examples/`: o pórtico simples e a **Estrutura 01 do Desafio 2022**, reconstruída a partir das pranchas originais.

@@ -73,7 +73,7 @@ export function Dock() {
       <span className="lbl">Barras</span>
       {([
         ["eixos", "Eixos", "Barras só nos eixos (Shift inclina uma barra) (1)"],
-        ["passo", `${step}°`, `Inclinadas em passos de ${step}° (2)`],
+        ["passo", `${step.toLocaleString("pt-BR")}°`, `Inclinadas em passos de ${step.toLocaleString("pt-BR")}° (2)`],
         ["livre", "Livre", "Qualquer direção 3D, com encaixes em esferas, triângulos e alturas (3)"],
       ] as const).map(([v, label, title]) => (
         <button key={v} role="radio" aria-checked={barMode === v} className={`word${barMode === v ? " on" : ""}`} onClick={() => st.setBarMode(v)} title={`${title} · I alterna`}>

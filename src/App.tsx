@@ -7,9 +7,10 @@ import { HintLine, VersionTag } from "./ui/StatusBar";
 import { Dock } from "./ui/Dock";
 import { Toolbar } from "./ui/Toolbar";
 import { Shortcuts } from "./ui/Shortcuts";
+import { AdvancedConfig } from "./ui/Config";
 import { GROUPS, PaletteMini } from "./ui/Palette";
 import { panelOpen, useApp } from "./ui/store";
-import { catalog } from "./core/catalog";
+import { catalog, configState, markConfigBootOk } from "./core/catalog";
 import { available } from "./core/inventory";
 
 /** Retângulo de seleção: azul = só o que está inteiro dentro; verde tracejado = o que tocar. */
@@ -39,6 +40,7 @@ function useShortcuts() {
       const t = e.target as HTMLElement;
       if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT") return;
       const st = useApp.getState();
+      if (st.settingsOpen) return; // janela de configurações aberta: as teclas são dela
       if (st.sheetsOpen) {
         if (e.key === "Escape") st.setSheetsOpen(false);
         return;
@@ -160,8 +162,29 @@ function useShortcuts() {
   }, []);
 }
 
+/** Configurações: a abertura deu certo (o teste passa) e os avisos do que aconteceu com elas. */
+function useConfigNotices() {
+  useEffect(() => {
+    markConfigBootOk();
+    const say: string[] = [];
+    let applied = false;
+    try {
+      applied = sessionStorage.getItem("simolador:config-aplicada") === "1";
+      sessionStorage.removeItem("simolador:config-aplicada");
+    } catch {
+      /* nada */
+    }
+    if (configState.safeMode) say.push("As configurações novas não abriram direito e foram desfeitas: o programa voltou ao padrão.");
+    else if (configState.problems.length) say.push(`Configurações deixadas de lado: ${configState.problems[0]}`);
+    else if (applied) say.push("Configurações aplicadas.");
+    if (configState.rejected.length) say.push(`Valores ignorados nas configurações: ${configState.rejected.slice(0, 4).join(", ")}${configState.rejected.length > 4 ? "…" : ""}.`);
+    if (say.length) useApp.setState({ hint: say.join(" ") });
+  }, []);
+}
+
 export default function App() {
   useShortcuts();
+  useConfigNotices();
   const placing = useApp((s) => s.tool.kind !== "select");
   const sheetsOpen = useApp((s) => s.sheetsOpen);
   // o resumo abre e fecha só pelas setas « »; selecionar não o abre (o nome da peça aparece de leve no canto)
@@ -183,6 +206,7 @@ export default function App() {
       <VersionTag />
       <SelectBox />
       <Shortcuts />
+      <AdvancedConfig />
       {sheetsOpen && <SheetsView />}
     </div>
   );

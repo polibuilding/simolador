@@ -14,6 +14,13 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.20 — Configurações e biblioteca · 14/10/2026
+- **Configurações (engrenagem)** de verdade: módulo, ângulo mínimo entre molas, ângulo mínimo da mola na GC, passo das inclinadas (o botão da barra de baixo mostra o passo novo) e tamanho da chapa. Cada valor mostra o padrão da planilha quando muda; antes de aplicar, o menu diz o que muda na estrutura aberta (tamanho das peças, GC fora da chapa, chapas sobrepostas, ângulos abaixo do novo mínimo).
+- **Configurações avançadas**: janela com abas laterais (no estilo dos atalhos): **Peças** (medidas e pesos de cada peça; as medidas das regras acompanham o módulo), **Medidas gerais**, **Cabo e enrijecedor**, **Geral**; e, em breve, **Tutorial**, **Aparência**, **Idioma** e **Perfil**.
+- **Proteção contra configurações que quebram o programa**: limites e checagens cruzadas bloqueiam o Aplicar; aplicar recarrega o programa com a estrutura salva; se a abertura travar, a seguinte volta ao padrão sozinha e avisa; valores ilegíveis são ignorados; tela de erro com "Voltar às configurações padrão"; `?padrao` no endereço abre sem elas.
+- **Biblioteca** (ao lado da engrenagem): a biblioteca online de modelos dos usuários vem depois; por enquanto, os exemplos que vêm com o programa abrem com um clique.
+- Abrir um .mola feito com outro módulo avisa a diferença.
+
 ## 1.19 — Enter, destaque e resumo no duplo clique · 13/10/2026
 - **Enter = clique**: colocando uma peça, ligando esferas, pondo cabo ou enrijecedor, ou movendo só o nó (inclusive depois do Tab nos limites), o Enter vale como clique no lugar do cursor; sem ferramenta, seleciona a peça sob o cursor.
 - **Duplo clique abre o resumo** com a peça, até o **Esc** (que também cancela o movimento). A preferência de resumo aberto/fechado pelas setas não muda.
