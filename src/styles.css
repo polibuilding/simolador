@@ -783,3 +783,70 @@ dl { margin: 0 0 16px; }
 .piece { padding-top: 6px; padding-bottom: 6px; }
 .palette section + section { margin-top: 10px; }
 .piece-count { white-space: nowrap; }
+
+/* tela de erro (ErrorBoundary) */
+.crash { position: fixed; inset: 0; display: grid; place-items: center; background: var(--paper, #f1f3f2); padding: 24px; }
+.crash-card { max-width: 460px; background: #fff; border: 1px solid var(--rule); border-radius: 14px; padding: 22px 24px; box-shadow: 0 10px 40px rgba(20, 30, 28, 0.08); }
+.crash-card h1 { font-size: 18px; margin: 0 0 8px; }
+.crash-card p { color: var(--graphite); line-height: 1.5; margin: 0 0 14px; }
+.crash-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.crash-actions button { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--rule); background: #fff; cursor: pointer; font: inherit; }
+.crash-actions button.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+.crash-card details { font-size: 12px; color: var(--graphite); }
+.crash-card code { display: block; margin-top: 6px; white-space: pre-wrap; }
+
+/* ---------- configurações (engrenagem) ---------- */
+.cfg-pop { width: 360px; }
+.cfg-row { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; column-gap: 10px; align-items: center; padding: 5px 0; }
+.cfg-row > label { font-size: 13px; color: var(--ink); }
+.cfg-in { display: inline-flex; align-items: center; gap: 5px; justify-self: end; }
+.cfg-note { grid-column: 1 / -1; font-size: 11px; color: var(--graphite); min-height: 0; }
+.cfg-row.bad .cfg-note { color: #b4373b; }
+.cfg-num { height: 28px; border: 1px solid var(--rule); border-radius: 7px; padding: 0 8px; font: inherit; font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; background: #fff; }
+.cfg-num:focus { outline: none; border-color: var(--ink); }
+.cfg-num.bad { border-color: #d9686c; background: #fff6f6; }
+.cfg-in select { height: 28px; border: 1px solid var(--rule); border-radius: 7px; padding: 0 6px; font: inherit; font-size: 13px; background: #fff; }
+.cfg-unit { font-size: 11.5px; color: var(--graphite); min-width: 22px; }
+.cfg-reset { border: 0 !important; background: none !important; padding: 0 !important; font-size: 11px !important; color: var(--graphite) !important; text-decoration: underline dotted; cursor: pointer; }
+.cfg-msgs { margin: 8px 0 0; padding: 8px 10px 8px 24px; border-radius: 8px; background: #fbf6ea; color: #6d5a2b; font-size: 12px; line-height: 1.45; }
+.cfg-msgs.bad { background: #fdf0f0; color: #9b2c30; }
+.cfg-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; align-items: center; }
+.cfg-actions button { height: 30px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--rule) !important; background: #fff; font: inherit; font-size: 13px; cursor: pointer; }
+.cfg-actions button.primary { background: var(--ink); color: #fff; border-color: var(--ink) !important; }
+.cfg-actions button:disabled { opacity: 0.4; cursor: default; }
+.cfg-grow { flex: 1; }
+.cfg-foot { margin: 8px 0 0; font-size: 11px; color: var(--graphite); line-height: 1.4; }
+.cfg-adv { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 10px; padding: 8px 2px 0 !important; border: 0 !important; border-top: 1px solid var(--rule) !important; border-radius: 0 !important; background: none; font: inherit; font-size: 13px; color: var(--ink); cursor: pointer; }
+.cfg-adv:hover { color: #000; }
+/* janela das avançadas: abas laterais */
+.cfg-adv-win { width: min(940px, calc(100vw - 32px)); max-height: calc(100vh - 60px); display: flex; flex-direction: column; }
+.cfg-body { display: grid; grid-template-columns: 190px 1fr; gap: 18px; min-height: 0; flex: 1; overflow: hidden; }
+.cfg-tabs { display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--rule); padding-right: 12px; overflow-y: auto; }
+.cfg-tabs button { display: flex; flex-direction: column; align-items: flex-start; text-align: left; border: 0; background: transparent; border-radius: 8px; padding: 7px 10px; font: inherit; font-size: 13.5px; color: var(--ink); cursor: pointer; }
+.cfg-tabs button small { font-size: 11px; color: var(--graphite); }
+.cfg-tabs button:hover { background: var(--hover); }
+.cfg-tabs button.on { background: var(--on); font-weight: 600; }
+.cfg-tabs button.soon { color: #9aa29f; }
+.cfg-tabs-sep { height: 1px; background: var(--rule); margin: 8px 4px; }
+.cfg-content { overflow-y: auto; padding-right: 6px; }
+.cfg-content .cfg-row { max-width: 560px; border-bottom: 1px solid var(--rule); }
+.cfg-lead { margin: 0 0 10px; font-size: 12.5px; color: var(--graphite); line-height: 1.45; }
+.cfg-table { border-collapse: collapse; width: 100%; }
+.cfg-table th { text-align: left; padding: 6px 10px 6px 0; vertical-align: middle; white-space: nowrap; }
+.cfg-table th b { display: block; font-size: 13px; }
+.cfg-table th small { font-size: 11px; color: var(--graphite); font-weight: 400; }
+.cfg-table td { padding: 6px 8px 6px 0; white-space: nowrap; vertical-align: bottom; }
+.cfg-table tr { border-bottom: 1px solid var(--rule); }
+.cfg-table td.mine .cfg-num { border-color: #8fb2e8; }
+.cfg-cell-label { display: block; font-size: 10.5px; color: var(--graphite); margin-bottom: 2px; }
+.cfg-soon .soon { font-weight: 600; color: var(--graphite); }
+.cfg-soon p { max-width: 460px; color: var(--graphite); line-height: 1.5; }
+.cfg-adv-foot { border-top: 1px solid var(--rule); margin-top: 12px; padding-top: 4px; }
+/* biblioteca */
+.lib-pop { width: 300px; }
+.lib-sub { margin: 10px 0 4px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #a1a9a6; }
+.lib-list { list-style: none; margin: 0; padding: 0; }
+.lib-list button { display: flex; justify-content: space-between; align-items: baseline; width: 100%; border: 0 !important; background: none; padding: 7px 6px !important; border-radius: 8px; font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
+.lib-list button:hover { background: var(--hover); }
+.lib-list small { color: var(--graphite); font-size: 11px; }
+.cfg-adv-win { height: min(700px, calc(100vh - 60px)); }
