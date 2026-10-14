@@ -11,3 +11,4 @@ v1.7 e3eeb9e66052cb393245b7a4a80d1585de751bc2 Triângulos de barras
 v1.8 73e4dec01b665b86ed2f51c2dc26d067f1898002 Chapas giradas, cruzamentos e atalhos
 v1.9 a17d5c03b4e6f5a92445c083dcd8feeb131f0ffa Vista simples e chapas soltas
 v1.10 b526b5bfb8e30680036a7444e51a6294940133e9 Vista paralela, Z para cima e 40°
+v1.11 e24e438c740927cbe89db3aa9a91a7413d1652ee Ligar duas esferas
