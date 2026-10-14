@@ -28,6 +28,8 @@ function ModelGroup({
       ? {
           onPick: (e: { delta: number; stopPropagation: () => void; nativeEvent: MouseEvent }) => {
             if (e.delta > 4) return;
+            // colocando peças: o clique é da colocação (ligar esferas, pontos), não seleciona
+            if (useApp.getState().tool.kind !== "select") return;
             e.stopPropagation();
             if (e.nativeEvent.shiftKey || e.nativeEvent.ctrlKey || e.nativeEvent.metaKey) toggleMulti({ kind, id });
             else select({ kind, id });
@@ -285,6 +287,20 @@ function Markers() {
   );
 }
 
+/** Primeira esfera de uma ligação (dois cliques): halo azul. */
+function LinkMark() {
+  const from = useApp((s) => s.linkFrom);
+  const model = useApp((s) => workingModel(s));
+  const n = from ? model.nodes[from] : null;
+  if (!n) return null;
+  return (
+    <mesh position={toWorld(n.pos)} raycast={() => null} renderOrder={5}>
+      <sphereGeometry args={[12, 24, 16]} />
+      <meshBasicMaterial color={COLORS.select} transparent opacity={0.35} depthWrite={false} />
+    </mesh>
+  );
+}
+
 /** Chapas (nas pranchas de algumas chapas, só elas aparecem, para a foto da capa). */
 function BoardsView() {
   const model = useDisplayModel();
@@ -441,6 +457,8 @@ export function Scene() {
       onPointerMissed={(e) => {
         // o clique que encerra um retângulo de seleção não apaga a seleção
         if (performance.now() - useApp.getState().boxEndedAt < 250) return;
+        // colocando peças, o clique é da colocação: não mexe na seleção nem apaga a dica
+        if (useApp.getState().tool.kind !== "select") return;
         if (!(e.shiftKey || e.ctrlKey || e.metaKey)) select(null);
       }}
       gl={{ preserveDrawingBuffer: true }}
@@ -480,6 +498,7 @@ export function Scene() {
       <ModelView />
       <GhostView />
       <Markers />
+      <LinkMark />
       <Placement />
       <CameraRig />
       <GizmoHelper alignment="top-right" margin={[84, 84]}>

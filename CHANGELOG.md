@@ -14,6 +14,11 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.11 — Ligar duas esferas · 13/10/2026
+- Com uma mola (ou diagonal) na mão, **clique sobre uma esfera e depois sobre outra**: a peça liga as duas. Se a distância não é a da mola, a segunda esfera anda até o ponto possível mais perto em que ela cabe, e as molas presas a ela giram (como Mover só o nó). O fantasma mostra antes onde ela vai parar; travada ou longe demais, o rodapé explica. Esc ou clicar de novo na primeira cancela.
+- Os pontos verdes, amarelos e laranja continuam valendo; para puxar uma mola da esfera, leve o cursor um pouco para fora dela.
+- Colocando peças, clicar numa peça ou no vazio não seleciona mais nada (nem apaga a dica do rodapé).
+
 ## 1.10 — Vista paralela, Z para cima e 40° · 13/10/2026
 - **Vista paralela** (caixa embaixo do cubo, tecla P): projeção sem perspectiva para modelar; a troca mantém a direção e o enquadramento. Fica guardada no navegador.
 - **Z é a altura** na tela: painéis, coordenadas, mensagens e eixos do canto mostram (X, Y, Z) com Z para cima. Os arquivos .mola não mudam (por dentro, y continua para cima). Ao colar, X e Y espelham (Z também vale, como antes).

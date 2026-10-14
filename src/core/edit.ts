@@ -3,10 +3,10 @@ import type { Catalog } from "./catalog";
 import type { InventoryConfig } from "./inventory";
 import { frameRadAt } from "./boards";
 import {
-  AXES, boardsOf, rotDir, toDisp, type Member, type Model, type Vec3, add, componentOf, cross, directionFrom, dot, len, membersAt, norm, removeConnector,
+  AXES, addMember, boardsOf, rotDir, toDisp, type Member, type Model, type Vec3, add, componentOf, cross, directionFrom, dot, len, membersAt, norm, removeConnector,
   removeMember, removeNode, removePlate, samePos, scale, sub, transformNodes,
 } from "./model";
-import { inclineStep as inclineStepOf, segmentHitsPlate, validateMovedModel, type Check } from "./rules";
+import { inclineStep as inclineStepOf, segmentHitsPlate, validateMember, validateMovedModel, type Check } from "./rules";
 import {
   applyCandidate, connectorCandidates, inclinedDirs, markerPos, memberCandidates, plateCandidates, type Candidate,
 } from "./snapping";
@@ -157,6 +157,8 @@ export interface NodeMoveSet {
   evalAt?: (p: Vec3) => NodeMove | null;
   /** ponto possível mais perto de um alvo */
   nearest?: (p: Vec3) => Vec3 | null;
+  /** como `nearest`, com mais um vínculo: o nó a `L` módulos de `c` (para ligar uma mola nova até ele) */
+  nearestWith?: (extra: { c: Vec3; L: number }, target: Vec3) => Vec3 | null;
 }
 
 export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): NodeMoveSet {
@@ -336,6 +338,27 @@ export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): Nod
     const pts = ts.map((t) => onCircle(p, h, e1, e2, t));
     return pts.length ? pts.reduce((a, b) => (len(sub(a, target)) <= len(sub(b, target)) ? a : b)) : null;
   };
+  /** Pontos que atendem a todos os vínculos mais `extra`; o mais perto de `target`. */
+  const nearestWith = (extra: { c: Vec3; L: number }, target: Vec3): Vec3 | null => {
+    const all = [...cons, extra];
+    const okAll = (q: Vec3) => all.every(({ c, L }) => Math.abs(len(sub(q, c)) - L) <= tol);
+    const circ = circleOf(all[0], all[1]);
+    if (!circ) return null;
+    const { p, h, e1, e2 } = circ;
+    let cands: Vec3[];
+    if (support) {
+      cands = solve(h * e1[1], h * e2[1], -p[1]).map((t) => onCircle(p, h, e1, e2, t));
+    } else if (all.length === 2) {
+      // círculo de posições: vale o ponto dele mais perto do alvo
+      const w = sub(target, p);
+      cands = [onCircle(p, h, e1, e2, Math.atan2(dot(w, e2), dot(w, e1)))];
+    } else {
+      const w = sub(p, all[2].c);
+      cands = solve(2 * h * dot(w, e1), 2 * h * dot(w, e2), all[2].L * all[2].L - dot(w, w) - h * h).map((t) => onCircle(p, h, e1, e2, t));
+    }
+    const ok = cands.filter(okAll);
+    return ok.length ? ok.reduce((a, b) => (len(sub(a, target)) <= len(sub(b, target)) ? a : b)) : null;
+  };
   const options: NodeMove[] = [];
   const done = new Set<string>();
   for (const raw of pts) {
@@ -345,7 +368,7 @@ export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): Nod
     const o = evalAt(raw);
     if (o) options.push(o);
   }
-  return { options, evalAt, nearest };
+  return { options, evalAt, nearest, nearestWith };
 }
 
 
@@ -359,4 +382,43 @@ export function nodeMoveNearest(cat: Catalog, model: Model, nodeId: string, targ
   if (!move) return { error: "As barras não deixam esse nó ir para lá." };
   if (!move.check.ok) return { error: move.check.errors[0] };
   return { move, off: len(sub(move.pos, target)) };
+}
+
+
+/**
+ * Liga uma mola (ou diagonal) `code` entre as esferas A e B, nesta ordem (dois cliques).
+ * Se a distância já é a da peça, só liga. Se não, B anda para o ponto possível mais perto em que a peça cabe:
+ * as barras presas a B giram em torno das pontas fixas (como "Mover só o nó"). A fica parada.
+ */
+export function connectReach(
+  cat: Catalog, inv: InventoryConfig, model: Model, code: string, aId: string, bId: string,
+): { model?: Model; ids?: Set<string>; moved?: number; error?: string } {
+  const piece = cat.pieces[code];
+  const A = model.nodes[aId];
+  const B = model.nodes[bId];
+  if (!piece?.spanM || (piece.type !== "bar" && piece.type !== "cable")) return { error: `${code} não é mola nem diagonal.` };
+  if (!A || !B || aId === bId) return { error: "Escolha duas esferas diferentes." };
+  if (Object.values(model.members).some((m) => (m.a === aId && m.b === bId) || (m.a === bId && m.b === aId))) {
+    return { error: "Já existe uma peça entre essas duas esferas." };
+  }
+  const L = piece.type === "cable" ? Math.hypot(piece.spanM[0], piece.spanM[1]) : piece.spanM[0];
+  const tol = cat.settings.tolerancia_encaixe_mm / cat.settings.modulo_mm;
+  const fmt = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+  // já na distância certa: só liga
+  if (Math.abs(len(sub(B.pos, A.pos)) - L) <= tol) {
+    const ck = validateMember(cat, inv, model, code, aId, B.pos, { free: true });
+    if (!ck.ok) return { error: ck.errors[0] };
+    return { model: addMember(model, code, aId, B.pos).model, ids: new Set([bId]), moved: 0 };
+  }
+  const set = nodeMoveOptions(cat, model, bId);
+  if (set.locked) return { error: `A segunda esfera não pode andar: ${set.locked.charAt(0).toLowerCase()}${set.locked.slice(1)}` };
+  const p = set.nearestWith?.({ c: A.pos, L }, B.pos);
+  if (!p) return { error: `As barras presas à segunda esfera não deixam ela chegar a ${fmt(L)} M da primeira (a ${code} tem ${fmt(L)} M; estão a ${fmt(len(sub(B.pos, A.pos)))} M).` };
+  const mv = set.evalAt?.(p);
+  if (!mv) return { error: "As barras presas à segunda esfera não deixam ela ir para lá." };
+  if (mv.ids.has(aId)) return { error: "A primeira esfera anda junto com a segunda: escolha outra esfera, ou clique na ordem inversa." };
+  if (!mv.check.ok) return { error: mv.check.errors[0] };
+  const ck = validateMember(cat, inv, mv.model, code, aId, mv.pos, { free: true });
+  if (!ck.ok) return { error: ck.errors[0] };
+  return { model: addMember(mv.model, code, aId, mv.pos).model, ids: mv.ids, moved: len(sub(mv.pos, B.pos)) };
 }
