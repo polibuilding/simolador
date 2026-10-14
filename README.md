@@ -2,7 +2,7 @@
 
 Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (Mola Structural Model), feito pela equipe Poli Mola da Poli Building. Você monta a estrutura no navegador, com as peças e o estoque reais dos kits, e o programa vai gerar as pranchas (plantas e vistas) no padrão do Desafio Poli-USP.
 
-**Versão em uso:** https://polibuilding.github.io/simolador/ · versão atual **1.13** ("geométrica"); o que mudou em cada versão está em [CHANGELOG.md](CHANGELOG.md).
+**Versão em uso:** https://polibuilding.github.io/simolador/ · versão atual **1.14** ("geométrica"); o que mudou em cada versão está em [CHANGELOG.md](CHANGELOG.md).
 
 ## O que já funciona
 
@@ -26,6 +26,7 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 - **Câmera**: cubo de vistas no canto (faces, arestas e cantos para isométricas; segue a projeção), e na barra de baixo Enquadrar (F), **Vista paralela** (P), **Sombras**, **Renderização** (desligada = peças simples e leves, o padrão) e **Inércia** (B); sem limite de altura; dá para olhar por baixo (a chapa fica translúcida); eixos X, Y, Z no canto.
 - **Atalhos em volta do W A S D** (lista completa no botão Atalhos ou com ? / H): W A S D giram a vista (Shift: arrastam), Q/E trocam a peça pela vizinha do grupo (B4 ⇄ B6 ⇄ B12), 1/2/3 escolhem Eixos/15°/Livre, G/V/T ligam a grade e os pontos azuis e amarelos, B liga a inércia, F enquadra, R gira, Espaço repete.
 - **Pranchas** (A3 ou A4): desenhos, títulos e tabela arrastáveis; capa com isométrica renderizada (ou em linhas) e lista de peças, cotas entre eixos, totais e níveis (liga/desliga), etiquetas que se arrastam na tela, logos no carimbo, todas as chapas ou só algumas, plantas por pavimento e vistas A–D no padrão do Desafio Poli-USP; escala automática; carimbo editável; **PDF**, **DXF** (camadas MOLA-*) e SVG.
+- **Paleta recolhível** (1.14): a seta « no alto da paleta a transforma num menu pequeno só com os símbolos das peças (» volta); as bolinhas ao lado do código mostram de que kit vem cada peça.
 - Estoque configurável (a paleta mostra só as peças dos kits escolhidos; no modo sem limite, o programa diz quantos kits, no mínimo, a estrutura pede), arquivos `.mola`, salvamento automático no navegador.
 
 Exemplos em `examples/`: o pórtico simples e a **Estrutura 01 do Desafio 2022**, reconstruída a partir das pranchas originais.

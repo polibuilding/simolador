@@ -14,6 +14,12 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.14 — Paleta recolhível e marca do siMOLAdor · 13/10/2026
+- **Paleta de peças mais enxuta**: as bolinhas dos kits (verde = K1, vermelha = K2) ficam ao lado do código, numa linha só por peça.
+- **Recolher a paleta**: a seta **«** no canto superior direito da aba vira um **menu pequeno** sobre a cena, como o de Encaixe, Barras e Vista, só com os símbolos (separados por grupo; o nome, o que resta e o total aparecem ao passar o mouse). Clicar ou arrastar um símbolo funciona como na paleta. A seta **»** acima dele devolve a paleta inteira. Quando falta altura (ou quando entrarem mais peças, como as do kit 3), o menu passa a ter **duas colunas**. O programa lembra a escolha.
+- **Símbolos das diagonais** com comprimentos diferentes (D4x6 < D6x6 < D6x12), para distinguir de longe.
+- **Marca**: o símbolo do siMOLAdor é o hexágono do Mola com os triângulos pintados no azul e amarelo da Poli Building (também no ícone da aba do navegador). O símbolo do Kit Mola leva a br.molamodel.com e o do grupo ao Instagram da Poli Building (abrem em outra aba).
+
 ## 1.13 — Mover com o mouse e painel da peça · 13/10/2026
 - **Segurar e arrastar** qualquer peça move a estrutura inteira; **duplo clique** move só a peça. Na esfera (ou GC), o caminho possível aparece em azul: esfera translúcida (presa por uma mola), círculo tracejado (duas molas), círculo na chapa (GC) ou pontos; ela desliza pelo caminho e encaixa nas posições redondas. Na mola, placa ou ligação, o duplo clique a leva para outro lugar. Os botões "Mover estrutura" e "Mover só o nó" saíram.
 - **Painel da peça** reorganizado: primeiro **Posição e geometria** (coordenadas, vão, comprimento, direção, orientação), depois **Ligações** (o que chega em cada ponta ou na esfera) e, nas molas, **Peça** (como trabalha, origem da medida).

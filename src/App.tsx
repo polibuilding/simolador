@@ -7,7 +7,7 @@ import { HintLine, VersionTag } from "./ui/StatusBar";
 import { Dock } from "./ui/Dock";
 import { Toolbar } from "./ui/Toolbar";
 import { Shortcuts } from "./ui/Shortcuts";
-import { GROUPS } from "./ui/Palette";
+import { GROUPS, PaletteMini } from "./ui/Palette";
 import { useApp } from "./ui/store";
 import { catalog } from "./core/catalog";
 import { available } from "./core/inventory";
@@ -159,12 +159,14 @@ export default function App() {
   const sheetsOpen = useApp((s) => s.sheetsOpen);
   // o resumo abre pelo botão lateral; com algo selecionado, abre sozinho (mostra a peça)
   const propsOpen = useApp((s) => s.propsOpen || !!s.selection || s.multi.length > 0 || !!s.selectedBoard);
+  const mini = useApp((s) => s.paletteMini);
   return (
-    <div className={`app${placing ? " placing" : ""}${propsOpen ? " props-open" : ""}`}>
+    <div className={`app${placing ? " placing" : ""}${propsOpen ? " props-open" : ""}${mini ? " palette-mini-on" : ""}`}>
       <Toolbar />
-      <Palette />
+      {!mini && <Palette />}
       <main className="viewport" aria-label="Cena 3D">
         <Scene />
+        {mini && <PaletteMini />}
         <HintLine />
         <Dock />
         {!propsOpen && <SummaryTab />}

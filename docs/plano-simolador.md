@@ -143,7 +143,8 @@ Exemplo de entrada em `catalog.json` (gerado de `data/parametros.xlsx` por `npm 
 - **Peças realistas, mas leves**: mola como hélice procedural metálica, esferas cromadas, ligações em plástico cinza claro, chapa de base preta com a grade branca igual à real (18 × 12 módulos).
 - **Layout** (interface leve, 1.12: traços finos, cantos suaves, pouco peso):
   - no topo, à esquerda: logos pequenas, siMOLAdor, Arquivo, Configurações (engrenagem), desfazer/refazer; no centro, o nome do projeto; à direita, o estoque, Pranchas e Simolar;
-  - à esquerda, a paleta de peças (só o código; quantidade só com estoque limitado), até o fim da tela;
+  - à esquerda, a paleta de peças (código com as bolinhas dos kits ao lado; quantidade só com estoque limitado), até o fim da tela; a seta « a recolhe num menu pequeno sobre a cena, só com os símbolos (uma coluna, ou duas se faltar altura), e a seta » a devolve (1.14);
+  - marca: o hexágono do Mola com os triângulos no azul e amarelo da Poli Building; os símbolos do Kit Mola e do grupo levam ao site do Mola e ao Instagram da Poli Building;
   - no centro, a cena 3D com o cubo de vistas (segue a projeção: paralela ou perspectiva), a dica da ferramenta em texto pequeno e a barra de baixo (Encaixe, Barras, Vista);
   - à direita, o resumo / a peça selecionada, recolhível pela aba "‹ Resumo" (abre sozinho com algo selecionado), até o fim da tela;
   - a versão, bem de leve, no canto inferior direito.
@@ -222,7 +223,7 @@ Análise estrutural: fora do escopo (Q09).
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0`, `v1.1`…).
 
-- **1.x — geométrica** (atual: 1.13): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.14): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: o módulo extra ajustável.
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
