@@ -24,3 +24,4 @@ v1.20 92d146a Configurações e biblioteca
 v1.21 888d2ef Girar o conjunto em torno das GC, atalhos novos
 v1.22 59871df Rigidez: a estrutura acompanha ou trava
 v1.23 77a69c4 O que mexe junto (Tab amplia) e GC perto da estrutura
+v1.23.1 92c17df Correção: clique que não colocava a peça
