@@ -157,9 +157,16 @@ export interface NodeMoveSet {
   evalAt?: (p: Vec3) => NodeMove | null;
   /** ponto possível mais perto de um alvo */
   nearest?: (p: Vec3) => Vec3 | null;
+  /** onde o nó pode ficar (para desenhar): superfície de esfera, círculo ou alguns pontos */
+  locus?: NodeLocus;
   /** como `nearest`, com mais um vínculo: o nó a `L` módulos de `c` (para ligar uma mola nova até ele) */
   nearestWith?: (extra: { c: Vec3; L: number }, target: Vec3) => Vec3 | null;
 }
+
+export type NodeLocus =
+  | { kind: "sphere"; c: Vec3; r: number }
+  | { kind: "circle"; p: Vec3; h: number; e1: Vec3; e2: Vec3 }
+  | { kind: "points"; pts: Vec3[] };
 
 export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): NodeMoveSet {
   const node = model.nodes[nodeId];
@@ -368,7 +375,30 @@ export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): Nod
     const o = evalAt(raw);
     if (o) options.push(o);
   }
-  return { options, evalAt, nearest, nearestWith };
+  // lugar geométrico do nó (sem as regras): para desenhar o caminho possível
+  let locus: NodeLocus | undefined;
+  if (cons.length === 1) {
+    const { c, L } = cons[0];
+    if (support) {
+      if (c[1] < L) locus = { kind: "circle", p: [c[0], 0, c[2]], h: Math.sqrt(L * L - c[1] * c[1]), e1: [1, 0, 0], e2: [0, 0, 1] };
+    } else locus = { kind: "sphere", c, r: L };
+  } else {
+    const circ = circleOf(cons[0], cons[1]);
+    if (circ) {
+      if (!support && cons.length === 2) locus = { kind: "circle", ...circ };
+      else {
+        const { p, h, e1, e2 } = circ;
+        let ts: number[];
+        if (support) ts = solve(h * e1[1], h * e2[1], -p[1]);
+        else {
+          const w = sub(p, cons[2].c);
+          ts = solve(2 * h * dot(w, e1), 2 * h * dot(w, e2), cons[2].L * cons[2].L - dot(w, w) - h * h);
+        }
+        locus = { kind: "points", pts: ts.map((t) => onCircle(p, h, e1, e2, t)).filter((q) => cons.every(({ c, L }) => Math.abs(len(sub(q, c)) - L) <= tol)) };
+      }
+    }
+  }
+  return { options, evalAt, nearest, nearestWith, locus };
 }
 
 

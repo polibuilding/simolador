@@ -13,7 +13,7 @@ export function HintLine() {
   const message =
     hint ??
     (tool.kind === "select"
-      ? "Esquerdo seleciona (arraste para um retângulo); direito gira a vista; Shift+direito move. ? mostra os atalhos."
+      ? "Clique seleciona · arraste uma peça para mover a estrutura · duplo clique move só a peça · direito gira a vista. ? mostra os atalhos."
       : ok
         ? dragging
           ? "Solte para encaixar."

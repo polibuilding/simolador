@@ -38,10 +38,12 @@ export interface Pickable {
   onPick?: (e: ThreeEvent<MouseEvent>) => void;
   onHover?: (over: boolean) => void;
   onDown?: (e: ThreeEvent<PointerEvent>) => void;
+  onDouble?: (e: ThreeEvent<MouseEvent>) => void;
 }
 
-export const pickProps = ({ onPick, onHover, onDown }: Pickable) => ({
+export const pickProps = ({ onPick, onHover, onDown, onDouble }: Pickable) => ({
   onClick: onPick,
+  onDoubleClick: onDouble,
   onPointerDown: onDown,
   onPointerOver: onHover ? (e: ThreeEvent<PointerEvent>) => (e.stopPropagation(), onHover(true)) : undefined,
   onPointerOut: onHover ? () => onHover(false) : undefined,

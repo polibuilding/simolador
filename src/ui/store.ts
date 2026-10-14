@@ -101,6 +101,8 @@ interface State {
   startMove: (viaDrag: boolean) => void;
   /** N / botão "Mover só o nó" */
   startMoveNode: (viaDrag: boolean) => void;
+  /** arrastar uma peça: leva a estrutura inteira dela (qualquer peça) */
+  startMoveStructure: (viaDrag: boolean) => void;
   /** área de transferência (Ctrl+C) */
   clip: Clip | null;
   copySelection: () => void;
@@ -335,7 +337,21 @@ export const useApp = create<State>((set, get) => ({
   startMoveNode: (viaDrag) => {
     const sel = get().selection;
     if (sel?.kind !== "node") return set({ hint: "Selecione uma esfera ou ligação de base para mover só o nó." });
-    set({ tool: { kind: "moveNode", nodeId: sel.id, viaDrag }, ghost: null, hint: "Leve o nó até um dos pontos verdes: as barras acompanham. Esc cancela." });
+    set({ tool: { kind: "moveNode", nodeId: sel.id, viaDrag }, ghost: null, hint: "Leve a esfera pelo caminho azul: as barras acompanham. Clique para deixar; Esc cancela." });
+  },
+  startMoveStructure: (viaDrag) => {
+    const s = get();
+    const sel = s.selection;
+    const m = s.history.present;
+    if (!sel) return;
+    // a peça pega pela mão: esfera = ela mesma; barra, placa ou ligação = uma esfera dela
+    const anchor =
+      sel.kind === "node" ? sel.id
+      : sel.kind === "member" ? m.members[sel.id]?.a
+      : sel.kind === "plate" ? m.plates[sel.id]?.corners[0]
+      : m.connectors[sel.id]?.node;
+    if (!anchor || !m.nodes[anchor]) return;
+    set({ tool: { kind: "moveGroup", nodeId: anchor, turns: 0, viaDrag }, ghost: null, hint: "Leve a estrutura até o novo lugar. R gira 90°." });
   },
 
   clip: null,

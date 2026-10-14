@@ -31,20 +31,52 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
   );
 }
 
-function Actions({ moveLabel, removeLabel, nodeOnly }: { moveLabel: string; removeLabel: string; nodeOnly?: boolean }) {
-  const { startMove, startMoveNode, rotate, removeSelected } = useApp.getState();
+/** Ações da peça selecionada. Mover: arrastar a peça leva a estrutura; duplo clique move só a peça. */
+function Actions({ removeLabel, rotate = true }: { removeLabel: string; rotate?: boolean }) {
+  const { rotate: doRotate, removeSelected } = useApp.getState();
   return (
     <div className="actions">
-      <button onClick={() => startMove(false)} title="M, ou arraste a peça">{moveLabel}</button>
-      {nodeOnly && (
-        <button onClick={() => startMoveNode(false)} title="N, ou Alt + arrastar: o resto fica parado e as barras inclinam para acompanhar">
-          Mover só o nó
-        </button>
-      )}
-      <button onClick={rotate} title="R">Girar</button>
+      {rotate && <button onClick={doRotate} title="R">Girar</button>}
       <button className="danger" onClick={removeSelected} title="Delete">{removeLabel}</button>
     </div>
   );
+}
+
+/** Bloco do painel com título pequeno. */
+function Section({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
+  return (
+    <section className={`psec ${className}`}>
+      <h3>{title}</h3>
+      {children}
+    </section>
+  );
+}
+
+/** Como mover a peça (no lugar dos antigos botões). */
+function MoveHint({ only }: { only: string }) {
+  return (
+    <p className="move-hint">
+      <strong>Arraste</strong> a peça para mover a estrutura inteira · <strong>duplo clique</strong> para mover {only}.
+    </p>
+  );
+}
+
+/** "B6 ×3 · D6x6 ×1" */
+const countText = (codes: string[]) => {
+  const c = new Map<string, number>();
+  for (const k of codes) c.set(k, (c.get(k) ?? 0) + 1);
+  return [...c].sort().map(([k, n]) => (n > 1 ? `${k} ×${n}` : k)).join(" · ") || "—";
+};
+
+/** Direção de uma barra, em palavras. */
+function directionText(a: Vec3, b: Vec3): string {
+  const v = sub(b, a);
+  const L = len(v) || 1;
+  const elev = (Math.asin(Math.min(1, Math.abs(v[1]) / L)) * 180) / Math.PI;
+  if (elev > 89.5) return "vertical (Z)";
+  const az = ((Math.atan2(v[2], v[0]) * 180) / Math.PI + 360) % 180; // em planta, a partir de X
+  const plan = az < 0.5 || az > 179.5 ? "em X" : Math.abs(az - 90) < 0.5 ? "em Y" : `${fmt(az, 0)}° em planta (a partir de X)`;
+  return elev < 0.5 ? `horizontal, ${plan}` : `inclinada: ${fmt(elev, 0)}° com a horizontal, ${plan}`;
 }
 
 /** Texto do campo → módulos. Aceita "5,196" (módulos) ou "77,3 mm". */
@@ -56,6 +88,7 @@ function parseCoord(t: string): number | null {
   if (!body || !Number.isFinite(v)) return null;
   return mm ? v / M : v;
 }
+const scaleV = (v: Vec3, k: number): Vec3 => [v[0] * k, v[1] * k, v[2] * k];
 const fieldText = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 4, useGrouping: false });
 
 /**
@@ -158,20 +191,31 @@ function Selected() {
   if (sel.kind === "node") {
     const n = model.nodes[sel.id];
     if (!n) return null;
-    const links = Object.values(model.members).filter((m) => m.a === n.id || m.b === n.id).length;
+    const members = Object.values(model.members).filter((m) => m.a === n.id || m.b === n.id);
+    const conns = Object.values(model.connectors).filter((c) => c.node === n.id);
+    const plates = Object.values(model.plates).filter((p) => p.corners.includes(n.id));
     const group = componentOf(model, n.id).size;
+    const gc = n.kind === "support";
     return (
       <>
-        <h2>{n.kind === "support" ? "Ligação de base (GC)" : "Esfera (C)"}</h2>
-        <dl>
-          <Row k="Posição (módulos)" v={posText(n.pos)} />
-          <Row k="Altura do centro" v={`${fmt(catalog.settings.gc_centro_esfera_mm + n.pos[1] * M)} mm`} />
-          <Row k="Peças ligadas" v={links} />
-          <Row k="Mover e girar" v={`levam a estrutura inteira (${group} ${group === 1 ? "nó" : "nós"})`} />
-        </dl>
-        <CoordEditor id={n.id} pos={n.pos} support={n.kind === "support"} />
-        {n.kind === "support" && <Distances id={n.id} />}
-        <Actions nodeOnly moveLabel="Mover estrutura" removeLabel={n.kind === "support" ? "Remover GC e o que sai dela" : "Remover esfera e peças ligadas"} />
+        <h2>{gc ? "Ligação de base (GC)" : "Esfera (C)"}</h2>
+        <Section title="Posição e geometria">
+          <CoordEditor id={n.id} pos={n.pos} support={gc} />
+          <dl>
+            <Row k="Altura do centro" v={`${fmt(catalog.settings.gc_centro_esfera_mm + n.pos[1] * M)} mm acima da chapa`} />
+          </dl>
+          {gc && <Distances id={n.id} />}
+        </Section>
+        <Section title="Ligações">
+          <dl>
+            <Row k="Molas e diagonais" v={`${members.length ? countText(members.map((m) => m.code)) : "nenhuma"}`} />
+            {conns.length > 0 && <Row k="Ligações" v={countText(conns.map((c) => c.code))} />}
+            {plates.length > 0 && <Row k="Placas" v={countText(plates.map((p) => p.code))} />}
+            <Row k="Estrutura" v={`${group} ${group === 1 ? "nó" : "nós"} ligados`} />
+          </dl>
+        </Section>
+        <MoveHint only={gc ? "só a GC (pelo caminho azul na chapa)" : "só a esfera (pelo caminho azul; as molas acompanham)"} />
+        <Actions removeLabel={gc ? "Remover GC e o que sai dela" : "Remover esfera e peças ligadas"} />
       </>
     );
   }
@@ -179,21 +223,40 @@ function Selected() {
     const m = model.members[sel.id];
     if (!m) return null;
     const p = catalog.pieces[m.code];
-    const span = len(sub(model.nodes[m.b].pos, model.nodes[m.a].pos));
+    const A = model.nodes[m.a].pos;
+    const B = model.nodes[m.b].pos;
+    const span = len(sub(B, A));
     const cable = p?.type === "cable";
     const lengthMm = Number(cable ? p?.geometry.cableLengthMm : p?.geometry.lengthMm);
+    const atEnd = (id: string) => Object.values(model.members).filter((x) => x.id !== m.id && (x.a === id || x.b === id)).map((x) => x.code);
+    const conns = Object.values(model.connectors).filter((c) => c.node === m.a || c.node === m.b);
     return (
       <>
-        <h2>{p?.name ?? m.code}</h2>
-        <dl>
-          <Row k="Vão" v={`${fmt(span, cable ? 2 : 0)} módulos = ${fmt(span * M)} mm entre centros`} />
-          <Row k={cable ? "Comprimento do cabo" : "Comprimento da peça"} v={`${fmt(lengthMm)} mm`} />
-          <Row k="De" v={posText(model.nodes[m.a].pos)} />
-          <Row k="Até" v={posText(model.nodes[m.b].pos)} />
-          <Row k="Trabalha a" v={cable ? "só tração" : "tração, compressão e flexão"} />
-          <Row k="Origem da medida" v={STATUS_TEXT[p?.status ?? ""] ?? "—"} />
-        </dl>
-        <Actions moveLabel="Mover" removeLabel={cable ? "Remover diagonal" : "Remover barra"} />
+        <h2>{p?.name ?? m.code} <span className="code-chip">{m.code}</span></h2>
+        <Section title="Posição e geometria">
+          <dl>
+            <Row k="Vão (centro a centro)" v={`${fmt(span, cable ? 2 : Number.isInteger(span) ? 0 : 2)} módulos = ${fmt(span * M)} mm`} />
+            <Row k={cable ? "Comprimento do cabo" : "Comprimento da mola"} v={`${fmt(lengthMm)} mm`} />
+            <Row k="Direção" v={directionText(A, B)} />
+            <Row k="De" v={posText(A)} />
+            <Row k="Até" v={posText(B)} />
+          </dl>
+        </Section>
+        <Section title="Ligações">
+          <dl>
+            <Row k={`Na ponta ${posText(A)}`} v={atEnd(m.a).length ? countText(atEnd(m.a)) : "só esta peça"} />
+            <Row k={`Na ponta ${posText(B)}`} v={atEnd(m.b).length ? countText(atEnd(m.b)) : "só esta peça"} />
+            {conns.length > 0 && <Row k="Ligações nas pontas" v={countText(conns.map((c) => c.code))} />}
+          </dl>
+        </Section>
+        <Section title="Peça">
+          <dl>
+            <Row k="Trabalha a" v={cable ? "só tração" : "tração, compressão e flexão"} />
+            <Row k="Origem da medida" v={STATUS_TEXT[p?.status ?? ""] ?? "—"} />
+          </dl>
+        </Section>
+        <MoveHint only={cable ? "só a diagonal" : "só a mola"} />
+        <Actions removeLabel={cable ? "Remover diagonal" : "Remover mola"} />
       </>
     );
   }
@@ -201,35 +264,60 @@ function Selected() {
     const pl = model.plates[sel.id];
     if (!pl) return null;
     const p = catalog.pieces[pl.code];
-    const ys = pl.corners.map((c) => model.nodes[c].pos[1]);
-    const horizontal = ys.every((y) => y === ys[0]);
+    const cs = pl.corners.map((c) => model.nodes[c].pos);
+    const ys = cs.map((q) => q[1]);
+    const horizontal = ys.every((y) => Math.abs(y - ys[0]) < 1e-6);
+    const center = scaleV(cs.reduce((acc, q) => [acc[0] + q[0], acc[1] + q[1], acc[2] + q[2]] as Vec3, [0, 0, 0] as Vec3), 0.25);
+    const vertical = !horizontal && Math.abs(Math.max(...ys) - Math.min(...ys)) > 1e-6 && cs.some((q, i) => cs.some((r, j) => i !== j && Math.abs(q[0] - r[0]) < 1e-6 && Math.abs(q[2] - r[2]) < 1e-6));
     return (
       <>
-        <h2>{p?.name ?? pl.code}</h2>
-        <dl>
-          <Row k="Posição" v={horizontal ? `laje no nível ${fmt(ys[0], 0)}` : "parede (vertical)"} />
-          <Row k="Tamanho" v={`${fmt(Number(p?.geometry.lengthMm))} × ${fmt(Number(p?.geometry.widthMm))} mm`} />
-          <Row k="Espessura" v={`${fmt(Number(p?.geometry.thicknessMm))} mm (${STATUS_TEXT.estimado})`} />
-        </dl>
-        <Actions moveLabel="Mover" removeLabel="Remover placa" />
+        <h2>{p?.name ?? pl.code} <span className="code-chip">{pl.code}</span></h2>
+        <Section title="Posição e geometria">
+          <dl>
+            <Row k="Orientação" v={horizontal ? `laje, no nível z = ${fmt(ys[0], Number.isInteger(ys[0]) ? 0 : 2)} M` : vertical ? "parede (vertical)" : "inclinada"} />
+            <Row k="Centro" v={posText(center)} />
+            <Row k="Tamanho" v={`${fmt(Number(p?.geometry.lengthMm))} × ${fmt(Number(p?.geometry.widthMm))} mm`} />
+            <Row k="Espessura" v={`${fmt(Number(p?.geometry.thicknessMm))} mm (${STATUS_TEXT.estimado})`} />
+          </dl>
+        </Section>
+        <Section title="Ligações">
+          <dl>
+            <Row k="Esferas nos cantos" v={cs.map(posText).join(" ")} />
+          </dl>
+        </Section>
+        <MoveHint only="só a placa" />
+        <Actions removeLabel="Remover placa" />
       </>
     );
   }
   const c = model.connectors[sel.id];
   if (!c) return null;
   const p = catalog.pieces[c.code];
+  const bars = Object.values(model.members).filter((m) => (m.a === c.node || m.b === c.node) && catalog.pieces[m.code]?.type === "bar");
   return (
     <>
-      <h2>{p?.name ?? c.code}</h2>
-      <dl>
-        <Row k="Na esfera" v={posText(model.nodes[c.node].pos)} />
-        <Row
-          k={c.code === "RC90" ? "Canto" : "Par contínuo"}
-          v={c.code === "RC90" ? (c.base ? "entre a GC e o pilar" : `${AXIS_NAME(c.dirs[0])} com ${AXIS_NAME(c.dirs[1])}`) : `barras no eixo ${AXIS_NAME(c.dirs[0])}${c.side ? `, lado ${SIDE_NAME(c.side)}` : ""} (R troca o lado)`}
-        />
-        <Row k="Origem da medida" v={STATUS_TEXT[p?.status ?? ""] ?? "—"} />
-      </dl>
-      <Actions moveLabel="Mover" removeLabel="Remover ligação" />
+      <h2>{p?.name ?? c.code} <span className="code-chip">{c.code}</span></h2>
+      <Section title="Posição e geometria">
+        <dl>
+          <Row k="Na esfera" v={posText(model.nodes[c.node].pos)} />
+          <Row
+            k={c.code === "RC90" ? "Canto" : "Par contínuo"}
+            v={c.code === "RC90" ? (c.base ? "entre a GC e o pilar" : `${AXIS_NAME(c.dirs[0])} com ${AXIS_NAME(c.dirs[1])}`) : `molas no eixo ${AXIS_NAME(c.dirs[0])}${c.side ? `, lado ${SIDE_NAME(c.side)}` : ""} (R troca o lado)`}
+          />
+        </dl>
+      </Section>
+      <Section title="Ligações">
+        <dl>
+          <Row k="Molas na esfera" v={countText(bars.map((m) => m.code))} />
+        </dl>
+      </Section>
+      <Section title="Peça">
+        <dl>
+          <Row k="Origem da medida" v={STATUS_TEXT[p?.status ?? ""] ?? "—"} />
+        </dl>
+      </Section>
+      <MoveHint only="só a ligação" />
+      <Actions removeLabel="Remover ligação" />
     </>
   );
 }
@@ -395,6 +483,9 @@ function Summary() {
           })}
         </tbody>
       </table>
+      <Section title="Estabilidade" className="future">
+        <p className="soon">Em breve</p>
+      </Section>
     </>
   );
 }

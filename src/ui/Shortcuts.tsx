@@ -36,6 +36,8 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
   {
     title: "Editar",
     keys: [
+      ["Arrastar", "segurar e arrastar uma peça move a estrutura inteira"],
+      ["Duplo clique", "move só a peça (esfera: pelo caminho azul; mola, placa, ligação: para outro lugar)"],
       ["M", "mover a peça ou a seleção"],
       ["N", "mover só o nó (esfera selecionada)"],
       ["Delete", "apagar"],

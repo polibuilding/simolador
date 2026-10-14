@@ -21,6 +21,7 @@ import {
 import { componentOf } from "../core/model";
 import { freeOn, inclineOn, useApp, workingModel } from "../ui/store";
 import { BASE_Y, M, toWorld } from "../render/units";
+import { PROPS_W } from "../render/Scene";
 
 const SPOT_PX = 46;
 const CLICK_PX = 5;
@@ -456,9 +457,12 @@ export function Placement() {
       return true;
     };
 
-    const inGizmo = (ev: PointerEvent, rect: DOMRect) =>
-      (ev.clientX > rect.right - GIZMO_PX && ev.clientY < rect.top + GIZMO_PX) || // cubo de vistas
+    const inGizmo = (ev: PointerEvent, rect: DOMRect) => {
+      const s = useApp.getState();
+      const off = s.propsOpen || s.selection || s.multi.length || s.selectedBoard ? PROPS_W : 0; // painel aberto: o cubo se afasta
+      return (ev.clientX > rect.right - off - GIZMO_PX && ev.clientX < rect.right - off && ev.clientY < rect.top + GIZMO_PX) || // cubo de vistas
       (ev.clientX < rect.left + AXES_PX && ev.clientY > rect.bottom - AXES_PX); // eixos X, Y, Z
+    };
 
     // ---- seleção por retângulo ----
     let boxStart: { x: number; y: number; shift: boolean } | null = null;
@@ -500,57 +504,73 @@ export function Placement() {
       if (st.tool.kind === "select" && st.pendingDrag) {
         if (Math.hypot(ev.clientX - st.pendingDrag.x, ev.clientY - st.pendingDrag.y) > DRAG_PX) {
           st.setPendingDrag(null);
-          // Alt + arrastar um nó: move só o nó; sem Alt: a estrutura inteira
+          // arrastar uma peça: a estrutura inteira; Alt + arrastar um nó: só o nó
           if (ev.altKey && st.selection?.kind === "node") st.startMoveNode(true);
-          else st.startMove(true);
+          else if (st.multi.length) st.startMoveSelection();
+          else st.startMoveStructure(true);
         } else return;
       }
       const tool = useApp.getState().tool;
       if (tool.kind === "select") return;
       if (!insideOf(ev, rect)) return st.setGhost(null, tool.viaDrag ? "Solte a peça sobre a cena." : st.hint);
+      // cursor sobre o painel da direita, a barra de baixo ou a aba do resumo (por cima da cena): sem fantasma
+      if (!tool.viaDrag && (ev.target as HTMLElement | null)?.closest?.(".props, .dock, .summary-tab")) return st.setGhost(null, st.hint);
       const model = workingModel(useApp.getState());
 
-      // ---- mover só o nó: vale a posição possível mais perto do cursor ----
+      // ---- mover só o nó (duplo clique na esfera): desliza pelo caminho possível (esfera, círculo ou pontos) ----
       if (tool.kind === "moveNode") {
         const present = st.history.present;
         const node = present.nodes[tool.nodeId];
         if (!node) return st.disarm();
         const set = nodeOptionsFor(present, tool.nodeId);
-        const { options, locked } = set;
-        if (locked) return st.setGhost(null, locked);
-        // modo Livre: o nó desliza (contínuo) pelo lugar possível mais perto do cursor
-        if (freeOn(st) && set.nearest && set.evalAt) {
-          const ray = rayAt(ev, rect);
-          const tgt = toModule(ray.closestPointToPoint(toWorld(node.pos), new THREE.Vector3()));
-          const pt = set.nearest(tgt);
-          const o = pt && set.evalAt(pt);
-          if (o) {
-            const y = o.pos[1].toFixed(2).replace(".", ",");
-            return st.setGhost({ kind: "group", model: o.model, ids: o.ids, check: o.check }, o.check.ok ? `Livre: nó em (${toDisp(o.pos).map((v) => +v.toFixed(2)).join("; ")}), altura z = ${y} M. Clique para deixar aí.` : o.check.errors[0]);
-          }
-        }
-        let best: { o: (typeof options)[number]; d: number } | null = null;
-        for (const o of options) {
-          const w = toWorld(o.pos);
+        if (set.locked) return st.setGhost(null, set.locked);
+        const dpx = (p: Vec3) => {
+          const w = toWorld(p);
           if (node.kind === "support") w.y = 0.6;
-          const sp = toScreen(w, rect);
-          const d = Math.hypot(sp.x - ev.clientX, sp.y - ev.clientY);
-          if (!best || d < best.d - (o.check.ok ? 0 : 4)) best = { o, d };
+          const q = toScreen(w, rect);
+          return q.z > 1 ? Infinity : Math.hypot(q.x - ev.clientX, q.y - ev.clientY);
+        };
+        // 1) posições "redondas" (eixos, passos de 15°) perto do cursor: encaixa nelas
+        let pick: Vec3 | null = null;
+        let best = 14;
+        for (const o of set.options) {
+          const d = dpx(o.pos);
+          if (o.check.ok && d < best) (best = d), (pick = o.pos);
         }
-        const nOk = options.filter((o) => o.check.ok).length;
-        if (!best || best.d > 90) return st.setGhost(null, `Leve o nó até um dos ${nOk} pontos verdes: as barras acompanham.`);
-        const o = best.o;
-        // inclinação das barras que giraram (a primeira), para o rodapé
-        const tie = Object.values(o.model.members).find((m) => (m.a === tool.nodeId) !== (m.b === tool.nodeId) && !(o.ids.has(m.a) && o.ids.has(m.b)));
-        let ang = "";
-        if (tie) {
-          const a = o.model.nodes[tie.a].pos;
-          const b = o.model.nodes[tie.b].pos;
-          const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
-          const deg = Math.round((Math.asin(Math.min(1, Math.abs(b[1] - a[1]) / L)) * 180) / Math.PI);
-          ang = ` A ${tie.code} fica a ${deg}° da horizontal.`;
+        // 2) contínuo, pelo caminho
+        const loc = set.locus;
+        if (!pick && loc) {
+          if (loc.kind === "sphere") {
+            const ray = rayAt(ev, rect);
+            const C = toWorld(loc.c);
+            const hit = ray.intersectSphere(new THREE.Sphere(C, loc.r * M), new THREE.Vector3())
+              ?? C.clone().add(ray.closestPointToPoint(C, new THREE.Vector3()).sub(C).setLength(loc.r * M));
+            pick = toModule(hit);
+          } else if (loc.kind === "circle") {
+            let bd = Infinity;
+            for (let k = 0; k < 360; k++) {
+              const t = (k * Math.PI) / 180;
+              const q = add(loc.p, add(scale(loc.e1, loc.h * Math.cos(t)), scale(loc.e2, loc.h * Math.sin(t))));
+              const d = dpx(q);
+              if (d < bd) (bd = d), (pick = q);
+            }
+          } else {
+            let bd = 80;
+            for (const q of loc.pts) {
+              const d = dpx(q);
+              if (d < bd) (bd = d), (pick = q);
+            }
+          }
+          if (pick && set.nearest) pick = set.nearest(pick) ?? pick;
         }
-        return st.setGhost({ kind: "group", model: o.model, ids: o.ids, check: o.check }, o.check.ok ? `Clique para levar o nó para ${`(${toDisp(o.pos).map((v) => +v.toFixed(2)).join("; ")})`}.${ang}` : o.check.errors[0]);
+        const o = pick && set.evalAt ? set.evalAt(pick) : null;
+        if (!o) return st.setGhost(null, "Leve o cursor pelo caminho azul: é por ali que a esfera pode andar.");
+        const f = (p: Vec3) => `(${toDisp(p).map((v) => +v.toFixed(2)).join("; ")})`;
+        const moved = len(sub(o.pos, node.pos)).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+        return st.setGhost(
+          { kind: "group", model: o.model, ids: o.ids, check: o.check },
+          o.check.ok ? `Clique para deixar o nó em ${f(o.pos)} (anda ${moved} M; as barras acompanham). Esc cancela.` : o.check.errors[0],
+        );
       }
 
       // ---- mover estrutura ----
