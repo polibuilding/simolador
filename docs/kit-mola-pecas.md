@@ -82,9 +82,34 @@ Mola: fio Ø 0,6 mm, diâmetro médio 3,4 mm, ~112 espiras ativas; EA medido ≈
 
 ## Outros kits (resumo)
 
-- Kit 3 (azul, 205 peças + cortador): cabos (3,35 m), conexões e grampos de cabo, anéis, B6, B12, enrijecedores, D6x6, D6x12, 2 chapas de base.
+- Kit 3 (azul, 205 peças + cortador): detalhado na seção abaixo.
 - Kit 4 (amarelo, 144 peças + chave Allen): B3, B6, B12, arco A6x6, D3x3, D3x6, D6x6, ligação de superfície, folhas de papel.
 - Acessórios: barras de comprimento ajustável (B3–B4, B4–B6, B6–B9, B9–B12), ligações leves, placas avulsas, Ground Clip (une chapas de base).
+
+## Kit 3 (cor azul) — 205 peças + cortador, manual bilíngue
+
+Levantado em 13/10/2026 na página oficial (a página diz 205 no texto e 235 na descrição; a soma da lista dá 205). Códigos das peças novas ainda a confirmar com o kit e o manual.
+
+| Peça (nome oficial) | Código provável | Qtd | Já existe no siMOLAdor? |
+|---|---|---|---|
+| Connection (esfera) | C | 18 | sim |
+| Rigid Connection | RC90 | 12 | sim (confirmar se é a mesma RC90) |
+| Ground Connection | GC | 8 | sim |
+| Ground (chapa de base) | G | 2 | sim (várias chapas desde 1.10) |
+| Bar B6 | B6 | 30 | sim |
+| Bar B12 | B12 | 9 | sim |
+| Diagonal D6x6 | D6x6 | 9 | sim |
+| Diagonal D6x12 | D6x12 | 9 | sim |
+| Cable (3,35 m, cortado com o cortador) | — | 1 | **não**: cabo de comprimento livre |
+| Cable Connection | — | 24 | **não**: prende a ponta do cabo (na esfera?) |
+| Cable Clip Connection | — | 50 | **não**: grampo de cabo |
+| Multiple Cable Clip Connection | — | 4 | **não**: grampo para vários cabos |
+| Cable Ring, small / medium | — | 10 + 10 | **não**: anéis (redes de cabo, tensegridade?) |
+| Bar Stiffener B6 / B12 | — | 3 + 6 | **não**: enrijecedor da mola |
+
+Sistemas do manual: cabo, reações de apoio do cabo, formas funiculares, viga com cabo, rede de cabos (sela), cobertura suspensa, ponte estaiada, ponte pênsil, tensegridade, busca de forma.
+
+Perguntas para a equipe (com o kit em mãos): onde prende cada peça nova (esfera, mola, outro cabo); medidas e fotos; se o cabo tem comprimento livre (múltiplo do módulo ou qualquer); se o enrijecedor deixa a mola rígida e se muda o desenho; se as duas chapas vêm iguais à do Kit 1/2 (18 × 12 M).
 
 ## Fontes
 
@@ -93,4 +118,5 @@ Mola: fio Ø 0,6 mm, diâmetro médio 3,4 mm, ~112 espiras ativas; EA medido ≈
 - https://molamodel.com/pages/compare-products
 - https://br.molamodel.com/pages/manual-kit-estrutural-mola-1
 - https://br.molamodel.com/pages/manual-kit-estrutural-mola-2
+- https://molamodel.com/products/mola-structural-kit-3
 - https://upcommons.upc.edu/bitstreams/59bed473-2c1e-4be5-a9c3-d81db4e83e4c/download
