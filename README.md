@@ -2,11 +2,12 @@
 
 Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (Mola Structural Model), feito pela equipe Poli Mola da Poli Building. Você monta a estrutura no navegador, com as peças e o estoque reais dos kits, e o programa vai gerar as pranchas (plantas e vistas) no padrão do Desafio Poli-USP.
 
-**Versão em uso:** https://polibuilding.github.io/simolador/ · versão atual **1.10** ("geométrica"); o que mudou em cada versão está em [CHANGELOG.md](CHANGELOG.md).
+**Versão em uso:** https://polibuilding.github.io/simolador/ · versão atual **1.11** ("geométrica"); o que mudou em cada versão está em [CHANGELOG.md](CHANGELOG.md).
 
 ## O que já funciona
 
 - **Todas as peças dos Kits 1 e 2**: ligação de base, barras B4/B6/B12, diagonais D4x6/D6x6/D6x12, placas P6x6/P6x12 (laje ou parede), ligações RC90, CC e CC90.
+- **Ligar duas esferas**: com uma mola na mão, clique sobre uma esfera e depois sobre outra; se a distância não bate, a segunda esfera anda até a mola caber (as molas dela giram).
 - **Encaixe**: pontos verdes mostram onde a peça escolhida entra. Sobre uma esfera, a barra sobe; puxando o cursor para um lado, ela vai para aquele lado; **R** alterna as opções.
 - **Direção das barras: Eixos, 15° ou Livre**. No Livre a ponta segue o cursor em qualquer direção 3D e encaixa em esferas, triângulos com esferas vizinhas e alturas existentes (treliças 3D, telhados). Por padrão as barras vão só nos eixos; segure **Shift** (ou ligue "Barras: Inclinadas", tecla **I**) para inclinar em passos de 15° nos planos X, Y e Z. Fechar entre duas esferas que estejam à distância da barra (triângulos) vale sempre. Uma barra que não alcança a esfera fica vermelha e o rodapé diz quanto faltou.
 - **CC e CC90 nos 4 lados** da esfera (R troca o lado), menos onde chega uma barra transversal; o mesmo par aceita CC em vários lados.

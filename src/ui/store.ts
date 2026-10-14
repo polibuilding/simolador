@@ -43,6 +43,8 @@ interface State {
   guides: { blue: boolean; yellow: boolean };
   /** esfera de onde saem os pontos amarelos de barras (triângulos) */
   triAnchor: string | null;
+  /** primeira esfera escolhida para ligar duas esferas com a peça na mão (dois cliques) */
+  linkFrom: string | null;
   /** inércia da vista: a câmera desliza um pouco depois de soltar o mouse */
   inertia: boolean;
   setInertia: (on: boolean) => void;
@@ -230,6 +232,7 @@ export const useApp = create<State>((set, get) => ({
   snap: catalog.settings.gc_encaixe_padrao !== "livre",
   guides: { blue: true, yellow: true },
   triAnchor: null,
+  linkFrom: null,
   inertia: readPref("simolador:inercia", true),
   setInertia: (inertia) => (writePref("simolador:inercia", inertia), set({ inertia, hint: inertia ? "Inércia ligada: a vista desliza um pouco depois de soltar o mouse (B)." : "Vista firme: para assim que você solta o mouse (B)." })),
   render: readPref("simolador:render", false),

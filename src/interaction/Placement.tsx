@@ -8,7 +8,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 import { catalog } from "../core/catalog";
-import { moveGroup, nodeMoveOptions } from "../core/edit";
+import { connectReach, moveGroup, nodeMoveOptions } from "../core/edit";
 import { pasteClip, transformClip, type Clip, type PasteResult } from "../core/clipboard";
 import { AXES, add, boardsOf, findNodeAt, len, norm, rotDir, scale, sub, toDisp, type Model, type Vec3 } from "../core/model";
 import { frameRadAt } from "../core/boards";
@@ -96,6 +96,15 @@ export function barGuidesFor(model: Model, code: string, inv: ReturnType<typeof 
   if (c && c.model === model && c.code === code && c.inv === inv && c.anchor === anchor) return c.guides;
   barGuideCache = { model, code, inv, anchor, guides: barTriangleGuides(catalog, inv, model, code, anchor) };
   return barGuideCache.guides;
+}
+
+// ligação entre duas esferas (dois cliques): recalcula quando muda o modelo, a peça ou as esferas
+let linkCache: { model: Model; code: string; inv: unknown; a: string; b: string; r: ReturnType<typeof connectReach> } | null = null;
+function linkFor(model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"], a: string, b: string) {
+  const c = linkCache;
+  if (c && c.model === model && c.code === code && c.inv === inv && c.a === a && c.b === b) return c.r;
+  linkCache = { model, code, inv, a, b, r: connectReach(catalog, inv, model, code, a, b) };
+  return linkCache.r;
 }
 
 /** Peças novas de `full` em relação a `base` (para o fantasma): o modelo só com elas e os nós novos. */
@@ -395,6 +404,58 @@ export function Placement() {
       return false;
     };
 
+    // ---- ligar duas esferas (dois cliques): a segunda anda até a mola caber ----
+    /** esfera clicada agora (a primeira, ou de novo a primeira para cancelar) */
+    let linkPick: string | null = null;
+    /** o fantasma atual é uma ligação entre duas esferas */
+    let linkGhost: { moved: number } | null = null;
+    /** Esfera sob o cursor: dentro do desenho dela na tela (mínimo 9 px). */
+    const sphereUnder = (ev: PointerEvent, rect: DOMRect, model: Model): string | null => {
+      const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+      let best: { id: string; d: number } | null = null;
+      for (const n of Object.values(model.nodes)) {
+        const w = toWorld(n.pos);
+        const c = toScreen(w, rect);
+        if (c.z > 1) continue;
+        const e = toScreen(w.clone().add(right.clone().multiplyScalar(catalog.settings.esfera_diametro_mm / 2)), rect);
+        const r = Math.max(9, Math.hypot(e.x - c.x, e.y - c.y));
+        const d = Math.hypot(c.x - ev.clientX, c.y - ev.clientY);
+        if (d <= r && (!best || d < best.d)) best = { id: n.id, d };
+      }
+      return best?.id ?? null;
+    };
+    const linkStep = (ev: PointerEvent, rect: DOMRect, model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"]): boolean => {
+      const st = useApp.getState();
+      linkPick = null;
+      linkGhost = null;
+      const on = sphereUnder(ev, rect, model);
+      if (!on) return false;
+      const fmt = (p: Vec3) => `(${toDisp(p).map((v) => +v.toFixed(2)).join("; ")})`;
+      const from = st.linkFrom && model.nodes[st.linkFrom] ? st.linkFrom : null;
+      if (!from || on === from) {
+        linkPick = on;
+        st.setGhost(
+          null,
+          from
+            ? `Primeira esfera ${fmt(model.nodes[from].pos)}: clique na outra esfera. Clique de novo nesta (ou Esc) cancela.`
+            : "Clique para começar a ligação nesta esfera; depois clique na outra esfera. Ou leve o cursor até um ponto verde, amarelo ou laranja.",
+        );
+        return true;
+      }
+      const r = linkFor(model, code, inv, from, on);
+      if (!r.model) {
+        st.setGhost(null, r.error ?? "Não dá para ligar essas esferas.");
+        return true;
+      }
+      linkGhost = { moved: r.moved ?? 0 };
+      const moved = r.moved ? ` A segunda esfera anda ${(r.moved).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} M e as molas dela giram para a ${code} caber.` : "";
+      st.setGhost(
+        { kind: "group", model: r.model, ids: r.ids ?? new Set([on]), keep: true, check: { ok: true, errors: [], warnings: [] } },
+        `Clique para ligar ${fmt(model.nodes[from].pos)} a ${fmt(model.nodes[on].pos)} com a ${code}.${moved}`,
+      );
+      return true;
+    };
+
     const inGizmo = (ev: PointerEvent, rect: DOMRect) =>
       (ev.clientX > rect.right - GIZMO_PX && ev.clientY < rect.top + GIZMO_PX) || // cubo de vistas
       (ev.clientX < rect.left + AXES_PX && ev.clientY > rect.bottom - AXES_PX); // eixos X, Y, Z
@@ -548,6 +609,12 @@ export function Placement() {
         if (triangleStep(ev, rect, model, code, inv)) return;
       } else if (st.triAnchor) useApp.setState({ triAnchor: null });
 
+      // ---- ligar duas esferas: clique numa esfera e depois em outra ----
+      const ptype = catalog.pieces[code]?.type;
+      if ((ptype === "bar" || ptype === "cable") && !tool.moving && !tool.viaDrag) {
+        if (linkStep(ev, rect, model, code, inv)) return;
+      } else if (st.linkFrom) useApp.setState({ linkFrom: null });
+
       // ---- barras no modo Livre ----
       if (freeOn(st) && catalog.pieces[code]?.type === "bar") return freeBar(ev, rect, model, code, inv);
 
@@ -688,9 +755,21 @@ export function Placement() {
       down.current = null;
       if (!inside || !d || Math.hypot(d.x - ev.clientX, d.y - ev.clientY) > CLICK_PX) return; // foi giro de câmera
       update(ev);
-      useApp.getState().commitGhost();
+      // clique numa esfera: escolhe a primeira da ligação (ou cancela, se for a mesma)
+      if (linkPick) {
+        const cur = useApp.getState().linkFrom;
+        useApp.setState({ linkFrom: cur === linkPick ? null : linkPick });
+        update(ev);
+        return;
+      }
+      const wasLink = linkGhost;
+      const ok = useApp.getState().commitGhost();
+      if (ok && (wasLink || useApp.getState().linkFrom)) useApp.setState({ linkFrom: null });
       // depois de colocar, recalcula o fantasma no mesmo lugar
       update(ev);
+      if (ok && wasLink) {
+        useApp.setState({ hint: wasLink.moved ? `Ligado. A segunda esfera andou ${wasLink.moved.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} M e as molas dela giraram (Ctrl+Z desfaz).` : "Ligado." });
+      }
     };
 
     // Gancho de teste/depuração: projeta posições do modelo (módulos) para a tela.
@@ -708,6 +787,9 @@ export function Placement() {
       if (s.tool !== p.tool && s.triAnchor && !(s.tool.kind === "place" && p.tool.kind === "place" && s.tool.code === p.tool.code)) {
         useApp.setState({ triAnchor: null });
       }
+      if (s.tool !== p.tool && s.linkFrom && !(s.tool.kind === "place" && p.tool.kind === "place" && s.tool.code === p.tool.code)) {
+        useApp.setState({ linkFrom: null });
+      }
       // depois de colocar a peça, o Tab recomeça do ponto mais perto
       if ((s.history !== p.history || s.tool !== p.tool) && s.snapCycle && s.tool.kind === "place" && catalog.pieces[s.tool.code]?.type === "bar") {
         triTab = null;
@@ -718,7 +800,7 @@ export function Placement() {
         freeAnchor = null;
         freeHold = s.history !== p.history && lastEv ? { x: lastEv.clientX, y: lastEv.clientY } : null;
       }
-      if (lastEv && (s.rotIndex !== p.rotIndex || s.barMode !== p.barMode || (s.tool !== p.tool && s.tool.kind === "paste") || s.snapCycle !== p.snapCycle || s.guides !== p.guides || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
+      if (lastEv && (s.linkFrom !== p.linkFrom || s.rotIndex !== p.rotIndex || s.barMode !== p.barMode || (s.tool !== p.tool && s.tool.kind === "paste") || s.snapCycle !== p.snapCycle || s.guides !== p.guides || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
         update(lastEv);
       }
     });

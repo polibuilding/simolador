@@ -47,6 +47,9 @@ function useShortcuts() {
       const k = e.key.toLowerCase();
       if (e.key === "Escape" && st.helpOpen) {
         st.setHelpOpen(false);
+      } else if (e.key === "Escape" && st.linkFrom) {
+        // primeiro Esc: só cancela a ligação começada
+        useApp.setState({ linkFrom: null, hint: "Ligação cancelada." });
       } else if (e.key === "Escape") {
         if (st.tool.kind !== "select") st.disarm();
         else st.select(null); // limpa também a seleção múltipla

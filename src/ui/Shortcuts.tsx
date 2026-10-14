@@ -16,6 +16,7 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
     title: "Peças",
     keys: [
       ["Q / E", "peça anterior / seguinte do grupo (B4 ⇄ B6 ⇄ B12…)"],
+      ["Clique · Clique", "com uma mola na mão: esfera e outra esfera ligam as duas (a segunda anda se precisar)"],
       ["Espaço", "repetir a última peça"],
       ["R", "girar / alternar a opção no ponto"],
       ["1 · 2 · 3", "direção das barras: Eixos · 15° · Livre (I alterna)"],
