@@ -1,5 +1,5 @@
 import { Canvas, useThree } from "@react-three/fiber";
-import { Environment, GizmoHelper, GizmoViewport, Lightformer, OrbitControls } from "@react-three/drei";
+import { Environment, GizmoHelper, GizmoViewport, Lightformer, Line, OrbitControls } from "@react-three/drei";
 import { GizmoHelper as CubeHelperRaw } from "./gizmo/CubeHelper";
 import { GizmoViewcube as ViewCubeRaw } from "./gizmo/ViewCube";
 import { useEffect, useMemo, useRef } from "react";
@@ -38,11 +38,25 @@ function ModelGroup({
           },
           onHover: (over: boolean) => setHover(over ? id : null),
           onDown: (e: { button: number; stopPropagation: () => void; nativeEvent: PointerEvent }) => {
-            // arrastar a peça já selecionada = mover
-            if (e.button === 0 && selection?.id === id) {
-              e.stopPropagation();
-              setPendingDrag({ x: e.nativeEvent.clientX, y: e.nativeEvent.clientY });
-            }
+            // segurar e arrastar uma peça = mover a estrutura dela (a peça já fica selecionada)
+            const st = useApp.getState();
+            if (e.button !== 0 || st.tool.kind !== "select") return;
+            const n = e.nativeEvent;
+            if (n.shiftKey || n.ctrlKey || n.metaKey) return;
+            e.stopPropagation();
+            const inMulti = st.multi.some((x) => x.id === id);
+            if (!inMulti && selection?.id !== id) select({ kind, id });
+            setPendingDrag({ x: n.clientX, y: n.clientY });
+          },
+          onDouble: (e: { stopPropagation: () => void }) => {
+            // duplo clique: move só esta peça (esfera: pelo caminho possível; barra, placa, ligação: para outro lugar)
+            const st = useApp.getState();
+            if (st.tool.kind !== "select") return;
+            e.stopPropagation();
+            st.setPendingDrag(null);
+            select({ kind, id });
+            if (kind === "node") useApp.getState().startMoveNode(false);
+            else useApp.getState().startMove(false);
           },
         }
       : {};
@@ -219,7 +233,9 @@ function Markers() {
   }, [code, model, present, inventory, tool, show, triAnchor]);
   const { dots, rings } = useMemo(() => {
     if (tool.kind === "moveNode") {
-      // mover só o nó: pontos verdes nas posições possíveis
+      // mover só o nó: o caminho azul já mostra onde ela pode ir; com caminho contínuo, as posições "redondas"
+      // continuam valendo como encaixe, mas sem pontos verdes; só sem caminho (travada em pontos) eles aparecem
+      if (nodeOptionsFor(present, tool.nodeId).locus?.kind !== "points") return { dots: [] as THREE.Vector3[], rings: [] as THREE.Vector3[] };
       const node = present.nodes[tool.nodeId];
       const { options } = nodeOptionsFor(present, tool.nodeId);
       const dots = options.filter((o) => o.check.ok).map((o) => {
@@ -289,9 +305,9 @@ function Markers() {
   );
 }
 
-/** Primeira esfera de uma ligação (dois cliques): halo azul. */
+/** Halo azul na esfera em destaque: a primeira de uma ligação (dois cliques) ou a que está andando sozinha. */
 function LinkMark() {
-  const from = useApp((s) => s.linkFrom);
+  const from = useApp((s) => s.linkFrom ?? (s.tool.kind === "moveNode" ? s.tool.nodeId : null));
   const model = useApp((s) => workingModel(s));
   const n = from ? model.nodes[from] : null;
   if (!n) return null;
@@ -301,6 +317,69 @@ function LinkMark() {
       <meshBasicMaterial color={COLORS.select} transparent opacity={0.35} depthWrite={false} />
     </mesh>
   );
+}
+
+/** Caminho possível da esfera que anda sozinha: esfera azul (uma mola), círculo tracejado (duas) ou pontos. */
+function NodeLocusView() {
+  const tool = useApp((s) => s.tool);
+  const present = useApp((s) => s.history.present);
+  const nodeId = tool.kind === "moveNode" ? tool.nodeId : null;
+  const set = useMemo(() => (nodeId && present.nodes[nodeId] ? nodeOptionsFor(present, nodeId) : null), [nodeId, present]);
+  const loc = set && !set.locked ? set.locus : undefined;
+  const lift = present.nodes[nodeId ?? ""]?.kind === "support";
+  const circle = useMemo(() => {
+    if (loc?.kind !== "circle") return null;
+    const pts: THREE.Vector3[] = [];
+    for (let k = 0; k <= 180; k++) {
+      const t = (k * 2 * Math.PI) / 180;
+      const w = toWorld([0, 1, 2].map((i) => loc.p[i] + loc.h * (loc.e1[i] * Math.cos(t) + loc.e2[i] * Math.sin(t))) as Vec3);
+      if (lift) w.y = 0.6;
+      pts.push(w);
+    }
+    return pts;
+  }, [loc, lift]);
+  if (!loc) return null;
+  if (loc.kind === "sphere") {
+    const c = toWorld(loc.c);
+    const r = loc.r * M;
+    const ring = (axis: "x" | "y" | "z") =>
+      Array.from({ length: 121 }, (_, k) => {
+        const t = (k * 2 * Math.PI) / 120;
+        const [a, b] = [Math.cos(t) * r, Math.sin(t) * r];
+        return axis === "y" ? new THREE.Vector3(c.x + a, c.y, c.z + b) : axis === "x" ? new THREE.Vector3(c.x, c.y + a, c.z + b) : new THREE.Vector3(c.x + a, c.y + b, c.z);
+      });
+    return (
+      <group raycast={() => null}>
+        <mesh position={c} raycast={() => null} renderOrder={4}>
+          <sphereGeometry args={[r, 48, 32]} />
+          <meshBasicMaterial color={COLORS.select} transparent opacity={0.07} depthWrite={false} side={THREE.DoubleSide} />
+        </mesh>
+        {(["x", "y", "z"] as const).map((a) => (
+          <Line key={a} points={ring(a)} color={COLORS.select} lineWidth={1.2} dashed dashSize={4} gapSize={3} transparent opacity={0.6} />
+        ))}
+      </group>
+    );
+  }
+  if (loc.kind === "circle" && circle) {
+    return <Line points={circle} color={COLORS.select} lineWidth={2} dashed dashSize={5} gapSize={3.5} />;
+  }
+  if (loc.kind === "points") {
+    return (
+      <group raycast={() => null}>
+        {loc.pts.map((p, i) => {
+          const w = toWorld(p);
+          if (lift) w.y = 0.6;
+          return (
+            <mesh key={i} position={w} raycast={() => null}>
+              <sphereGeometry args={[4, 16, 12]} />
+              <meshBasicMaterial color={COLORS.select} transparent opacity={0.8} depthTest={false} />
+            </mesh>
+          );
+        })}
+      </group>
+    );
+  }
+  return null;
 }
 
 /** Chapas (nas pranchas de algumas chapas, só elas aparecem, para a foto da capa). */
@@ -355,6 +434,9 @@ function CameraRig() {
 // cópias do drei sem tipos: props livres
 const CubeHelper = CubeHelperRaw as unknown as React.FC<Record<string, unknown> & { children?: React.ReactNode }>;
 const ViewCube = ViewCubeRaw as unknown as React.FC<Record<string, unknown>>;
+
+/** largura do painel da direita (por cima da cena), em px: o cubo de vistas se afasta dele */
+export const PROPS_W = 272;
 
 /** abertura da câmera em perspectiva (graus) */
 const FOV = 35;
@@ -456,6 +538,7 @@ export function Scene() {
   const render = useApp((s) => s.render);
   const shadows = useApp((s) => s.shadows);
   const ortho = useApp((s) => s.ortho);
+  const propsOpen = useApp((s) => s.propsOpen || !!s.selection || s.multi.length > 0 || !!s.selectedBoard);
   return (
     <Canvas
       shadows
@@ -506,10 +589,11 @@ export function Scene() {
       <GhostView />
       <Markers />
       <LinkMark />
+      <NodeLocusView />
       <Placement />
       <CameraRig />
       {/* cubo de vistas: segue a projeção da cena (paralela ou perspectiva) */}
-      <CubeHelper alignment="top-right" margin={[84, 84]} perspective={!ortho}>
+      <CubeHelper alignment="top-right" margin={[84 + (propsOpen ? PROPS_W : 0), 84]} perspective={!ortho}>
         <group scale={1.35}>
           <ViewCube
             faces={["DIREITA", "ESQUERDA", "TOPO", "BASE", "FRENTE", "TRÁS"]}

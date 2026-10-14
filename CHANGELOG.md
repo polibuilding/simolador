@@ -14,6 +14,13 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.13 — Mover com o mouse e painel da peça · 13/10/2026
+- **Segurar e arrastar** qualquer peça move a estrutura inteira; **duplo clique** move só a peça. Na esfera (ou GC), o caminho possível aparece em azul: esfera translúcida (presa por uma mola), círculo tracejado (duas molas), círculo na chapa (GC) ou pontos; ela desliza pelo caminho e encaixa nas posições redondas. Na mola, placa ou ligação, o duplo clique a leva para outro lugar. Os botões "Mover estrutura" e "Mover só o nó" saíram.
+- **Painel da peça** reorganizado: primeiro **Posição e geometria** (coordenadas, vão, comprimento, direção, orientação), depois **Ligações** (o que chega em cada ponta ou na esfera) e, nas molas, **Peça** (como trabalha, origem da medida).
+- **Resumo**: bloco **Estabilidade** (em breve) depois da tabela de peças.
+- O painel da direita abre **por cima da cena** (a cena não muda de tamanho ao selecionar; nada pula de lugar). O cubo de vistas e a barra de baixo se afastam dele.
+- **Estoque**: menu mais limpo (sem a pergunta e sem Fechar); fecha com Esc ou clicando fora. Configurações e Simolar também.
+
 ## 1.12 — Interface leve · 13/10/2026
 - **Visual mais limpo**: traços finos, cantos suaves, menos negrito; botões ligados só levemente tingidos.
 - **Barra de cima**: logos pequenas + siMOLAdor, **Arquivo**, **Configurações** (engrenagem; por enquanto mostra os valores internos, como o módulo) e desfazer/refazer à esquerda; **nome do projeto no centro**; estoque, **Pranchas** e **Simolar** (novo, "em breve": a porta da simulação) à direita.

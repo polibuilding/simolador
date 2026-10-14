@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
 import { minKits, usage } from "../core/inventory";
 import { useApp, useModel } from "./store";
@@ -16,14 +16,45 @@ function download(name: string, text: string) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
+/**
+ * Fecha um menu flutuante com Esc ou com um clique fora dele (inclusive no botão que o abriu,
+ * que fica fora: o próprio botão volta a abrir/fechar).
+ */
+function useDismiss(onClose: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const down = (e: PointerEvent) => {
+      const box = ref.current;
+      const t = e.target as Node;
+      if (!box || box.contains(t)) return;
+      // o botão que abre o menu (irmão anterior) cuida de fechar sozinho
+      if (box.parentElement?.contains(t)) return;
+      onClose();
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener("pointerdown", down, true);
+    window.addEventListener("keydown", key, true);
+    return () => {
+      document.removeEventListener("pointerdown", down, true);
+      window.removeEventListener("keydown", key, true);
+    };
+  }, [onClose]);
+  return ref;
+}
+
 function StockPanel({ onClose }: { onClose: () => void }) {
+  const ref = useDismiss(onClose);
   const inventory = useApp((s) => s.inventory);
   const setInventory = useApp((s) => s.setInventory);
   const setKit = (id: string, n: number) =>
     setInventory({ ...inventory, kits: { ...inventory.kits, [id]: Math.max(0, Math.min(20, n)) } });
   return (
-    <div className="popover" role="dialog" aria-label="Estoque">
-      <p className="popover-title">Quantas caixas vocês têm?</p>
+    <div ref={ref} className="popover stock-pop" role="dialog" aria-label="Estoque">
       {Object.entries(catalog.kits).map(([id, k]) => (
         <label key={id} className="stock-row">
           <i className="kit-swatch" style={{ background: k.color ?? "#999" }} />
@@ -43,7 +74,6 @@ function StockPanel({ onClose }: { onClose: () => void }) {
         />
         Sem limite de peças
       </label>
-      <button className="popover-close" onClick={onClose}>Fechar</button>
     </div>
   );
 }
@@ -91,12 +121,24 @@ function Brand() {
   );
 }
 
+/** Simolar (em breve). */
+function SimPanel({ onClose }: { onClose: () => void }) {
+  const ref = useDismiss(onClose);
+  return (
+    <div ref={ref} className="popover right" role="dialog" aria-label="Simolar">
+      <p className="popover-title">Simolar · em breve</p>
+      <p className="popover-text">Aqui vai entrar a simulação da estrutura montada: deformação, estaticidade e estabilidade (a linha 3.x, "de engenharia").</p>
+    </div>
+  );
+}
+
 /** Configurações (por enquanto só mostra os valores internos; as opções entram depois). */
 function ConfigPanel({ onClose }: { onClose: () => void }) {
+  const ref = useDismiss(onClose);
   const s = catalog.settings;
   const f = (n: number) => n.toLocaleString("pt-BR");
   return (
-    <div className="popover left" role="dialog" aria-label="Configurações">
+    <div ref={ref} className="popover left" role="dialog" aria-label="Configurações">
       <p className="popover-title">Configurações</p>
       <p className="popover-text">As configurações do programa vão ficar aqui. Por enquanto, os valores usados (vêm de <code>data/parametros.xlsx</code>):</p>
       <dl className="config-list">
@@ -106,7 +148,6 @@ function ConfigPanel({ onClose }: { onClose: () => void }) {
         <div><dt>Passo das inclinadas</dt><dd>{f(Number(s.passo_inclinacao_graus ?? 15))}°</dd></div>
         <div><dt>Chapa</dt><dd>{s.chapa_modulos_x} × {s.chapa_modulos_y} módulos</dd></div>
       </dl>
-      <button className="popover-close" onClick={onClose}>Fechar</button>
     </div>
   );
 }
@@ -122,6 +163,9 @@ export function Toolbar() {
   const [fileOpen, setFileOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [simOpen, setSimOpen] = useState(false);
+  const closeStock = useCallback(() => setStockOpen(false), []);
+  const closeConfig = useCallback(() => setConfigOpen(false), []);
+  const closeSim = useCallback(() => setSimOpen(false), []);
   const [error, setError] = useState<string | null>(null);
   const model = useModel();
   // modo sem limite: quantas caixas, no mínimo, a estrutura pede
@@ -167,7 +211,7 @@ export function Toolbar() {
           <button className="icon ghost" onClick={() => setConfigOpen((o) => !o)} aria-expanded={configOpen} title="Configurações" aria-label="Configurações">
             <Icon d={Ico.gear} />
           </button>
-          {configOpen && <ConfigPanel onClose={() => setConfigOpen(false)} />}
+          {configOpen && <ConfigPanel onClose={closeConfig} />}
         </div>
         <span className="tb-sep" />
         <button className="icon ghost" onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)" aria-label="Desfazer"><Icon d={Ico.undo} /></button>
@@ -198,7 +242,7 @@ export function Toolbar() {
           <button className="ghost" onClick={() => setStockOpen((o) => !o)} aria-expanded={stockOpen} title="Peças disponíveis: quantos kits de cada tipo vocês têm">
             <Icon d={Ico.box} /> {kits}
           </button>
-          {stockOpen && <StockPanel onClose={() => setStockOpen(false)} />}
+          {stockOpen && <StockPanel onClose={closeStock} />}
         </div>
         <button className="primary" onClick={() => setSheetsOpen(true)} title="Plantas, vistas e capa (PDF, DXF, SVG)">
           <Icon d={Ico.sheet} /> Pranchas
@@ -207,15 +251,7 @@ export function Toolbar() {
           <button className="primary" onClick={() => setSimOpen((o) => !o)} aria-expanded={simOpen} title="Simular a estrutura (em breve)">
             <Icon d={Ico.sim} /> Simolar
           </button>
-          {simOpen && (
-            <div className="popover right" role="dialog" aria-label="Simolar">
-              <p className="popover-title">Simolar · em breve</p>
-              <p className="popover-text">
-                Aqui vai entrar a simulação da estrutura montada: deformação, estaticidade e estabilidade (a linha 3.x, "de engenharia").
-              </p>
-              <button className="popover-close" onClick={() => setSimOpen(false)}>Fechar</button>
-            </div>
-          )}
+          {simOpen && <SimPanel onClose={closeSim} />}
         </div>
       </div>
       {error && (

@@ -35,8 +35,10 @@ export function Dock() {
   const inertia = useApp((s) => s.inertia);
   const st = useApp.getState();
   const step = catalog.settings.passo_inclinacao_graus ?? 15;
+  // com o painel da direita aberto (por cima da cena), a barra encolhe para só ícones
+  const narrow = useApp((s) => s.propsOpen || !!s.selection || s.multi.length > 0 || !!s.selectedBoard);
   return (
-    <nav className="dock" aria-label="Encaixe, barras e vista" onPointerDown={(e) => e.stopPropagation()}>
+    <nav className={`dock${narrow ? " narrow" : ""}`} aria-label="Encaixe, barras e vista" onPointerDown={(e) => e.stopPropagation()}>
       <span className="lbl">Encaixe</span>
       <Toggle on={snap} onClick={() => st.setSnap(!snap)} title="Grade: pontos verdes de encaixe e grade da chapa para a GC (G)" icon={<i className="dock-dot green" />} />
       <Toggle on={guides.blue} onClick={() => st.setGuides({ ...guides, blue: !guides.blue })} title="Vão: GC a um vão de barra de outra GC, em X ou Y (V)" icon={<i className="dock-dot blue" />} />

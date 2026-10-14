@@ -2,7 +2,7 @@
 
 Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (Mola Structural Model), feito pela equipe Poli Mola da Poli Building. Você monta a estrutura no navegador, com as peças e o estoque reais dos kits, e o programa vai gerar as pranchas (plantas e vistas) no padrão do Desafio Poli-USP.
 
-**Versão em uso:** https://polibuilding.github.io/simolador/ · versão atual **1.12** ("geométrica"); o que mudou em cada versão está em [CHANGELOG.md](CHANGELOG.md).
+**Versão em uso:** https://polibuilding.github.io/simolador/ · versão atual **1.13** ("geométrica"); o que mudou em cada versão está em [CHANGELOG.md](CHANGELOG.md).
 
 ## O que já funciona
 
@@ -17,7 +17,8 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 - **Guias da ligação de base**: ao colocar ou mover uma GC, pontos **azuis** a um vão de barra (4, 6 ou 12 módulos) de outra GC e **amarelos** no vértice de um triângulo de barras. A GC encaixa neles mesmo no modo Livre.
 - **Coordenadas** (Z é a altura): com uma GC selecionada, digite X e Y no painel (em módulos ou em mm); com uma esfera, X, Y e Z (só o nó anda, as barras acompanham); o painel mostra as distâncias às outras GC e quais batem com uma barra.
 - **Regras do kit**: comprimentos, ângulo mínimo de 40° entre molas, mola na GC a pelo menos 40° da chapa (até 50° da vertical), nada deitado na chapa, diagonais só no vão nominal, placas presas em 4 esferas, ligações nos cantos certos, placa e diagonal sem dividir o mesmo ponto da esfera, RC90 fora do canto de uma diagonal, barras que não se cruzam, esfera que não cai em cima de uma barra, RC90 que não se cruzam, estoque. O motivo de cada bloqueio aparece no rodapé.
-- **Editar**: selecionar; **mover** (M, botão ou arrastar a peça); **girar** (R, R, R… a peça continua selecionada); remover; desfazer e refazer; **Espaço** repete a última peça. Mover uma ligação de base leva a estrutura inteira; **Mover só o nó** (N ou Alt + arrastar) deixa o resto parado e as barras inclinam para acompanhar, se as ligações deixarem.
+- **Mover com o mouse**: segurar e arrastar uma peça move a estrutura inteira; duplo clique move só a peça (numa esfera, o caminho possível aparece em azul e ela desliza por ele).
+- **Editar**: selecionar; **mover** (M ou arrastar a peça); **girar** (R, R, R… a peça continua selecionada); remover; desfazer e refazer; **Espaço** repete a última peça. Mover uma ligação de base leva a estrutura inteira; **Mover só o nó** (N ou Alt + arrastar) deixa o resto parado e as barras inclinam para acompanhar, se as ligações deixarem.
 - **Várias chapas**: clique na chapa vazia para selecioná-la; aparecem os + (acrescentar chapa ao lado) e o menu (selecionar peças, exportar ou importar .mola, pranchas da chapa, apagar). **Setas** movem a chapa nos eixos dela; no painel, **nome**, **centro X/Z** e **giro**. **Ctrl+clique** em outras chapas para definir a **distância entre elas** (0/4/6/12 módulos ou livre) e movê-las juntas. Numa chapa girada, a grade e os eixos das barras giram junto. Estruturas de chapas diferentes podem se ligar.
 - **Copiar, colar, mover, espelhar e repetir**: Ctrl+C / Ctrl+V (a cópia segue o cursor; ↑/↓ altura, R gira, X/Z espelha), M move várias peças, e "Repetir" no painel cria N cópias com deslocamento. Esferas no mesmo lugar viram uma só (vãos e pavimentos se ligam sozinhos).
 - **Seleção por retângulo**: para a direita pega o que fica inteiro dentro; para a esquerda, o que tocar. O painel mostra a lista de peças e as medidas do trecho, copia a lista e apaga tudo de uma vez.

@@ -34,11 +34,11 @@ button { font: inherit; color: inherit; }
 .app {
   height: 100%;
   display: grid;
-  grid-template-columns: 210px 1fr 0;
+  grid-template-columns: 210px 1fr;
   grid-template-rows: 48px 1fr;
   grid-template-areas:
-    "top top top"
-    "pal view props";
+    "top top"
+    "pal view";
 }
 .app.placing .viewport { cursor: crosshair; }
 
@@ -528,7 +528,10 @@ dl { margin: 0 0 16px; }
 /* =====================================================================
    Interface leve (1.12): traços finos, cantos suaves, menos peso.
    ===================================================================== */
-.app.props-open { grid-template-columns: 210px 1fr 272px; }
+/* o painel da direita abre por cima da cena (a cena não muda de tamanho: nada pula de lugar ao selecionar) */
+.app { --props-w: 272px; }
+.app .props { grid-area: view; justify-self: end; width: var(--props-w); height: 100%; z-index: 7; box-shadow: -8px 0 24px rgba(20, 30, 28, 0.05); }
+.app.props-open .dock, .app.props-open .hint-line { left: calc((100% - var(--props-w)) / 2); }
 
 /* barra de cima: marca + Arquivo + configurações à esquerda, nome do projeto no centro, estoque e botões à direita */
 .toolbar { justify-content: space-between; gap: 12px; padding: 0 12px 0 14px; border-bottom: 1px solid var(--rule); }
@@ -633,6 +636,8 @@ dl { margin: 0 0 16px; }
 .dock-dot.tri { background: linear-gradient(90deg, #ffc21a 50%, #ff7a1a 50%); }
 @container (max-width: 1050px) { .dock .txt { display: none; } .dock button { padding: 0 8px; } }
 @container (max-width: 760px) { .dock .lbl { display: none; } }
+/* com o painel aberto, sobra menos cena: só ícones */
+@container (max-width: 1320px) { .dock.narrow .txt { display: none; } .dock.narrow button { padding: 0 8px; } }
 .hint-line {
   position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); z-index: 4; margin: 0;
   width: max-content; max-width: min(760px, 80%); text-align: center; pointer-events: none;
@@ -640,3 +645,16 @@ dl { margin: 0 0 16px; }
 }
 .hint-line.bad { color: #b4373b; }
 .version-tag { position: fixed; right: 10px; bottom: 6px; z-index: 3; font-size: 10px; font-weight: 500; letter-spacing: 0.04em; color: #c2c9c6; pointer-events: none; }
+
+/* painel: blocos da peça selecionada */
+.psec { margin: 4px 0 14px; }
+.psec h3 { margin: 0 0 4px; font-size: 10.5px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #a1a9a6; }
+.psec dl { margin: 0; }
+.psec.future { margin-top: 20px; }
+.psec .soon { margin: 4px 0 0; font-size: 13px; color: #a1a9a6; }
+.code-chip { font-size: 11px; font-weight: 500; color: var(--graphite); background: var(--hover); border-radius: 6px; padding: 1px 6px; vertical-align: 2px; margin-left: 4px; }
+.move-hint { margin: 2px 0 10px; font-size: 12px; color: var(--graphite); line-height: 1.45; }
+.move-hint strong { color: var(--ink); font-weight: 600; }
+.props .coords { margin-bottom: 6px; }
+.stock-pop { width: 240px; padding: 8px 12px; }
+.stock-pop .stock-unlimited { margin: 8px 0 2px; }
