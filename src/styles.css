@@ -52,7 +52,7 @@ button { font: inherit; color: inherit; }
   background: var(--panel);
   border-bottom: 1px solid var(--rule-strong);
   position: relative;
-  z-index: 5;
+  z-index: 12; /* menus do topo (estoque, arquivo) por cima da paleta e do resumo */
 }
 .brand {
   font-weight: 400;
