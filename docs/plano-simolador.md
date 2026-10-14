@@ -224,7 +224,7 @@ Análise estrutural: fora do escopo (Q09).
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0`, `v1.1`…).
 
-- **1.x — geométrica** (atual: 1.20): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.21): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: o módulo extra ajustável.
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
@@ -239,6 +239,13 @@ Em aberto:
 - **Medidas da CC e da CC90**: necessárias para desenhá-las (o programa usa um formato provisório até lá). **Lembrete pedido pela equipe (13/10): ajeitar as peças CC e CC90.**
 - **Configurações** (engrenagem; 1.20): o menu muda módulo, ângulo mínimo entre molas, ângulo mínimo da mola na GC, passo das inclinadas (o rótulo da barra de baixo acompanha) e o tamanho da chapa; "Configurações avançadas" abre a janela com abas (Peças: medidas e pesos; Medidas gerais; Cabo e enrijecedor; Geral; e, em breve, Tutorial, Aparência, Idioma e Perfil). **Próximo passo**: pensar o menu maior; quando estiver pronto, a engrenagem abre direto nele. Os pesos ainda não entram em nenhuma conta (3.x).
   - **Proteção**: limites em cada valor; checagens cruzadas (molas com comprimento positivo, esfera menor que o menor vão, bolinha menor que o passo, GC menor que a chapa) bloqueiam o Aplicar; antes de aplicar, a tela mostra o que muda na estrutura aberta (GC fora da chapa, chapas sobrepostas, ângulos abaixo do novo mínimo); aplicar recarrega o programa com a estrutura salva; se a abertura travar, a seguinte volta ao padrão sozinha (as configurações recusadas ficam guardadas à parte); valores ilegíveis são ignorados com aviso; tela de erro com "Voltar às configurações padrão"; `?padrao` no endereço abre sem as configurações.
+- **Graus de liberdade pelos movimentos livres** (mapa, 14/10). O que já anda pelo caminho azul/vermelho e o que falta:
+  - feito: esfera presa por 1 mola (2 GL: esfera), por 2 (1 GL: círculo), por 3 ou mais (0 GL: pontos); GC presa por 1 mola (1 GL: círculo na chapa) — 1.13/1.16;
+  - feito (1.21): conjunto rígido apoiado em 1 GC (giro em volta dela: 3 GL, o programa usa o giro mínimo que leva o ponto clicado ao cursor); em 2 GC ou mais alinhadas (1 GL: giro em torno da linha, cilindro); em 3 ou mais fora de linha, ou com RC90 na base (engaste): travado;
+  - próximo — **mecanismos** (o conjunto não é um bloco só): pórtico sem placa (2 pilares + viga em 2 GC: paralelogramo, a viga anda num arco sem girar); mesa (placa em 4 pilares: balança em 2 direções); torre sem diagonais. Hoje o duplo clique gira o mecanismo inteiro como bloco (é um dos movimentos possíveis, mas não o único). Para resolver: separar os corpos rígidos (partes trianguladas e placas) e as rótulas entre eles e mover a cadeia (fórmula de Grübler/Maxwell: GL = 3 × nós − barras − 3 × GC, descontando as dependências);
+  - cabos: só tração (vínculo de um lado só): deixariam metade do caminho vermelha (o lado em que o cabo afrouxa é possível; o que estica além do pedaço, não). Hoje o cabo estica junto;
+  - enrijecedor: não muda os movimentos livres (a mola já é uma barra com rótulas nas esferas); entra na 3.x (flexão);
+  - **Estabilidade** (bloco "em breve" do resumo): mostrar os GL da estrutura (e quais peças formam mecanismo) é o caminho natural para esse bloco.
 - **Biblioteca** (ao lado da engrenagem; 1.20): por enquanto "em breve" e os exemplos que vêm com o programa (abrem com um clique). Depois: biblioteca online de modelos enviados pelos usuários (precisa de um servidor e de contas: definir onde hospedar).
 - **Simolar** (botão ao lado de Pranchas): por enquanto "em breve"; é a porta da linha 3.x (deformação, estaticidade, estabilidade).
 - **Kit 3 (1.18: cabo simples e enrijecedor)**: Kit 3 no estoque; cabo em dois cliques (esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera, com as ligações e clipes automáticos), pedaço em bolinhas, plano de corte dos rolos no resumo e na capa; enrijecedor clicando na mola B6/B12. **Medidas estimadas pelas fotos** (`kit-mola-pecas.md`): confirmar com o kit em mãos. Próximas montagens de cabo, mapeadas abaixo.

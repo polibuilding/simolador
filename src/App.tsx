@@ -48,7 +48,18 @@ function useShortcuts() {
       const mod = e.ctrlKey || e.metaKey;
       const k = e.key.toLowerCase();
       // Esc fecha o resumo aberto pelo duplo clique (e segue: cancela o que estiver em andamento)
-      if (e.key === "Escape" && st.propsPeek) useApp.setState({ propsPeek: false });
+      // Esc sempre fecha o resumo, se estiver aberto (e segue: cancela o que estiver em andamento)
+      if (e.key === "Escape" && (st.propsOpen || st.propsPeek)) {
+        st.setPropsOpen(false);
+        useApp.setState({ propsPeek: false });
+      }
+      // C abre e fecha o resumo, em qualquer momento (até no meio de um comando)
+      if (!mod && !e.altKey && k === "c" && st.tool.kind !== "paste") {
+        const open = st.propsOpen || st.propsPeek;
+        st.setPropsOpen(!open);
+        useApp.setState({ propsPeek: false });
+        return;
+      }
       if (e.key === "Escape" && st.helpOpen) {
         st.setHelpOpen(false);
       } else if (e.key === "Escape" && st.linkFrom) {
@@ -103,7 +114,7 @@ function useShortcuts() {
         st.startMoveSelection();
       } else if (!mod && k === "m" && st.selection) {
         st.startMove(false);
-      } else if (e.key === "Tab" && !mod && st.tool.kind === "moveNode") {
+      } else if (e.key === "Tab" && !mod && (st.tool.kind === "moveNode" || st.tool.kind === "moveBody")) {
         // mover só o nó: Tab pula entre os limites azul ↔ vermelho do caminho (Shift+Tab volta)
         e.preventDefault();
         const next = st.snapCycle + (e.shiftKey ? -1 : 1);
@@ -127,22 +138,23 @@ function useShortcuts() {
       } else if (mod && k === "a") {
         e.preventDefault();
         st.selectAll();
-      } else if (!mod && !e.altKey && (k === "1" || k === "2" || k === "3")) {
-        // 1 / 2 / 3: direção das barras
-        st.setBarMode(k === "1" ? "eixos" : k === "2" ? "passo" : "livre");
+      } else if (!mod && !e.altKey && (k === "4" || k === "5" || k === "6")) {
+        // 4 / 5 / 6: direção das barras (eixos, passo, livre)
+        st.setBarMode(k === "4" ? "eixos" : k === "5" ? "passo" : "livre");
       } else if (!mod && (k === "q" || k === "e")) {
         // Q / E: peça vizinha do mesmo grupo (B4 ⇄ B6 ⇄ B12…), só as que existem nos kits
         const groups = GROUPS.map((g) => g.codes.filter((c) => available(catalog, st.inventory, c) > 0));
         st.cyclePiece(k === "e" ? 1 : -1, groups);
-      } else if (!mod && k === "g") {
+      } else if (!mod && !e.altKey && k === "1") {
+        // 1 / 2 / 3: as bolinhas do encaixe (verde, azul, amarela), na ordem da barra de baixo
         st.setSnap(!st.snap);
-        useApp.setState({ hint: `Grade (pontos verdes) ${!st.snap ? "ligada" : "desligada"} (G).` });
-      } else if (!mod && k === "v") {
+        useApp.setState({ hint: `Grade (pontos verdes) ${!st.snap ? "ligada" : "desligada"} (1).` });
+      } else if (!mod && !e.altKey && k === "2") {
         st.setGuides({ ...st.guides, blue: !st.guides.blue });
-        useApp.setState({ hint: `Pontos azuis (vão) ${!st.guides.blue ? "ligados" : "desligados"} (V).` });
-      } else if (!mod && k === "t") {
+        useApp.setState({ hint: `Pontos azuis (vão) ${!st.guides.blue ? "ligados" : "desligados"} (2).` });
+      } else if (!mod && !e.altKey && k === "3") {
         st.setGuides({ ...st.guides, yellow: !st.guides.yellow });
-        useApp.setState({ hint: `Pontos amarelos e laranja (triângulos) ${!st.guides.yellow ? "ligados" : "desligados"} (T).` });
+        useApp.setState({ hint: `Pontos amarelos e laranja (triângulos) ${!st.guides.yellow ? "ligados" : "desligados"} (3).` });
       } else if (!mod && k === "p") {
         st.setOrtho(!st.ortho);
       } else if (!mod && k === "b") {

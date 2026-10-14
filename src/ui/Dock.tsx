@@ -61,20 +61,20 @@ export function Dock() {
   return (
     <nav ref={ref} className={`dock${narrow ? " narrow" : ""}`} aria-label="Encaixe, barras e vista" onPointerDown={(e) => e.stopPropagation()}>
       <span className="lbl">Encaixe</span>
-      <Toggle on={snap} onClick={() => st.setSnap(!snap)} title="Grade: pontos verdes de encaixe e grade da chapa para a GC (G)" icon={<i className="dock-dot green" />} />
-      <Toggle on={guides.blue} onClick={() => st.setGuides({ ...guides, blue: !guides.blue })} title="Vão: GC a um vão de barra de outra GC, em X ou Y (V)" icon={<i className="dock-dot blue" />} />
+      <Toggle on={snap} onClick={() => st.setSnap(!snap)} title="Grade: pontos verdes de encaixe e grade da chapa para a GC (1)" icon={<i className="dock-dot green" />} />
+      <Toggle on={guides.blue} onClick={() => st.setGuides({ ...guides, blue: !guides.blue })} title="Vão: GC a um vão de barra de outra GC, em X ou Y (2)" icon={<i className="dock-dot blue" />} />
       <Toggle
         on={guides.yellow}
         onClick={() => st.setGuides({ ...guides, yellow: !guides.yellow })}
-        title="Triângulo: amarelo = triângulo, laranja = pirâmide ou treliça; Tab percorre os pontos (T)"
+        title="Triângulo: amarelo = triângulo, laranja = pirâmide ou treliça; Tab percorre os pontos (3)"
         icon={<i className="dock-dot tri" />}
       />
       <span className="sep" />
       <span className="lbl">Barras</span>
       {([
-        ["eixos", "Eixos", "Barras só nos eixos (Shift inclina uma barra) (1)"],
-        ["passo", `${step.toLocaleString("pt-BR")}°`, `Inclinadas em passos de ${step.toLocaleString("pt-BR")}° (2)`],
-        ["livre", "Livre", "Qualquer direção 3D, com encaixes em esferas, triângulos e alturas (3)"],
+        ["eixos", "Eixos", "Barras só nos eixos (Shift inclina uma barra) (4)"],
+        ["passo", `${step.toLocaleString("pt-BR")}°`, `Inclinadas em passos de ${step.toLocaleString("pt-BR")}° (5)`],
+        ["livre", "Livre", "Qualquer direção 3D, com encaixes em esferas, triângulos e alturas (6)"],
       ] as const).map(([v, label, title]) => (
         <button key={v} role="radio" aria-checked={barMode === v} className={`word${barMode === v ? " on" : ""}`} onClick={() => st.setBarMode(v)} title={`${title} · I alterna`}>
           {label}

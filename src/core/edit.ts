@@ -553,3 +553,177 @@ export function sphereMeridianLimits(set: NodeMoveSet, toward: Vec3, steps = 90)
   const at = (t: number) => locusSpherePoint(loc, t, phi);
   return scanPath((t) => !!set.evalAt!(at(t))?.check.ok, at, 0, Math.PI, steps, false).limits.map((l) => l.pos);
 }
+
+/* ---------- girar um conjunto rígido em torno das GC (duplo clique numa mola, diagonal ou placa) ---------- */
+
+/** Rotação de vetor em torno do eixo unitário `u` (Rodrigues). */
+function rotAxis(v: Vec3, u: Vec3, t: number): Vec3 {
+  const c = Math.cos(t);
+  const s = Math.sin(t);
+  return add(add(scale(v, c), scale(cross(u, v), s)), scale(u, dot(u, v) * (1 - c)));
+}
+
+/** Rotação mínima que leva a direção `a` para a direção `b` (eixo e ângulo). */
+function rotBetween(a: Vec3, b: Vec3): { u: Vec3; t: number } {
+  const na = norm(a);
+  const nb = norm(b);
+  const c = Math.max(-1, Math.min(1, dot(na, nb)));
+  let u = cross(na, nb);
+  if (len(u) < 1e-9) u = Math.abs(na[0]) < 0.9 ? cross(na, [1, 0, 0]) : cross(na, [0, 1, 0]);
+  return { u: norm(u), t: Math.acos(c) };
+}
+
+/** Gira os nós `ids` (e as ligações deles) em torno do eixo (centro `o`, direção `u`) pelo ângulo `t`. */
+function rotateBody(model: Model, ids: Set<string>, o: Vec3, u: Vec3, t: number): Model {
+  const nodes = { ...model.nodes };
+  for (const id of ids) {
+    const n = nodes[id];
+    const q = add(o, rotAxis(sub(n.pos, o), u, t));
+    nodes[id] = { ...n, pos: q.map((v) => Math.round(v * 1e4) / 1e4 + 0) as Vec3 };
+  }
+  const connectors = { ...model.connectors };
+  for (const c of Object.values(connectors)) {
+    if (!ids.has(c.node)) continue;
+    const r = (d: Vec3) => norm(rotAxis(d, u, t));
+    connectors[c.id] = { ...c, dirs: c.dirs.map(r), ...(c.side ? { side: r(c.side) } : {}) };
+  }
+  return { ...model, nodes, connectors };
+}
+
+export type BodyRef = { kind: "member" | "plate"; id: string };
+
+export interface BodyMoveSet extends NodeMoveSet {
+  /** ponto que segue o cursor (meio da peça clicada) */
+  handle: Vec3;
+  /** eixo de giro (duas GC ou mais, alinhadas) */
+  axis?: { a: Vec3; b: Vec3 };
+  /** centro de giro (uma GC) */
+  pivot?: Vec3;
+  /** nós que giram */
+  ids: Set<string>;
+  /** GC em que o conjunto se apoia */
+  anchors: string[];
+}
+
+/**
+ * Giro livre de um conjunto, como um corpo rígido, em torno das GC em que ele se apoia:
+ * - o conjunto = tudo o que está ligado à peça clicada (molas, diagonais, placas), sem passar pelas GC;
+ * - apoiado em 1 GC: gira em volta dela (o meio da peça anda numa esfera);
+ * - em 2 GC (ou mais, alinhadas): gira em torno da linha entre elas (o meio da peça anda num círculo; a peça
+ *   varre um cilindro em volta do eixo);
+ * - em 3 ou mais GC fora de uma linha, ou com RC90 na base de uma GC: travado.
+ * Todas as distâncias ficam iguais (molas não mudam de tamanho); valem as regras de sempre (G12, colisões, chapa).
+ */
+export function bodyMoveOptions(cat: Catalog, model: Model, ref: BodyRef): BodyMoveSet {
+  const empty = (locked: string): BodyMoveSet => ({ options: [], locked, handle: [0, 0, 0], ids: new Set(), anchors: [] });
+  const ends = ref.kind === "member" ? (model.members[ref.id] ? [model.members[ref.id].a, model.members[ref.id].b] : []) : model.plates[ref.id]?.corners ?? [];
+  if (!ends.length) return empty("Peça não encontrada.");
+  const isSupport = (id: string) => model.nodes[id]?.kind === "support";
+  const rigid = Object.values(model.members).filter((m) => cat.pieces[m.code]?.type !== "rope");
+  const adj = new Map<string, Set<string>>();
+  const link = (a: string, b: string) => {
+    (adj.get(a) ?? adj.set(a, new Set()).get(a)!).add(b);
+    (adj.get(b) ?? adj.set(b, new Set()).get(b)!).add(a);
+  };
+  for (const m of rigid) link(m.a, m.b);
+  for (const p of Object.values(model.plates)) for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) link(p.corners[i], p.corners[j]);
+  // conjunto: a partir das pontas que não são GC, sem atravessar GC
+  const ids = new Set<string>();
+  const anchors = new Set<string>();
+  const stack = ends.filter((id) => !isSupport(id));
+  ends.filter(isSupport).forEach((id) => anchors.add(id));
+  if (!stack.length) return empty("A peça liga duas GC: não tem como girar.");
+  for (const s of stack) ids.add(s);
+  while (stack.length) {
+    const k = stack.pop()!;
+    for (const nb of adj.get(k) ?? []) {
+      if (isSupport(nb)) anchors.add(nb);
+      else if (!ids.has(nb)) (ids.add(nb), stack.push(nb));
+    }
+  }
+  const A = [...anchors];
+  const fmtP = (p: Vec3) => `(${toDisp(p).map((v) => +v.toFixed(2)).join("; ")})`;
+  if (!A.length) return empty("Esse conjunto não está preso em nenhuma GC: segure e arraste para mover a estrutura.");
+  // RC90 na base de uma GC trava o pilar nela
+  const baseLock = Object.values(model.connectors).find((c) => c.base && anchors.has(c.node));
+  if (baseLock) return empty(`A RC90 na base da GC em ${fmtP(model.nodes[baseLock.node].pos)} trava o giro: tire a ligação para girar o conjunto.`);
+  const P = A.map((id) => model.nodes[id].pos);
+  // eixo: as GC precisam estar numa linha
+  let axis: { a: Vec3; b: Vec3 } | undefined;
+  if (P.length >= 2) {
+    let i0 = 0;
+    let i1 = 1;
+    let best = 0;
+    for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
+      const d = len(sub(P[j], P[i]));
+      if (d > best) (best = d), (i0 = i), (i1 = j);
+    }
+    const u = norm(sub(P[i1], P[i0]));
+    const off = P.find((q) => len(sub(sub(q, P[i0]), scale(u, dot(sub(q, P[i0]), u)))) > 1e-3);
+    if (off) return empty(`Apoiado em ${P.length} GC fora de uma linha: o conjunto não gira como um bloco (só um mecanismo mexeria).`);
+    axis = { a: P[i0], b: P[i1] };
+  }
+  const pts = ends.map((id) => model.nodes[id].pos);
+  const handle = scale(pts.reduce((s, q) => add(s, q), [0, 0, 0] as Vec3), 1 / pts.length);
+  const s = cat.settings;
+  const minA = s.angulo_minimo_membros_graus;
+  const step = (inclineStepOf(cat) || 15) * (Math.PI / 180);
+
+  /** modelo com o conjunto girado (eixo u passando por o, ângulo t) e as regras */
+  const evalRot = (o: Vec3, u: Vec3, t: number, pos: Vec3): NodeMove => {
+    const next = rotateBody(model, ids, o, u, t);
+    const errors: string[] = [...validateMovedModel(cat, next, ids).errors];
+    // N3 nas GC: as molas do conjunto com as outras molas da GC
+    for (const at of A) {
+      const bars = membersAt(next, at).filter((m) => cat.pieces[m.code]?.type === "bar").map((m) => directionFrom(next, m, at));
+      for (let i = 0; i < bars.length && !errors.length; i++) {
+        for (let j = i + 1; j < bars.length; j++) {
+          const ang = (Math.acos(Math.max(-1, Math.min(1, dot(bars[i], bars[j])))) * 180) / Math.PI;
+          if (ang < minA - 0.5) {
+            errors.push(`Ângulo de ${ang.toFixed(0)}° entre molas na GC em ${fmtP(next.nodes[at].pos)} (mínimo ${minA}°).`);
+            break;
+          }
+        }
+      }
+    }
+    return { pos, model: next, ids, check: { ok: !errors.length, errors: [...new Set(errors)], warnings: [] } };
+  };
+
+  if (axis) {
+    const u = norm(sub(axis.b, axis.a));
+    const c = add(axis.a, scale(u, dot(sub(handle, axis.a), u)));
+    const r = len(sub(handle, c));
+    if (r < 1e-3) return empty("O meio da peça está em cima do eixo de giro: dê duplo clique em outra peça do conjunto.");
+    const e1 = scale(sub(handle, c), 1 / r);
+    const e2 = cross(u, e1);
+    const angleOf = (q: Vec3) => {
+      const w = sub(q, c);
+      return Math.atan2(dot(w, e2), dot(w, e1));
+    };
+    const onC = (t: number): Vec3 => add(c, add(scale(e1, r * Math.cos(t)), scale(e2, r * Math.sin(t))));
+    const evalAt = (q: Vec3): NodeMove | null => {
+      const t = angleOf(q);
+      return evalRot(c, u, t, onC(t));
+    };
+    const options: NodeMove[] = [];
+    for (let k = 1; k < Math.round((2 * Math.PI) / step); k++) options.push(evalRot(c, u, k * step, onC(k * step)));
+    return {
+      options, evalAt, nearest: (q) => onC(angleOf(q)), locus: { kind: "circle", p: c, h: r, e1, e2 },
+      handle, axis, ids, anchors: A,
+    };
+  }
+  // uma GC: gira em volta dela
+  const o = P[0];
+  const R = len(sub(handle, o));
+  if (R < 1e-3) return empty("A peça está em cima da GC.");
+  const evalAt = (q: Vec3): NodeMove | null => {
+    const dir = sub(q, o);
+    if (len(dir) < 1e-9) return null;
+    const { u, t } = rotBetween(sub(handle, o), dir);
+    return evalRot(o, u, t, add(o, scale(norm(dir), R)));
+  };
+  return {
+    options: [], evalAt, nearest: (q) => (len(sub(q, o)) < 1e-9 ? handle : add(o, scale(norm(sub(q, o)), R))),
+    locus: { kind: "sphere", c: o, r: R }, handle, pivot: o, ids, anchors: A,
+  };
+}

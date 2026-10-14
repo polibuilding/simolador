@@ -5,10 +5,10 @@ import { GizmoViewcube as ViewCubeRaw } from "./gizmo/ViewCube";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { catalog } from "../core/catalog";
-import { boardsOf, componentOf, type Model, type Vec3 } from "../core/model";
+import { add, boardsOf, componentOf, cross, dot, len, norm, scale, sub, type Model, type Vec3 } from "../core/model";
 import { markerPos, type Candidate } from "../core/snapping";
 import { boardCorners } from "../core/boards";
-import { barGuidesFor, candidatesFor, guidesFor, locusStatusFor, nodeOptionsFor, Placement } from "../interaction/Placement";
+import { barGuidesFor, bodyOptionsFor, candidatesFor, guidesFor, locusStatusFor, nodeOptionsFor, pathFor, Placement } from "../interaction/Placement";
 import { locusCirclePoint, locusSpherePoint } from "../core/edit";
 import { panelOpen, useApp, useDisplayModel, useModel, inclineOn, workingModel } from "../ui/store";
 import type { Sel } from "../core/edit";
@@ -56,9 +56,9 @@ function ModelGroup({
             e.stopPropagation();
             st.setPendingDrag(null);
             select({ kind, id });
-            // o resumo abre para mostrar a peça, até o Esc
-            if (!st.propsOpen) useApp.setState({ propsPeek: true });
+            // esfera: só ela anda; mola, diagonal ou placa: o conjunto gira em torno das GC; ligação: vai para outro lugar
             if (kind === "node") useApp.getState().startMoveNode(false);
+            else if (kind === "member" || kind === "plate") useApp.getState().startMoveBody();
             else useApp.getState().startMove(false);
           },
         }
@@ -167,13 +167,16 @@ function GhostView() {
     const ids = ghost.ids;
     const g = ghost.model;
     const members = Object.fromEntries(Object.entries(g.members).filter(([, m]) => ids.has(m.a) || ids.has(m.b)));
+    // placas que se mexem (algum canto anda): por exemplo, a placa apoiada em duas GC girando junto com o pórtico
+    const plates = Object.fromEntries(Object.entries(g.plates).filter(([, p]) => p.corners.some((c) => ids.has(c))));
     const used = new Set<string>([...ids]);
     for (const m of Object.values(members)) (used.add(m.a), used.add(m.b));
+    for (const p of Object.values(plates)) p.corners.forEach((c) => used.add(c));
     const part: Model = {
       ...g,
       nodes: Object.fromEntries(Object.entries(g.nodes).filter(([k]) => used.has(k))),
       members,
-      plates: Object.fromEntries(Object.entries(g.plates).filter(([, p]) => p.corners.every((c) => ids.has(c)))),
+      plates,
       connectors: Object.fromEntries(Object.entries(g.connectors).filter(([, c]) => ids.has(c.node))),
     };
     const fixedEnds = new Set([...used].filter((k) => !ids.has(k)));
@@ -352,11 +355,37 @@ function NodeLocusView() {
   const tool = useApp((s) => s.tool);
   const present = useApp((s) => s.history.present);
   const tabbed = useApp((s) => s.nodeLimits);
-  const nodeId = tool.kind === "moveNode" ? tool.nodeId : null;
-  const set = useMemo(() => (nodeId && present.nodes[nodeId] ? nodeOptionsFor(present, nodeId) : null), [nodeId, present]);
-  const status = useMemo(() => (nodeId && set && !set.locked ? locusStatusFor(present, nodeId) : null), [nodeId, set, present]);
+  const path = useMemo(() => pathFor(present, tool), [present, tool]);
+  const set = path?.set ?? null;
+  const status = useMemo(() => (path && !path.set.locked ? locusStatusFor(present, path.key, path.set) : null), [path, present]);
   const loc = set && !set.locked ? set.locus : undefined;
-  const lift = present.nodes[nodeId ?? ""]?.kind === "support";
+  const lift = !!path?.lift;
+  // giro do conjunto: o eixo (tracejado) e o cilindro que a peça varre (círculos das pontas, bem de leve)
+  const bodyExtras = useMemo(() => {
+    if (tool.kind !== "moveBody" || !set || set.locked) return null;
+    const bs = set as ReturnType<typeof bodyOptionsFor>;
+    if (!bs.axis) return null;
+    const u = norm(sub(bs.axis.b, bs.axis.a));
+    const ext = 3;
+    const axisPts = [toWorld(add(bs.axis.a, scale(u, -ext))), toWorld(add(bs.axis.b, scale(u, ext)))];
+    const ends = tool.ref.kind === "member" ? [present.members[tool.ref.id]?.a, present.members[tool.ref.id]?.b] : present.plates[tool.ref.id]?.corners ?? [];
+    const rings = ends
+      .filter((id): id is string => !!id && present.nodes[id]?.kind !== "support")
+      .map((id) => {
+        const p = present.nodes[id].pos;
+        const c = add(bs.axis!.a, scale(u, dot(sub(p, bs.axis!.a), u)));
+        const r = len(sub(p, c));
+        if (r < 1e-3) return null;
+        const e1 = scale(sub(p, c), 1 / r);
+        const e2 = cross(u, e1);
+        return Array.from({ length: 121 }, (_, k) => {
+          const t = (k * 2 * Math.PI) / 120;
+          return toWorld(add(c, add(scale(e1, r * Math.cos(t)), scale(e2, r * Math.sin(t)))));
+        });
+      })
+      .filter(Boolean) as THREE.Vector3[][];
+    return { axisPts, rings };
+  }, [tool, set, present]);
   const w = (p: Vec3) => {
     const v = toWorld(p);
     if (lift) v.y = 0.6;
@@ -433,6 +462,8 @@ function NodeLocusView() {
   if (loc.kind === "circle" && circle) {
     return (
       <group raycast={() => null}>
+        {bodyExtras && <Line points={bodyExtras.axisPts} color="#6b7570" lineWidth={1.2} dashed dashSize={6} gapSize={4} transparent opacity={0.8} />}
+        {bodyExtras?.rings.map((r, i) => <Line key={`c${i}`} points={r} color={COLORS.select} lineWidth={1} dashed dashSize={3} gapSize={4} transparent opacity={0.35} />)}
         {circle.map((a, i) => (
           <Line key={i} points={a.pts} color={a.ok ? COLORS.select : COLORS.invalid} lineWidth={2} dashed dashSize={5} gapSize={3.5} transparent opacity={a.ok ? 1 : 0.75} />
         ))}
