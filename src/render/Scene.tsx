@@ -8,7 +8,8 @@ import { catalog } from "../core/catalog";
 import { boardsOf, componentOf, type Model, type Vec3 } from "../core/model";
 import { markerPos, type Candidate } from "../core/snapping";
 import { boardCorners } from "../core/boards";
-import { barGuidesFor, candidatesFor, guidesFor, nodeOptionsFor, Placement } from "../interaction/Placement";
+import { barGuidesFor, candidatesFor, guidesFor, locusStatusFor, nodeOptionsFor, Placement } from "../interaction/Placement";
+import { locusCirclePoint, locusSpherePoint } from "../core/edit";
 import { useApp, useDisplayModel, useModel, inclineOn, workingModel } from "../ui/store";
 import type { Sel } from "../core/edit";
 import { Bar, GroundConnection, Sphere, type Look } from "./pieces/pieces";
@@ -319,63 +320,130 @@ function LinkMark() {
   );
 }
 
-/** Caminho possível da esfera que anda sozinha: esfera azul (uma mola), círculo tracejado (duas) ou pontos. */
+/** pedaços seguidos de uma linha com a mesma cor (azul = pode, vermelho = não pode) */
+function runs(pts: THREE.Vector3[], ok: boolean[]): { pts: THREE.Vector3[]; ok: boolean }[] {
+  const out: { pts: THREE.Vector3[]; ok: boolean }[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const last = out[out.length - 1];
+    if (last && last.ok === ok[i]) last.pts.push(pts[i]);
+    else {
+      // emenda: o pedaço novo começa no meio do caminho entre os dois pontos
+      if (last) {
+        const mid = pts[i - 1].clone().lerp(pts[i], 0.5);
+        last.pts.push(mid);
+        out.push({ pts: [mid, pts[i]], ok: ok[i] });
+      } else out.push({ pts: [pts[i]], ok: ok[i] });
+    }
+  }
+  return out.filter((r) => r.pts.length > 1);
+}
+
+/**
+ * Caminho possível da esfera que anda sozinha: esfera (uma mola), círculo tracejado (duas) ou pontos.
+ * Azul onde ela pode ficar; vermelho onde alguma regra não deixa (ângulo, cruzamento, chapa...).
+ * Os limites entre os dois são os pontos para onde o Tab pula.
+ */
 function NodeLocusView() {
   const tool = useApp((s) => s.tool);
   const present = useApp((s) => s.history.present);
+  const tabbed = useApp((s) => s.nodeLimits);
   const nodeId = tool.kind === "moveNode" ? tool.nodeId : null;
   const set = useMemo(() => (nodeId && present.nodes[nodeId] ? nodeOptionsFor(present, nodeId) : null), [nodeId, present]);
+  const status = useMemo(() => (nodeId && set && !set.locked ? locusStatusFor(present, nodeId) : null), [nodeId, set, present]);
   const loc = set && !set.locked ? set.locus : undefined;
   const lift = present.nodes[nodeId ?? ""]?.kind === "support";
+  const w = (p: Vec3) => {
+    const v = toWorld(p);
+    if (lift) v.y = 0.6;
+    return v;
+  };
   const circle = useMemo(() => {
-    if (loc?.kind !== "circle") return null;
-    const pts: THREE.Vector3[] = [];
-    for (let k = 0; k <= 180; k++) {
-      const t = (k * 2 * Math.PI) / 180;
-      const w = toWorld([0, 1, 2].map((i) => loc.p[i] + loc.h * (loc.e1[i] * Math.cos(t) + loc.e2[i] * Math.sin(t))) as Vec3);
-      if (lift) w.y = 0.6;
-      pts.push(w);
+    if (loc?.kind !== "circle" || !status?.arcs) return null;
+    return status.arcs.map((a) => {
+      const n = Math.max(2, Math.ceil(((a.t1 - a.t0) * 180) / Math.PI / 2));
+      return { ok: a.ok, pts: Array.from({ length: n + 1 }, (_, k) => w(locusCirclePoint(loc, a.t0 + ((a.t1 - a.t0) * k) / n))) };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loc, status, lift]);
+  const sphere = useMemo(() => {
+    if (loc?.kind !== "sphere" || !status?.grid) return null;
+    const { rows, cols, ok } = status.grid;
+    const pos: number[] = [];
+    const col: number[] = [];
+    const blue = new THREE.Color(COLORS.select);
+    const red = new THREE.Color(COLORS.invalid);
+    const vtx: THREE.Vector3[] = [];
+    for (let i = 0; i <= rows; i++) {
+      for (let j = 0; j <= cols; j++) {
+        const v = toWorld(locusSpherePoint(loc, (i * Math.PI) / rows, (j * 2 * Math.PI) / cols));
+        vtx.push(v);
+        pos.push(v.x, v.y, v.z);
+        const good = ok[i * (cols + 1) + j];
+        const c = good ? blue : red;
+        col.push(c.r, c.g, c.b, good ? 0.07 : 0.2);
+      }
     }
-    return pts;
-  }, [loc, lift]);
-  if (!loc) return null;
-  if (loc.kind === "sphere") {
-    const c = toWorld(loc.c);
-    const r = loc.r * M;
-    const ring = (axis: "x" | "y" | "z") =>
-      Array.from({ length: 121 }, (_, k) => {
-        const t = (k * 2 * Math.PI) / 120;
-        const [a, b] = [Math.cos(t) * r, Math.sin(t) * r];
-        return axis === "y" ? new THREE.Vector3(c.x + a, c.y, c.z + b) : axis === "x" ? new THREE.Vector3(c.x, c.y + a, c.z + b) : new THREE.Vector3(c.x + a, c.y + b, c.z);
-      });
+    const idx: number[] = [];
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < cols; j++) {
+        const a = i * (cols + 1) + j;
+        const b = a + cols + 1;
+        idx.push(a, b, a + 1, b, b + 1, a + 1);
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 4)); // com transparência: o vermelho aparece mais
+    geo.setIndex(idx);
+    // três anéis: o do meio (horizontal) e dois verticais, pintados pelos mesmos pontos da grade
+    const at = (i: number, j: number) => ({ p: vtx[i * (cols + 1) + j], ok: ok[i * (cols + 1) + j] });
+    const ringOf = (list: { p: THREE.Vector3; ok: boolean }[]) => runs(list.map((x) => x.p), list.map((x) => x.ok));
+    const eq = Array.from({ length: cols + 1 }, (_, j) => at(rows / 2, j));
+    const mer = (j1: number, j2: number) => [...Array.from({ length: rows + 1 }, (_, i) => at(i, j1)), ...Array.from({ length: rows }, (_, i) => at(rows - 1 - i, j2))];
+    return { geo, rings: [...ringOf(eq), ...ringOf(mer(0, cols / 2)), ...ringOf(mer(cols / 4, (3 * cols) / 4))] };
+  }, [loc, status]);
+  useEffect(() => () => sphere?.geo.dispose(), [sphere]);
+  if (!loc || !status) return null;
+  // pontos-limite (para onde o Tab pula): os do círculo sempre; os da esfera, quando o Tab está em uso
+  const limits = tabbed?.pts ?? (loc.kind === "circle" ? status.limits : []);
+  const limitDots = limits.map((p, i) => (
+    <mesh key={`l${i}`} position={w(p)} raycast={() => null} renderOrder={6}>
+      <sphereGeometry args={[tabbed && tabbed.i === i ? 4.6 : 3, 16, 12]} />
+      <meshBasicMaterial color={COLORS.select} transparent opacity={tabbed && tabbed.i !== i ? 0.55 : 0.95} depthTest={false} />
+    </mesh>
+  ));
+  if (loc.kind === "sphere" && sphere) {
     return (
       <group raycast={() => null}>
-        <mesh position={c} raycast={() => null} renderOrder={4}>
-          <sphereGeometry args={[r, 48, 32]} />
-          <meshBasicMaterial color={COLORS.select} transparent opacity={0.07} depthWrite={false} side={THREE.DoubleSide} />
+        <mesh geometry={sphere.geo} raycast={() => null} renderOrder={4}>
+          <meshBasicMaterial vertexColors transparent depthWrite={false} side={THREE.DoubleSide} />
         </mesh>
-        {(["x", "y", "z"] as const).map((a) => (
-          <Line key={a} points={ring(a)} color={COLORS.select} lineWidth={1.2} dashed dashSize={4} gapSize={3} transparent opacity={0.6} />
+        {sphere.rings.map((r, i) => (
+          <Line key={i} points={r.pts} color={r.ok ? COLORS.select : COLORS.invalid} lineWidth={1.2} dashed dashSize={4} gapSize={3} transparent opacity={r.ok ? 0.6 : 0.7} />
         ))}
+        {limitDots}
       </group>
     );
   }
   if (loc.kind === "circle" && circle) {
-    return <Line points={circle} color={COLORS.select} lineWidth={2} dashed dashSize={5} gapSize={3.5} />;
+    return (
+      <group raycast={() => null}>
+        {circle.map((a, i) => (
+          <Line key={i} points={a.pts} color={a.ok ? COLORS.select : COLORS.invalid} lineWidth={2} dashed dashSize={5} gapSize={3.5} transparent opacity={a.ok ? 1 : 0.75} />
+        ))}
+        {limitDots}
+      </group>
+    );
   }
   if (loc.kind === "points") {
     return (
       <group raycast={() => null}>
-        {loc.pts.map((p, i) => {
-          const w = toWorld(p);
-          if (lift) w.y = 0.6;
-          return (
-            <mesh key={i} position={w} raycast={() => null}>
-              <sphereGeometry args={[4, 16, 12]} />
-              <meshBasicMaterial color={COLORS.select} transparent opacity={0.8} depthTest={false} />
-            </mesh>
-          );
-        })}
+        {loc.pts.map((p, i) => (
+          <mesh key={i} position={w(p)} raycast={() => null}>
+            <sphereGeometry args={[4, 16, 12]} />
+            <meshBasicMaterial color={status.pointsOk?.[i] === false ? COLORS.invalid : COLORS.select} transparent opacity={0.8} depthTest={false} />
+          </mesh>
+        ))}
       </group>
     );
   }
@@ -470,13 +538,21 @@ function usePaletteInset() {
   return useEased(mini ? 0 : PALETTE_W);
 }
 
+/** quanto da direita da cena o resumo cobre agora (anima junto com ele) */
+function usePropsInset() {
+  const open = useApp((s) => s.propsOpen || !!s.selection || s.multi.length > 0 || !!s.selectedBoard);
+  return useEased(open ? PROPS_W : 0);
+}
+
 /**
- * A paleta fica por cima da cena (a cena não muda de tamanho ao abrir/fechar). Para a estrutura
- * continuar no meio da parte visível, a imagem desliza meia paleta para a direita (view offset da câmera),
+ * A paleta e o resumo ficam por cima da cena (a cena não muda de tamanho ao abrir/fechar). Para a estrutura
+ * continuar no meio da parte visível, a imagem desliza meia largura para o lado (view offset da câmera),
  * acompanhando a animação.
  */
 function PaletteShift() {
-  const inset = usePaletteInset();
+  const left = usePaletteInset();
+  const right = usePropsInset();
+  const inset = left - right;
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera | THREE.OrthographicCamera;
   const size = useThree((s) => s.size);
   useFrame(() => {
@@ -601,7 +677,7 @@ export function Scene() {
   const render = useApp((s) => s.render);
   const shadows = useApp((s) => s.shadows);
   const ortho = useApp((s) => s.ortho);
-  const propsOpen = useApp((s) => s.propsOpen || !!s.selection || s.multi.length > 0 || !!s.selectedBoard);
+  const propsInset = usePropsInset();
   return (
     <Canvas
       shadows
@@ -656,7 +732,7 @@ export function Scene() {
       <Placement />
       <CameraRig />
       {/* cubo de vistas: segue a projeção da cena (paralela ou perspectiva) */}
-      <CubeHelper alignment="top-right" margin={[84 + (propsOpen ? PROPS_W : 0), 84]} perspective={!ortho}>
+      <CubeHelper alignment="top-right" margin={[84 + propsInset, 84]} perspective={!ortho}>
         <group scale={1.35}>
           <ViewCube
             faces={["DIREITA", "ESQUERDA", "TOPO", "BASE", "FRENTE", "TRÁS"]}

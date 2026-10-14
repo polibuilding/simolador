@@ -54,14 +54,6 @@ function Section({ title, children, className = "" }: { title: string; children:
 }
 
 /** Como mover a peça (no lugar dos antigos botões). */
-function MoveHint({ only }: { only: string }) {
-  return (
-    <p className="move-hint">
-      <strong>Arraste</strong> a peça para mover a estrutura inteira · <strong>duplo clique</strong> para mover {only}.
-    </p>
-  );
-}
-
 /** "B6 ×3 · D6x6 ×1" */
 const countText = (codes: string[]) => {
   const c = new Map<string, number>();
@@ -140,8 +132,7 @@ function CoordEditor({ id, pos, support }: { id: string; pos: Vec3; support: boo
         <button onClick={apply}>Aplicar</button>
       </div>
       <p className="coords-help">
-        Em módulos (1 M = {fmt(M, 2)} mm) ou em mm (ex.: 77,3 mm). Enter aplica.{" "}
-        {support ? "A estrutura ligada vai junto." : "Só a esfera anda; as barras inclinam para acompanhar (Z = altura)."}
+        Em módulos (1 M = {fmt(M, 2)} mm) ou em mm (77,3 mm).
       </p>
       {note && <p className="coords-help"><strong>{note}</strong></p>}
       {err && <p className="coords-err" role="alert">{err}</p>}
@@ -215,7 +206,6 @@ function Selected() {
             <Row k="Estrutura" v={`${group} ${group === 1 ? "nó" : "nós"} ligados`} />
           </dl>
         </Section>
-        <MoveHint only={gc ? "só a GC (pelo caminho azul na chapa)" : "só a esfera (pelo caminho azul; as molas acompanham)"} />
         <Actions removeLabel={gc ? "Remover GC e o que sai dela" : "Remover esfera e peças ligadas"} />
       </>
     );
@@ -250,7 +240,6 @@ function Selected() {
             {conns.length > 0 && <Row k="Ligações nas pontas" v={countText(conns.map((c) => c.code))} />}
           </dl>
         </Section>
-        <MoveHint only={cable ? "só a diagonal" : "só a mola"} />
         <Actions removeLabel={cable ? "Remover diagonal" : "Remover mola"} />
       </>
     );
@@ -280,7 +269,6 @@ function Selected() {
             <Row k="Esferas nos cantos" v={cs.map(posText).join(" ")} />
           </dl>
         </Section>
-        <MoveHint only="só a placa" />
         <Actions removeLabel="Remover placa" />
       </>
     );
@@ -306,7 +294,6 @@ function Selected() {
           <Row k="Molas na esfera" v={countText(bars.map((m) => m.code))} />
         </dl>
       </Section>
-      <MoveHint only="só a ligação" />
       <Actions removeLabel="Remover ligação" />
     </>
   );
@@ -347,7 +334,7 @@ function BoardSelected() {
         <label>Centro X <NumField value={cx} onCommit={(v) => err(st.setBoardCenterOf(id, v, cz))} title="Centro da chapa em X, em módulos (decimais valem)" width={64} suffix=" M" /></label>
         <label>Centro Y <NumField value={cz} onCommit={(v) => err(st.setBoardCenterOf(id, cx, v))} title="Centro da chapa em Y, em módulos (decimais valem)" width={64} suffix=" M" /></label>
         <p className="board-mm">= ({fmt(cx * M, 1)}; {fmt(cz * M, 1)}) mm</p>
-        <label className="stack">Giro (graus, anti-horário visto de cima)
+        <label className="stack" title="Graus, anti-horário visto de cima">Giro
           <span className="board-gap">
             <button onClick={() => err(st.rotateBoardOf(id, rot - 15))} title="15° no sentido horário (visto de cima)">↻ 15°</button>
             <button className={rot === 0 ? "on" : ""} onClick={() => err(st.rotateBoardOf(id, 0))}>0°</button>
@@ -356,10 +343,6 @@ function BoardSelected() {
           </span>
         </label>
       </div>
-      <p className="multi-note">
-        <strong>Setas</strong> movem a chapa nos eixos dela (1 módulo; Shift: 6; Alt ou Ctrl: 1/4), com a estrutura de cima.
-        <strong> Ctrl+clique</strong> em outra chapa para definir a distância entre elas. <strong>Delete</strong> apaga; <strong>Esc</strong> solta.
-      </p>
       <div className="actions">
         <button onClick={() => st.selectBoard(id)}>Selecionar peças</button>
         <button className="danger" onClick={() => st.removeSelectedBoard()}>Apagar chapa</button>
@@ -400,10 +383,7 @@ function BoardsSelected() {
           </span>
         </label>
       </div>
-      <p className="multi-note">
-        A primeira fica parada; cada uma anda só na direção em que já está da anterior até ficar à distância escolhida (espaço livre entre as bordas).
-        <strong> Setas</strong> movem todas juntas nos eixos da primeira. <strong>Ctrl+clique</strong> tira ou põe uma chapa; <strong>Esc</strong> solta.
-      </p>
+      <p className="multi-note">A primeira fica parada.</p>
       <div className="actions">
         <button className="danger" onClick={() => st.removeSelectedBoard()}>Apagar as {sel.length} chapas</button>
       </div>
@@ -421,20 +401,7 @@ function Summary() {
     return (
       <>
         <h2>Estrutura vazia</h2>
-        <p className="lead">
-          Arraste uma <strong>ligação de base</strong> para a chapa. Depois puxe as barras a partir das esferas.
-        </p>
-        <ul className="howto">
-          <li>Os pontos verdes mostram onde a peça escolhida encaixa.</li>
-          <li>Sobre uma esfera, a barra sai dela: R gira a direção.</li>
-          <li>Clique numa peça da paleta para usá-la várias vezes; Esc para parar.</li>
-          <li>Arraste a peça selecionada para mudar de lugar; R gira.</li>
-        </ul>
-        <ul className="mouse-help">
-          <li>Botão esquerdo: seleciona; arrastando, faz um retângulo (para a direita, só o que fica inteiro dentro; para a esquerda, o que tocar).</li>
-          <li>Botão direito: gira a vista. Shift+direito ou botão do meio: move a vista. Roda: zoom.</li>
-          <li>Cubo no canto: clique numa face, aresta ou canto para vistas e isométricas. F enquadra.</li>
-        </ul>
+        <p className="lead">Arraste uma <strong>GC</strong> para a chapa e puxe as molas a partir da esfera. <strong>?</strong> mostra os atalhos.</p>
       </>
     );
   }
@@ -513,7 +480,7 @@ function Repeat({ size }: { size: Vec3 }) {
         </label>
       </div>
       <button onClick={apply} className="repeat-go">Criar cópias</button>
-      <p className="coords-help">Cada cópia anda X, Y, Z módulos da anterior (Z = altura). Esferas no mesmo lugar viram uma só: um vão repetido com X = largura dele divide os pilares.</p>
+      <p className="coords-help">Cada cópia anda X, Y, Z módulos da anterior.</p>
       {err && <p className="coords-err" role="alert">{err}</p>}
     </div>
   );
@@ -561,7 +528,6 @@ function MultiSelected() {
   return (
     <>
       <h2>{total} peças selecionadas</h2>
-      <p className="multi-note">Shift+clique soma ou tira peças; Esc limpa.</p>
       <dl>
         <Row k="Planta (entre centros)" v={`${fmt(span(0), 0)} × ${fmt(span(2), 0)} mm`} />
         <Row k="Altura (entre centros)" v={`${fmt(span(1), 0)} mm`} />
@@ -600,7 +566,7 @@ function MultiSelected() {
   );
 }
 
-export function PropertiesPanel() {
+export function PropertiesPanel({ hidden = false }: { hidden?: boolean }) {
   const sel = useApp((s) => s.selection);
   const many = useApp((s) => s.multi.length > 0);
   const board = useApp((s) => s.selectedBoard);
@@ -611,7 +577,7 @@ export function PropertiesPanel() {
     if (st.selection || st.multi.length || st.selectedBoard) st.select(null);
   };
   return (
-    <aside className="props">
+    <aside className={`props${hidden ? " is-hidden" : ""}`} aria-hidden={hidden || undefined}>
       <button className="props-close" onClick={close} title="Recolher o resumo" aria-label="Recolher o resumo"><Chevrons dir="right" /></button>
       {many ? <MultiSelected /> : sel ? <Selected /> : board ? <BoardSelected /> : <Summary />}
     </aside>
@@ -619,11 +585,11 @@ export function PropertiesPanel() {
 }
 
 /** Resumo recolhido: só a seta « transparente no canto de cima, à direita (como a » da paleta). */
-export function SummaryTab() {
+export function SummaryTab({ hidden = false }: { hidden?: boolean }) {
   const model = useModel();
   const n = Object.keys(model.nodes).length + Object.keys(model.members).length + Object.keys(model.plates).length + Object.keys(model.connectors).length;
   return (
-    <button className="summary-open" onClick={() => useApp.getState().setPropsOpen(true)} title={`Abrir o resumo${n ? ` · ${n} peças` : ""}`} aria-label="Abrir o resumo">
+    <button className={`summary-open${hidden ? " is-hidden" : ""}`} tabIndex={hidden ? -1 : undefined} onClick={() => useApp.getState().setPropsOpen(true)} title={`Abrir o resumo${n ? ` · ${n} peças` : ""}`} aria-label="Abrir o resumo">
       <Chevrons dir="left" />
     </button>
   );

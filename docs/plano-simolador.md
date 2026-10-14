@@ -224,7 +224,7 @@ Análise estrutural: fora do escopo (Q09).
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0`, `v1.1`…).
 
-- **1.x — geométrica** (atual: 1.15): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.16): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: o módulo extra ajustável.
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
@@ -239,7 +239,7 @@ Em aberto:
 - **Medidas da CC e da CC90**: necessárias para desenhá-las (o programa usa um formato provisório até lá). **Lembrete pedido pela equipe (13/10): ajeitar as peças CC e CC90.**
 - **Configurações** (botão de engrenagem ao lado de Arquivo): hoje só mostra os valores internos (módulo, ângulos, chapa). **Lembrete pedido pela equipe (13/10): fazer a parte de configurações.**
 - **Simolar** (botão ao lado de Pranchas): por enquanto "em breve"; é a porta da linha 3.x (deformação, estaticidade, estabilidade).
-- **Kit 3 (próximo passo, pedido em 13/10)**: o estoque já mostra o Kit 3 (em breve) e o Kit A (versões 2.x). Peças do Kit 3 em `kit-mola-pecas.md`. As que o programa já sabe montar: esferas, RC90, GC, B6, B12, D6x6, D6x12 e as duas chapas. As novas pedem regra e desenho: **cabo** (3,35 m, cortado no comprimento que se quiser), **ligação de cabo**, **grampo de cabo** e **grampo múltiplo**, **anéis** (pequeno e médio) e **enrijecedores** de B6 e B12. Falta a equipe dizer como cada uma prende (na esfera, na mola, no cabo) e as medidas.
+- **Kit 3 (fica para quando a equipe estiver com o kit; pedido em 13/10)**: o estoque já mostra o Kit 3 (em breve) e o Kit A (versões 2.x). Peças do Kit 3 em `kit-mola-pecas.md`. As que o programa já sabe montar: esferas, RC90, GC, B6, B12, D6x6, D6x12 e as duas chapas. As novas pedem regra e desenho: **cabo** (3,35 m, cortado no comprimento que se quiser), **ligação de cabo**, **grampo de cabo** e **grampo múltiplo**, **anéis** (pequeno e médio) e **enrijecedores** de B6 e B12. Falta a equipe dizer como cada uma prende (na esfera, na mola, no cabo) e as medidas.
 - **Responsáveis por frente** (Q08).
 - **Repositório**: nome e dono no GitHub.
 

@@ -452,3 +452,102 @@ export function connectReach(
   if (!ck.ok) return { error: ck.errors[0] };
   return { model: addMember(mv.model, code, aId, mv.pos).model, ids: mv.ids, moved: len(sub(mv.pos, B.pos)) };
 }
+
+/* ---------- caminho da esfera: trechos possíveis (azul) e bloqueados (vermelho) ---------- */
+
+/** ponto do círculo do caminho no ângulo t */
+export function locusCirclePoint(loc: Extract<NodeLocus, { kind: "circle" }>, t: number): Vec3 {
+  return add(loc.p, add(scale(loc.e1, loc.h * Math.cos(t)), scale(loc.e2, loc.h * Math.sin(t))));
+}
+
+/** ponto da esfera do caminho: θ a partir de cima (0 = em cima, π = embaixo), φ em volta (no plano da chapa) */
+export function locusSpherePoint(loc: Extract<NodeLocus, { kind: "sphere" }>, theta: number, phi: number): Vec3 {
+  const s = Math.sin(theta);
+  return add(loc.c, scale([s * Math.cos(phi), Math.cos(theta), s * Math.sin(phi)], loc.r));
+}
+
+export interface LocusArc { t0: number; t1: number; ok: boolean }
+export interface LocusLimit { pos: Vec3; t: number }
+
+/**
+ * Percorre um parâmetro t em [a, b] (fechado em volta, se `closed`) e acha os trechos em que a esfera pode ficar.
+ * Os limites (trocas azul ↔ vermelho) são refinados por bisseção e ficam do lado possível.
+ */
+export function scanPath(okAt: (t: number) => boolean, at: (t: number) => Vec3, a: number, b: number, n: number, closed: boolean): { arcs: LocusArc[]; limits: LocusLimit[] } {
+  const ts = Array.from({ length: n + 1 }, (_, k) => a + ((b - a) * k) / n);
+  const ok = ts.map((t, k) => (closed && k === n ? undefined : okAt(t)));
+  if (closed) ok[n] = ok[0];
+  const cuts: { t: number; okT: number; before: boolean }[] = [];
+  for (let k = 0; k < n; k++) {
+    if (ok[k] === ok[k + 1]) continue;
+    let [lo, hi] = [ts[k], ts[k + 1]];
+    const before = ok[k]!;
+    for (let i = 0; i < 12; i++) {
+      const mid = (lo + hi) / 2;
+      if (okAt(mid) === before) lo = mid;
+      else hi = mid;
+    }
+    cuts.push({ t: (lo + hi) / 2, okT: before ? lo : hi, before });
+  }
+  const limits = cuts.map((c) => ({ pos: at(c.okT), t: c.okT }));
+  if (!cuts.length) return { arcs: [{ t0: a, t1: b, ok: !!ok[0] }], limits };
+  const arcs: LocusArc[] = [];
+  if (closed) {
+    for (let i = 0; i < cuts.length; i++) {
+      const c = cuts[i];
+      const nx = cuts[(i + 1) % cuts.length];
+      arcs.push({ t0: c.t, t1: nx.t > c.t ? nx.t : nx.t + (b - a), ok: !c.before });
+    }
+  } else {
+    let t0 = a;
+    for (const c of cuts) (arcs.push({ t0, t1: c.t, ok: c.before }), (t0 = c.t));
+    arcs.push({ t0, t1: b, ok: !cuts[cuts.length - 1].before });
+  }
+  return { arcs, limits };
+}
+
+export interface LocusStatus {
+  /** círculo: trechos azuis e vermelhos (ângulo t) */
+  arcs?: LocusArc[];
+  /** esfera: se cada vértice da grade (θ em linhas, φ em colunas) é possível */
+  grid?: { rows: number; cols: number; ok: boolean[] };
+  /** pontos: quais são possíveis */
+  pointsOk?: boolean[];
+  /** posições-limite (do lado possível), para o Tab */
+  limits: Vec3[];
+}
+
+/** Onde, no caminho, a esfera pode ficar (regras: ângulos, cruzamentos, chapa...). */
+export function locusStatus(set: NodeMoveSet, opts: { circleSteps?: number; rows?: number; cols?: number } = {}): LocusStatus {
+  const loc = set.locus;
+  const ev = set.evalAt;
+  if (!loc || !ev || set.locked) return { limits: [] };
+  const okAt = (p: Vec3) => !!ev(p)?.check.ok;
+  if (loc.kind === "points") {
+    const ok = loc.pts.map(okAt);
+    return { pointsOk: ok, limits: loc.pts.filter((_, i) => ok[i]) };
+  }
+  if (loc.kind === "circle") {
+    const at = (t: number) => locusCirclePoint(loc, t);
+    const { arcs, limits } = scanPath((t) => okAt(at(t)), at, 0, 2 * Math.PI, opts.circleSteps ?? 144, true);
+    return { arcs, limits: limits.map((l) => l.pos) };
+  }
+  const rows = opts.rows ?? 16;
+  const cols = opts.cols ?? 32;
+  const ok: boolean[] = [];
+  for (let i = 0; i <= rows; i++) {
+    const theta = (i * Math.PI) / rows;
+    for (let j = 0; j <= cols; j++) ok.push(okAt(locusSpherePoint(loc, theta, (j * 2 * Math.PI) / cols)));
+  }
+  return { grid: { rows, cols, ok }, limits: [] };
+}
+
+/** Esfera: limites ao longo do meridiano (de cima para baixo) que passa por `toward`. */
+export function sphereMeridianLimits(set: NodeMoveSet, toward: Vec3, steps = 90): Vec3[] {
+  const loc = set.locus;
+  if (loc?.kind !== "sphere" || !set.evalAt) return [];
+  const d = sub(toward, loc.c);
+  const phi = Math.hypot(d[0], d[2]) < 1e-6 ? 0 : Math.atan2(d[2], d[0]);
+  const at = (t: number) => locusSpherePoint(loc, t, phi);
+  return scanPath((t) => !!set.evalAt!(at(t))?.check.ok, at, 0, Math.PI, steps, false).limits.map((l) => l.pos);
+}

@@ -30,7 +30,7 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
       ["G", "grade (pontos verdes)"],
       ["V", "vão (pontos azuis)"],
       ["T", "triângulos (pontos amarelos e laranja)"],
-      ["Tab", "barras: percorre os pontos amarelos e laranja da esfera (Shift+Tab volta); GC: próximo ponto sobreposto"],
+      ["Tab", "barras: percorre os pontos amarelos e laranja da esfera (Shift+Tab volta); GC: próximo ponto sobreposto; mover só a esfera: limites do caminho azul"],
     ],
   },
   {
