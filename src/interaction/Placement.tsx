@@ -8,9 +8,9 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 import { catalog } from "../core/catalog";
-import { connectReach, locusStatus, moveGroup, nodeMoveOptions, sphereMeridianLimits, type LocusStatus } from "../core/edit";
+import { bodyMoveOptions, connectReach, locusStatus, moveGroup, nodeMoveOptions, sphereMeridianLimits, type BodyRef, type LocusStatus, type NodeMoveSet } from "../core/edit";
 import { pasteClip, transformClip, type Clip, type PasteResult } from "../core/clipboard";
-import { AXES, add, boardsOf, findNodeAt, len, norm, rotDir, scale, sub, toDisp, type Model, type Vec3 } from "../core/model";
+import { AXES, add, boardsOf, dot, findNodeAt, len, norm, rotDir, scale, sub, toDisp, type Model, type Vec3 } from "../core/model";
 import { frameRadAt } from "../core/boards";
 import { validateMember, validateRope, validateStiffener } from "../core/rules";
 import { ropeInfo, ropeText, STIFF_TOOL } from "../core/rope";
@@ -20,7 +20,7 @@ import {
   type BarGuide, type Candidate, type SupportGuide,
 } from "../core/snapping";
 import { componentOf } from "../core/model";
-import { freeOn, inclineOn, panelOpen, useApp, workingModel } from "../ui/store";
+import { freeOn, inclineOn, panelOpen, useApp, workingModel, type Tool } from "../ui/store";
 import { BASE_Y, M, toWorld } from "../render/units";
 import { PROPS_W } from "../render/Scene";
 
@@ -135,11 +135,34 @@ export function nodeOptionsFor(model: Model, nodeId: string) {
   return nodeMoveCache.r;
 }
 
-// trechos azuis e vermelhos do caminho (recalcula quando muda o modelo ou o nó)
-let locusCache: { model: Model; nodeId: string; r: LocusStatus } | null = null;
-export function locusStatusFor(model: Model, nodeId: string): LocusStatus {
-  if (locusCache && locusCache.model === model && locusCache.nodeId === nodeId) return locusCache.r;
-  locusCache = { model, nodeId, r: locusStatus(nodeOptionsFor(model, nodeId)) };
+// giro do conjunto em torno das GC (duplo clique numa mola, diagonal ou placa)
+let bodyCache: { model: Model; key: string; r: ReturnType<typeof bodyMoveOptions> } | null = null;
+export function bodyOptionsFor(model: Model, ref: BodyRef) {
+  const key = `${ref.kind}:${ref.id}`;
+  if (bodyCache && bodyCache.model === model && bodyCache.key === key) return bodyCache.r;
+  bodyCache = { model, key, r: bodyMoveOptions(catalog, model, ref) };
+  return bodyCache.r;
+}
+
+/** Caminho de quem anda pelo azul: a esfera (mover só o nó) ou o conjunto (giro em torno das GC). */
+export function pathFor(model: Model, tool: Tool): { set: NodeMoveSet; start: Vec3; lift: boolean; key: string } | null {
+  if (tool.kind === "moveNode") {
+    const n = model.nodes[tool.nodeId];
+    if (!n) return null;
+    return { set: nodeOptionsFor(model, tool.nodeId), start: n.pos, lift: n.kind === "support", key: `n:${tool.nodeId}` };
+  }
+  if (tool.kind === "moveBody") {
+    const set = bodyOptionsFor(model, tool.ref);
+    return { set, start: set.handle, lift: false, key: `b:${tool.ref.kind}:${tool.ref.id}` };
+  }
+  return null;
+}
+
+// trechos azuis e vermelhos do caminho (recalcula quando muda o modelo ou quem anda)
+let locusCache: { model: Model; key: string; r: LocusStatus } | null = null;
+export function locusStatusFor(model: Model, key: string, set: NodeMoveSet): LocusStatus {
+  if (locusCache && locusCache.model === model && locusCache.key === key) return locusCache.r;
+  locusCache = { model, key, r: locusStatus(set) };
   return locusCache.r;
 }
 
@@ -590,21 +613,23 @@ export function Placement() {
       if (!tool.viaDrag && (ev.target as HTMLElement | null)?.closest?.(".props, .dock, .summary-tab")) return st.setGhost(null, st.hint);
       const model = workingModel(useApp.getState());
 
-      // ---- mover só o nó (duplo clique na esfera): desliza pelo caminho possível (esfera, círculo ou pontos) ----
-      if (tool.kind === "moveNode") {
+      // ---- mover só o nó (duplo clique na esfera) ou girar o conjunto (duplo clique numa mola, diagonal ou placa):
+      //      desliza pelo caminho possível (esfera, círculo ou pontos) ----
+      if (tool.kind === "moveNode" || tool.kind === "moveBody") {
         const present = st.history.present;
-        const node = present.nodes[tool.nodeId];
-        if (!node) return st.disarm();
-        const set = nodeOptionsFor(present, tool.nodeId);
+        const path = pathFor(present, tool);
+        if (!path) return st.disarm();
+        const { set, start, lift, key: pathKey } = path;
+        const body = tool.kind === "moveBody";
         if (set.locked) return st.setGhost(null, set.locked);
         const dpx = (p: Vec3) => {
           const w = toWorld(p);
-          if (node.kind === "support") w.y = 0.6;
+          if (lift) w.y = 0.6;
           const q = toScreen(w, rect);
           return q.z > 1 ? Infinity : Math.hypot(q.x - ev.clientX, q.y - ev.clientY);
         };
         // Tab: pula entre os limites azul ↔ vermelho do caminho (mexer o cursor mais de TAB_PX volta ao normal)
-        if (nodeTab && (!st.snapCycle || nodeTab.nodeId !== tool.nodeId || Math.hypot(ev.clientX - nodeTab.x, ev.clientY - nodeTab.y) > TAB_PX)) {
+        if (nodeTab && (!st.snapCycle || nodeTab.nodeId !== pathKey || Math.hypot(ev.clientX - nodeTab.x, ev.clientY - nodeTab.y) > TAB_PX)) {
           nodeTab = null;
           useApp.setState({ ...(st.snapCycle ? { snapCycle: 0 } : {}), nodeLimits: null });
         }
@@ -614,17 +639,17 @@ export function Placement() {
         if (useApp.getState().snapCycle && loc) {
           if (!nodeTab) {
             // na esfera, os limites são os do meridiano que passa pelo cursor
-            let toward: Vec3 = node.pos;
+            let toward: Vec3 = start;
             if (loc.kind === "sphere") {
               const ray = rayAt(ev, rect);
               const C = toWorld(loc.c);
               const hit = ray.intersectSphere(new THREE.Sphere(C, loc.r * M), new THREE.Vector3());
               if (hit) toward = toModule(hit);
             }
-            const pts = loc.kind === "sphere" ? sphereMeridianLimits(set, toward) : locusStatusFor(present, tool.nodeId).limits;
-            let start = 0;
-            pts.forEach((p, i) => { if (dpx(p) < dpx(pts[start])) start = i; });
-            nodeTab = { x: ev.clientX, y: ev.clientY, nodeId: tool.nodeId, pts, start };
+            const pts = loc.kind === "sphere" ? sphereMeridianLimits(set, toward) : locusStatusFor(present, pathKey, set).limits;
+            let first = 0;
+            pts.forEach((p, i) => { if (dpx(p) < dpx(pts[first])) first = i; });
+            nodeTab = { x: ev.clientX, y: ev.clientY, nodeId: pathKey, pts, start: first };
           }
           const n = nodeTab.pts.length;
           if (!n) {
@@ -673,13 +698,21 @@ export function Placement() {
           if (pick && set.nearest) pick = set.nearest(pick) ?? pick;
         }
         const o = pick && set.evalAt ? set.evalAt(pick) : null;
-        if (!o) return st.setGhost(null, "Leve o cursor pelo caminho azul: é por ali que a esfera pode andar.");
+        if (!o) return st.setGhost(null, body ? "Leve o cursor pelo caminho azul: é por ali que o conjunto pode girar." : "Leve o cursor pelo caminho azul: é por ali que a esfera pode andar.");
         const f = (p: Vec3) => `(${toDisp(p).map((v) => +v.toFixed(2)).join("; ")})`;
-        const moved = len(sub(o.pos, node.pos)).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+        const moved = len(sub(o.pos, start)).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+        const tabHint = tabInfo || (locusStatusFor(present, pathKey, set).limits.length || loc?.kind === "sphere" ? " Tab pula para os limites." : "");
+        let what = `Clique para deixar o nó em ${f(o.pos)} (anda ${moved} M).`;
+        if (body) {
+          const bs = set as ReturnType<typeof bodyMoveOptions>;
+          const ctr = bs.axis ? add(bs.axis.a, scale(norm(sub(bs.axis.b, bs.axis.a)), dot(sub(start, bs.axis.a), norm(sub(bs.axis.b, bs.axis.a))))) : bs.pivot!;
+          const ang = (Math.acos(Math.max(-1, Math.min(1, dot(norm(sub(start, ctr)), norm(sub(o.pos, ctr)))))) * 180) / Math.PI;
+          what = `Clique para deixar o conjunto girado ${ang.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}° ${bs.axis ? "em torno da linha das GC" : "em volta da GC"}.`;
+        }
         return st.setGhost(
           { kind: "group", model: o.model, ids: o.ids, check: o.check },
           o.check.ok
-            ? `Clique para deixar o nó em ${f(o.pos)} (anda ${moved} M).${tabInfo || (locusStatusFor(present, tool.nodeId).limits.length || loc?.kind === "sphere" ? " Tab pula para os limites." : "")}`
+            ? `${what}${tabHint}`
             : `${o.check.errors[0]}${tabInfo || " Tab pula para os limites do trecho azul."}`,
         );
       }
@@ -880,7 +913,7 @@ export function Placement() {
         update(ev);
         const ok = inside && useApp.getState().commitGhost();
         const now = useApp.getState();
-        if (!ok && (now.tool.kind === "moveGroup" || now.tool.kind === "moveNode" || ((now.tool.kind === "place" || now.tool.kind === "paste") && now.tool.moving))) {
+        if (!ok && (now.tool.kind === "moveGroup" || now.tool.kind === "moveNode" || now.tool.kind === "moveBody" || ((now.tool.kind === "place" || now.tool.kind === "paste") && now.tool.moving))) {
           now.disarm(); // movimento cancelado: nada mudou
           now.setGhost(null, "Movimento cancelado: o lugar não era válido.");
         } else if (now.tool.kind !== "select") now.disarm();
@@ -960,7 +993,7 @@ export function Placement() {
         useApp.setState({ linkFrom: null });
       }
       // mover só o nó: ao sair ou depois de mexer, o Tab recomeça
-      if ((s.history !== p.history || s.tool !== p.tool) && (nodeTab || s.nodeLimits) && p.tool.kind === "moveNode") {
+      if ((s.history !== p.history || s.tool !== p.tool) && (nodeTab || s.nodeLimits) && (p.tool.kind === "moveNode" || p.tool.kind === "moveBody")) {
         nodeTab = null;
         useApp.setState({ snapCycle: 0, nodeLimits: null });
         return;

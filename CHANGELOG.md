@@ -14,6 +14,13 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.21 — Girar o conjunto em torno das GC, atalhos novos · 14/10/2026
+- **Duplo clique numa mola, diagonal ou placa gira o conjunto** em torno das GC em que ele se apoia, como um bloco (as molas não mudam de tamanho), pelo caminho azul/vermelho: em 1 GC, em volta dela (esfera); em 2 GC, em torno da linha entre elas (círculo, com o eixo tracejado e o cilindro que a peça varre). Ex.: a placa apoiada em duas GC com os pilares e a viga: pega a viga e inclina tudo junto. Tab nos limites e Enter como antes. Travado (3 GC fora de uma linha ou RC90 na base): a peça vai para outro lugar, como antes.
+- **Delete numa mola com enrijecedor** tira primeiro o enrijecedor; o segundo Delete apaga a mola.
+- **Resumo**: o duplo clique não abre mais; **Esc sempre fecha**; **C** abre e fecha a qualquer momento (até no meio de um comando).
+- **Atalhos**: **1 · 2 · 3** = bolinhas do encaixe (grade verde, vão azul, triângulos amarelos); **4 · 5 · 6** = direção das barras (Eixos, passo, Livre). G, V e T ficaram livres.
+- Placas que se mexem aparecem no fantasma (antes sumiam durante o giro).
+
 ## 1.20 — Configurações e biblioteca · 14/10/2026
 - **Configurações (engrenagem)** de verdade: módulo, ângulo mínimo entre molas, ângulo mínimo da mola na GC, passo das inclinadas (o botão da barra de baixo mostra o passo novo) e tamanho da chapa. Cada valor mostra o padrão da planilha quando muda; antes de aplicar, o menu diz o que muda na estrutura aberta (tamanho das peças, GC fora da chapa, chapas sobrepostas, ângulos abaixo do novo mínimo).
 - **Configurações avançadas**: janela com abas laterais (no estilo dos atalhos): **Peças** (medidas e pesos de cada peça; as medidas das regras acompanham o módulo), **Medidas gerais**, **Cabo e enrijecedor**, **Geral**; e, em breve, **Tutorial**, **Aparência**, **Idioma** e **Perfil**.

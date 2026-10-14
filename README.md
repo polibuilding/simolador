@@ -2,7 +2,7 @@
 
 Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (Mola Structural Model), feito pela equipe Poli Mola da Poli Building. Você monta a estrutura no navegador, com as peças e o estoque reais dos kits, e o programa vai gerar as pranchas (plantas e vistas) no padrão do Desafio Poli-USP.
 
-**Versão em uso:** https://polibuilding.github.io/simolador/ · versão atual **1.20** ("geométrica"); o que mudou em cada versão está em [CHANGELOG.md](CHANGELOG.md).
+**Versão em uso:** https://polibuilding.github.io/simolador/ · versão atual **1.21** ("geométrica"); o que mudou em cada versão está em [CHANGELOG.md](CHANGELOG.md).
 
 ## O que já funciona
 
@@ -24,7 +24,7 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 - **Seleção por retângulo**: para a direita pega o que fica inteiro dentro; para a esquerda, o que tocar. O painel mostra a lista de peças e as medidas do trecho, copia a lista e apaga tudo de uma vez.
 - **Interface leve**: no topo, Arquivo e Configurações (engrenagem) ao lado do nome do programa, o nome do projeto no centro, e à direita o estoque, **Pranchas** e **Simolar** (em breve). Embaixo da cena, uma barra com **Encaixe** (grade, vão, triângulos), **Barras** (Eixos, 15°, Livre) e **Vista**. O resumo abre e fecha pelas setas « » (selecionar uma peça não o abre; o nome dela aparece de leve no canto de baixo).
 - **Câmera**: cubo de vistas no canto (faces, arestas e cantos para isométricas; segue a projeção), e na barra de baixo Enquadrar (F), **Vista paralela** (P), **Sombras**, **Renderização** (desligada = peças simples e leves, o padrão) e **Inércia** (B); sem limite de altura; dá para olhar por baixo (a chapa fica translúcida); eixos X, Y, Z no canto.
-- **Atalhos em volta do W A S D** (lista completa no botão Atalhos ou com ? / H): W A S D giram a vista (Shift: arrastam), Q/E trocam a peça pela vizinha do grupo (B4 ⇄ B6 ⇄ B12), 1/2/3 escolhem Eixos/15°/Livre, G/V/T ligam a grade e os pontos azuis e amarelos, B liga a inércia, F enquadra, R gira, Espaço repete.
+- **Atalhos em volta do W A S D** (lista completa no botão Atalhos ou com ? / H): W A S D giram a vista (Shift: arrastam), Q/E trocam a peça pela vizinha do grupo (B4 ⇄ B6 ⇄ B12), 1/2/3 ligam as bolinhas do encaixe (grade verde, vão azul, triângulos amarelos), 4/5/6 escolhem Eixos/passo/Livre, C abre e fecha o resumo, B liga a inércia, F enquadra, R gira, Espaço repete, Enter vale como clique.
 - **Pranchas** (A3 ou A4): desenhos, títulos e tabela arrastáveis; capa com isométrica renderizada (ou em linhas) e lista de peças, cotas entre eixos, totais e níveis (liga/desliga), etiquetas que se arrastam na tela, logos no carimbo, todas as chapas ou só algumas, plantas por pavimento e vistas A–D no padrão do Desafio Poli-USP; escala automática; carimbo editável; **PDF**, **DXF** (camadas MOLA-*) e SVG.
 - **Paleta e resumo recolhíveis** (1.14–1.15): a seta « no alto da paleta a transforma num menu pequeno só com os símbolos das peças (» volta); o resumo recolhe com » e volta com « (1.17: só pelas setas; selecionar uma peça não o abre, e o nome dela aparece de leve no canto de baixo). A cena não muda de tamanho: a estrutura desliza junto. As bolinhas ao lado do código mostram de que kit vem cada peça.
 - **Kit 3** (1.18): **cabo** em dois cliques (esfera e esfera; ligações e clipes de cabo automáticos), pedaço em bolinhas e plano de corte dos rolos; **enrijecedor** clicando na mola B6 ou B12.
