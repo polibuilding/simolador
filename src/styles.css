@@ -763,3 +763,10 @@ dl { margin: 0 0 16px; }
 .pm-count.out, .pm-count.out b { color: #e5a3a5; }
 /* a dica cabe na parte visível da cena, sem passar por cima dos eixos */
 .app .hint-line { max-width: min(760px, calc(100% - var(--pal-cur) - var(--props-cur) - 260px)); }
+/* nome da peça selecionada, bem de leve no canto de baixo, à direita (antes da versão) */
+.selection-tag {
+  position: fixed; right: 46px; bottom: 6px; z-index: 3; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 11px; font-weight: 500; color: #a1a9a6; pointer-events: none; transition: opacity 0.2s ease;
+}
+.selection-tag.is-hidden { opacity: 0; }
+@media (max-width: 900px) { .selection-tag { display: none; } }

@@ -14,6 +14,10 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.17 — Resumo só pelas setas · 13/10/2026
+- **Clicar ou dar duplo clique numa peça não abre mais o resumo** (ele ia e voltava a cada clique). O resumo abre e fecha só pelas setas « »; aberto, mostra a peça selecionada; fechar não solta a seleção. O duplo clique mostra o caminho de movimento direto na cena.
+- **Nome da peça selecionada** bem de leve no canto de baixo, à direita, antes da versão (esfera e GC com a posição; molas, placas e ligações pelo nome; chapas; quantas peças na seleção). Some quando o resumo está aberto.
+
 ## 1.16 — Caminho azul e vermelho, resumo deslizando · 13/10/2026
 - **Caminho da esfera em azul e vermelho**: ao mover só a esfera (duplo clique), o caminho já mostra em **vermelho** onde ela não pode ficar (ângulo mínimo entre molas, 40° na GC, cruzamentos, abaixo da chapa...) e em azul onde pode. Na esfera de uma mola, a superfície e os anéis ficam pintados; no círculo de duas molas, os trechos.
 - **Tab pula para os limites** entre azul e vermelho (Shift+Tab volta); os limites do círculo aparecem como pontinhos azuis. Na esfera, os limites são os do meridiano que passa pelo cursor. Mexer o cursor volta ao normal.

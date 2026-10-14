@@ -38,7 +38,7 @@ export function Dock() {
   const step = catalog.settings.passo_inclinacao_graus ?? 15;
   // a barra fica só com ícones quando não cabe na parte visível da cena (entre a paleta e o resumo);
   // os textos encolhem com transição, junto com a paleta e o resumo deslizando
-  const propsOpen = useApp((s) => s.propsOpen || !!s.selection || s.multi.length > 0 || !!s.selectedBoard);
+  const propsOpen = useApp((s) => s.propsOpen);
   const mini = useApp((s) => s.paletteMini);
   const ref = useRef<HTMLElement>(null);
   const full = useRef(0);

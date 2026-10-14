@@ -570,12 +570,8 @@ export function PropertiesPanel({ hidden = false }: { hidden?: boolean }) {
   const sel = useApp((s) => s.selection);
   const many = useApp((s) => s.multi.length > 0);
   const board = useApp((s) => s.selectedBoard);
-  const close = () => {
-    const st = useApp.getState();
-    st.setPropsOpen(false);
-    // com algo selecionado o painel está aberto por causa da seleção: fechar solta a seleção
-    if (st.selection || st.multi.length || st.selectedBoard) st.select(null);
-  };
+  // o painel só abre e fecha pelas setas (« »): selecionar uma peça não o abre; aberto, mostra a peça selecionada
+  const close = () => useApp.getState().setPropsOpen(false);
   return (
     <aside className={`props${hidden ? " is-hidden" : ""}`} aria-hidden={hidden || undefined}>
       <button className="props-close" onClick={close} title="Recolher o resumo" aria-label="Recolher o resumo"><Chevrons dir="right" /></button>
@@ -592,5 +588,34 @@ export function SummaryTab({ hidden = false }: { hidden?: boolean }) {
     <button className={`summary-open${hidden ? " is-hidden" : ""}`} tabIndex={hidden ? -1 : undefined} onClick={() => useApp.getState().setPropsOpen(true)} title={`Abrir o resumo${n ? ` · ${n} peças` : ""}`} aria-label="Abrir o resumo">
       <Chevrons dir="left" />
     </button>
+  );
+}
+
+/** Nome da peça selecionada, bem de leve no canto de baixo, à direita (sem precisar abrir o resumo). */
+export function SelectionTag() {
+  const model = useModel();
+  const sel = useApp((s) => s.selection);
+  const multi = useApp((s) => s.multi.length);
+  const board = useApp((s) => s.selectedBoard);
+  const extra = useApp((s) => s.boardExtra.length);
+  const open = useApp((s) => s.propsOpen);
+  let text = "";
+  if (multi) text = `${multi} peças selecionadas`;
+  else if (sel?.kind === "node") {
+    const n = model.nodes[sel.id];
+    if (n) text = `${n.kind === "support" ? "GC" : "Esfera (C)"} · ${posText(n.pos)}`;
+  } else if (sel) {
+    const code = sel.kind === "member" ? model.members[sel.id]?.code : sel.kind === "plate" ? model.plates[sel.id]?.code : model.connectors[sel.id]?.code;
+    const name = code ? catalog.pieces[code]?.name : undefined;
+    if (code) text = !name || name === code ? code : name.includes(code) ? name : `${code} · ${name}`;
+    if (sel.kind === "connector" && model.connectors[sel.id]) text += ` · ${posText(model.nodes[model.connectors[sel.id].node]?.pos ?? [0, 0, 0])}`;
+  } else if (board) {
+    const b = boardsOf(model).find((x) => x.id === board);
+    if (b) text = extra ? `${extra + 1} chapas selecionadas` : boardName(b);
+  }
+  return (
+    <span className={`selection-tag${text && !open ? "" : " is-hidden"}`} aria-live="polite">
+      {text}
+    </span>
   );
 }

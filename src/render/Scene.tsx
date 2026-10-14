@@ -540,7 +540,7 @@ function usePaletteInset() {
 
 /** quanto da direita da cena o resumo cobre agora (anima junto com ele) */
 function usePropsInset() {
-  const open = useApp((s) => s.propsOpen || !!s.selection || s.multi.length > 0 || !!s.selectedBoard);
+  const open = useApp((s) => s.propsOpen);
   return useEased(open ? PROPS_W : 0);
 }
 

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Scene } from "./render/Scene";
 import { Palette } from "./ui/Palette";
-import { PropertiesPanel, SummaryTab } from "./ui/PropertiesPanel";
+import { PropertiesPanel, SelectionTag, SummaryTab } from "./ui/PropertiesPanel";
 import { SheetsView } from "./ui/SheetsView";
 import { HintLine, VersionTag } from "./ui/StatusBar";
 import { Dock } from "./ui/Dock";
@@ -162,8 +162,8 @@ export default function App() {
   useShortcuts();
   const placing = useApp((s) => s.tool.kind !== "select");
   const sheetsOpen = useApp((s) => s.sheetsOpen);
-  // o resumo abre pelo botão lateral; com algo selecionado, abre sozinho (mostra a peça)
-  const propsOpen = useApp((s) => s.propsOpen || !!s.selection || s.multi.length > 0 || !!s.selectedBoard);
+  // o resumo abre e fecha só pelas setas « »; selecionar não o abre (o nome da peça aparece de leve no canto)
+  const propsOpen = useApp((s) => s.propsOpen);
   const mini = useApp((s) => s.paletteMini);
   return (
     <div className={`app${placing ? " placing" : ""}${propsOpen ? " props-open" : ""}${mini ? " palette-mini-on" : ""}`}>
@@ -177,6 +177,7 @@ export default function App() {
         <SummaryTab hidden={propsOpen} />
       </main>
       <PropertiesPanel hidden={!propsOpen} />
+      <SelectionTag />
       <VersionTag />
       <SelectBox />
       <Shortcuts />
