@@ -147,7 +147,7 @@ Exemplo de entrada em `catalog.json` (gerado de `data/parametros.xlsx` por `npm 
   - marca: logos do Kit Mola (leva a br.molamodel.com) e da Poli Building (leva ao Instagram), e o nome siMOLAdor; o símbolo do programa (hexágono do Mola com os triângulos alternando azul e amarelo) aparece só na aba do navegador, por enquanto;
   - Arquivo: ".mola" em cinza claro e os ícones Novo, Abrir e Salvar;
   - no centro, a cena 3D com o cubo de vistas (segue a projeção: paralela ou perspectiva), a dica da ferramenta em texto pequeno e a barra de baixo (Encaixe, Barras, Vista);
-  - à direita, o resumo / a peça selecionada, por cima da cena: » no canto de cima recolhe; recolhido, fica só a « transparente no canto de cima da cena (abre sozinho com algo selecionado);
+  - à direita, o resumo / a peça selecionada, por cima da cena: » no canto de cima recolhe; recolhido, fica só a « transparente no canto de cima da cena (só abre pelas setas; selecionar uma peça não o abre: o nome dela aparece bem de leve no canto de baixo, à direita, antes da versão);
   - a versão, bem de leve, no canto inferior direito.
 - **Modo Prancha** em aba própria: folhas A3 com capa, plantas e vistas, carimbo editável, em preto e branco de desenho técnico.
 - **Feedback de encaixe**: fantasma verde ou vermelho, nós livres destacados ao aproximar a peça.
@@ -224,7 +224,7 @@ Análise estrutural: fora do escopo (Q09).
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0`, `v1.1`…).
 
-- **1.x — geométrica** (atual: 1.16): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.17): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: o módulo extra ajustável.
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 

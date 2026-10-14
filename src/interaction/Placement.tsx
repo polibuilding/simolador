@@ -468,7 +468,7 @@ export function Placement() {
 
     const inGizmo = (ev: PointerEvent, rect: DOMRect) => {
       const s = useApp.getState();
-      const off = s.propsOpen || s.selection || s.multi.length || s.selectedBoard ? PROPS_W : 0; // painel aberto: o cubo se afasta
+      const off = s.propsOpen ? PROPS_W : 0; // painel aberto: o cubo se afasta
       return (ev.clientX > rect.right - off - GIZMO_PX && ev.clientX < rect.right - off && ev.clientY < rect.top + GIZMO_PX) || // cubo de vistas
       (ev.clientX < rect.left + AXES_PX && ev.clientY > rect.bottom - AXES_PX); // eixos X, Y, Z
     };
