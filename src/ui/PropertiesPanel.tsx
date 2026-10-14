@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { catalog } from "../core/catalog";
-import { available, minKits, usage } from "../core/inventory";
-import { kitsText } from "./Toolbar";
+import { available, usage } from "../core/inventory";
 import { boardsOf, componentOf, DISP_AXIS, len, sub, toDisp, type Vec3 } from "../core/model";
 import { boardCenter, boardName, boardSelection, boardSize, boardsGap } from "../core/boards";
 import { NumField } from "../render/Boards";
@@ -373,22 +372,14 @@ function Summary() {
         <Row k="Planta" v={`${fmt(span(xs), 0)} × ${fmt(span(zs), 0)} mm`} />
         <Row k="Altura" v={`${fmt(span(ys), 0)} mm`} />
         <Row k="Níveis" v={levels} />
-        {inventory.unlimited && (() => {
-          const need = minKits(catalog, used);
-          return (
-            <Row
-              k="Kits necessários (mínimo)"
-              v={<>{need.total ? kitsText(need.kits) : "—"}{need.total ? ` (${need.total} ${need.total === 1 ? "caixa" : "caixas"})` : ""}{need.missing.length ? <span className="bad"> · fora dos kits: {need.missing.join(", ")}</span> : null}</>}
-            />
-          );
-        })()}
+
       </dl>
       <table className="bom">
         <thead>
           <tr>
             <th>Peça</th>
             <th>Usadas</th>
-            <th>Restam</th>
+            {!inventory.unlimited && <th>Restam</th>}
           </tr>
         </thead>
         <tbody>
@@ -398,7 +389,7 @@ function Summary() {
               <tr key={c} className={Number.isFinite(total) && total - used[c] < 0 ? "over" : ""}>
                 <td>{c}</td>
                 <td>{used[c]}</td>
-                <td>{Number.isFinite(total) ? total - used[c] : "∞"}</td>
+                {!inventory.unlimited && <td>{Number.isFinite(total) ? total - used[c] : "∞"}</td>}
               </tr>
             );
           })}
@@ -532,5 +523,27 @@ export function PropertiesPanel() {
   const sel = useApp((s) => s.selection);
   const many = useApp((s) => s.multi.length > 0);
   const board = useApp((s) => s.selectedBoard);
-  return <aside className="props">{many ? <MultiSelected /> : sel ? <Selected /> : board ? <BoardSelected /> : <Summary />}</aside>;
+  const close = () => {
+    const st = useApp.getState();
+    st.setPropsOpen(false);
+    // com algo selecionado o painel está aberto por causa da seleção: fechar solta a seleção
+    if (st.selection || st.multi.length || st.selectedBoard) st.select(null);
+  };
+  return (
+    <aside className="props">
+      <button className="props-close" onClick={close} title="Recolher o painel" aria-label="Recolher o painel">›</button>
+      {many ? <MultiSelected /> : sel ? <Selected /> : board ? <BoardSelected /> : <Summary />}
+    </aside>
+  );
+}
+
+/** Aba na borda direita da cena, com o painel recolhido. */
+export function SummaryTab() {
+  const model = useModel();
+  const n = Object.keys(model.nodes).length + Object.keys(model.members).length + Object.keys(model.plates).length + Object.keys(model.connectors).length;
+  return (
+    <button className="summary-tab" onClick={() => useApp.getState().setPropsOpen(true)} title="Abrir o resumo da estrutura">
+      <span aria-hidden>‹</span> Resumo{n ? ` · ${n} peças` : ""}
+    </button>
+  );
 }

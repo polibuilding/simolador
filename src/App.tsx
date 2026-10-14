@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 import { Scene } from "./render/Scene";
 import { Palette } from "./ui/Palette";
-import { PropertiesPanel } from "./ui/PropertiesPanel";
+import { PropertiesPanel, SummaryTab } from "./ui/PropertiesPanel";
 import { SheetsView } from "./ui/SheetsView";
-import { StatusBar } from "./ui/StatusBar";
+import { HintLine, VersionTag } from "./ui/StatusBar";
+import { Dock } from "./ui/Dock";
 import { Toolbar } from "./ui/Toolbar";
-import { ViewControls } from "./ui/ViewControls";
 import { Shortcuts } from "./ui/Shortcuts";
 import { GROUPS } from "./ui/Palette";
 import { useApp } from "./ui/store";
@@ -157,16 +157,20 @@ export default function App() {
   useShortcuts();
   const placing = useApp((s) => s.tool.kind !== "select");
   const sheetsOpen = useApp((s) => s.sheetsOpen);
+  // o resumo abre pelo botão lateral; com algo selecionado, abre sozinho (mostra a peça)
+  const propsOpen = useApp((s) => s.propsOpen || !!s.selection || s.multi.length > 0 || !!s.selectedBoard);
   return (
-    <div className={`app${placing ? " placing" : ""}`}>
+    <div className={`app${placing ? " placing" : ""}${propsOpen ? " props-open" : ""}`}>
       <Toolbar />
       <Palette />
       <main className="viewport" aria-label="Cena 3D">
         <Scene />
-        <ViewControls />
+        <HintLine />
+        <Dock />
+        {!propsOpen && <SummaryTab />}
       </main>
-      <PropertiesPanel />
-      <StatusBar />
+      {propsOpen && <PropertiesPanel />}
+      <VersionTag />
       <SelectBox />
       <Shortcuts />
       {sheetsOpen && <SheetsView />}

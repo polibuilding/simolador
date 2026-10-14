@@ -72,13 +72,6 @@ function Icon({ code }: { code: string }) {
   );
 }
 
-const SHORT: Record<string, string> = {
-  GC: "Ligação de base",
-  RC90: "Rígida 90°",
-  CC: "Contínua",
-  CC90: "Contínua 90°",
-};
-
 function KitDots({ code }: { code: string }) {
   return (
     <span className="kit-dots" aria-label="Kits que trazem esta peça">
@@ -117,7 +110,7 @@ export function Palette() {
                 className={`piece${armed ? " armed" : ""}${empty ? " empty" : ""}`}
                 aria-pressed={armed}
                 disabled={empty}
-                title={empty ? `Acabaram as ${code} do estoque` : `Clique ou arraste para a cena`}
+                title={empty ? `Acabaram as ${code} do estoque` : `${catalog.pieces[code]?.name ?? code} · clique ou arraste para a cena`}
                 onPointerDown={(e) => {
                   if (e.button !== 0 || empty) return;
                   if (armed) return; // segundo clique desarma (no pointerup)
@@ -130,17 +123,14 @@ export function Palette() {
               >
                 <Icon code={code} />
                 <span className="piece-name">
-                  <strong>{code}</strong> {SHORT[code] ?? ""}
+                  <strong>{code}</strong>
                 </span>
-                <span className="piece-count">
-                  {Number.isFinite(total) ? (
-                    <>
-                      <b>{left}</b>/{total}
-                    </>
-                  ) : (
-                    <b>∞</b>
-                  )}
-                </span>
+                {/* sem limite: não mostra quantidade */}
+                {Number.isFinite(total) && (
+                  <span className="piece-count">
+                    <b>{left}</b>/{total}
+                  </span>
+                )}
                 <KitDots code={code} />
               </button>
             );

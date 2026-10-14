@@ -56,6 +56,9 @@ interface State {
   /** vista paralela (projeção ortográfica) em vez de perspectiva */
   ortho: boolean;
   setOrtho: (on: boolean) => void;
+  /** resumo da estrutura aberto (painel da direita); com algo selecionado ele abre sozinho */
+  propsOpen: boolean;
+  setPropsOpen: (on: boolean) => void;
   /** painel de atalhos do teclado */
   helpOpen: boolean;
   setHelpOpen: (on: boolean) => void;
@@ -241,6 +244,8 @@ export const useApp = create<State>((set, get) => ({
   ortho: readPref("simolador:paralela", false),
   setOrtho: (ortho) => (writePref("simolador:paralela", ortho), set({ ortho, hint: ortho ? "Vista paralela: sem perspectiva, as medidas não encolhem com a distância (P)." : "Vista em perspectiva (P)." })),
   setShadows: (shadows) => (writePref("simolador:sombras", shadows), set({ shadows })),
+  propsOpen: readPref("simolador:resumo", false),
+  setPropsOpen: (propsOpen) => (writePref("simolador:resumo", propsOpen), set({ propsOpen })),
   helpOpen: false,
   setHelpOpen: (helpOpen) => set({ helpOpen }),
   cyclePiece: (dir, groups) => {

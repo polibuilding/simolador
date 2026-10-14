@@ -1,5 +1,7 @@
 import { Canvas, useThree } from "@react-three/fiber";
-import { Environment, GizmoHelper, GizmoViewcube, GizmoViewport, Lightformer, OrbitControls } from "@react-three/drei";
+import { Environment, GizmoHelper, GizmoViewport, Lightformer, OrbitControls } from "@react-three/drei";
+import { GizmoHelper as CubeHelperRaw } from "./gizmo/CubeHelper";
+import { GizmoViewcube as ViewCubeRaw } from "./gizmo/ViewCube";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { catalog } from "../core/catalog";
@@ -350,6 +352,10 @@ function CameraRig() {
   return null;
 }
 
+// cópias do drei sem tipos: props livres
+const CubeHelper = CubeHelperRaw as unknown as React.FC<Record<string, unknown> & { children?: React.ReactNode }>;
+const ViewCube = ViewCubeRaw as unknown as React.FC<Record<string, unknown>>;
+
 /** abertura da câmera em perspectiva (graus) */
 const FOV = 35;
 
@@ -449,6 +455,7 @@ export function Scene() {
   const inertia = useApp((s) => s.inertia);
   const render = useApp((s) => s.render);
   const shadows = useApp((s) => s.shadows);
+  const ortho = useApp((s) => s.ortho);
   return (
     <Canvas
       shadows
@@ -501,19 +508,20 @@ export function Scene() {
       <LinkMark />
       <Placement />
       <CameraRig />
-      <GizmoHelper alignment="top-right" margin={[84, 84]}>
-        <group scale={1.4}>
-          <GizmoViewcube
+      {/* cubo de vistas: segue a projeção da cena (paralela ou perspectiva) */}
+      <CubeHelper alignment="top-right" margin={[84, 84]} perspective={!ortho}>
+        <group scale={1.35}>
+          <ViewCube
             faces={["DIREITA", "ESQUERDA", "TOPO", "BASE", "FRENTE", "TRÁS"]}
-            font="bold 19px Arial"
-            color="#d9dfdc"
-            textColor="#0d1211"
-            strokeColor="#1d2422"
-            hoverColor="#9fd3bd"
+            font="600 18px Arial"
+            color="#e4e8e6"
+            textColor="#3c4644"
+            strokeColor="#a9b2af"
+            hoverColor="#bfe3d3"
             opacity={1}
           />
         </group>
-      </GizmoHelper>
+      </CubeHelper>
       {/* referência de eixos no canto inferior esquerdo (Y = vertical); clicar num eixo olha por ele */}
       <GizmoHelper alignment="bottom-left" margin={[62, 62]} renderPriority={2}>
         {/* Z é a altura: o eixo vertical da cena se chama Z (azul) e o de profundidade, Y (verde) */}
