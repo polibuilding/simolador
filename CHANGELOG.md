@@ -14,6 +14,13 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.22 — Rigidez: a estrutura acompanha (ou trava) · 14/10/2026
+- **Modelo das ligações para mexer peças**: esfera = rótula; mola = barra; **RC90** trava o ângulo entre duas molas; **RC90 na base** engasta o pilar na GC; **CC** trava o par alinhado em 180° (e a **CC90** o par perpendicular); **placa** = corpo rígido; **diagonais e cabos** só tração (não deixam esticar; afrouxar pode, com aviso); GC fixa.
+- **Duplo clique numa esfera, mola, diagonal ou placa**: a peça anda e a estrutura acompanha o que as ligações deixam. **Travada** (0 graus de liberdade): o rodapé diz o que trava. **Caminho** (1 grau): azul/vermelho como antes, agora para conjuntos inteiros (ex.: pórtico com RC90 nos esquadros tomba em torno da linha das GC). **Livre** (2 ou mais): a peça segue o cursor e o resto mexe o mínimo (primeiro só ela, depois as vizinhas). A esfera que só ela precisa mexer continua no "mover só o nó".
+- **Tab no caminho**: além dos limites azul/vermelho, para nas posições em que a peça ou as molas dela ficam **na horizontal ou na vertical**.
+- **Tab na colocação** dá a próxima opção da peça (o mesmo que R); sobre uma esfera com barra na mão, continua percorrendo os pontos amarelos e laranja.
+- **Estabilidade** no resumo: graus de liberdade da estrutura (0 = rígida; mais = mecanismo), por parte quando as GC separam; o painel de cada peça diz como ela pode mexer.
+
 ## 1.21 — Girar o conjunto em torno das GC, atalhos novos · 14/10/2026
 - **Duplo clique numa mola, diagonal ou placa gira o conjunto** em torno das GC em que ele se apoia, como um bloco (as molas não mudam de tamanho), pelo caminho azul/vermelho: em 1 GC, em volta dela (esfera); em 2 GC, em torno da linha entre elas (círculo, com o eixo tracejado e o cilindro que a peça varre). Ex.: a placa apoiada em duas GC com os pilares e a viga: pega a viga e inclina tudo junto. Tab nos limites e Enter como antes. Travado (3 GC fora de uma linha ou RC90 na base): a peça vai para outro lugar, como antes.
 - **Delete numa mola com enrijecedor** tira primeiro o enrijecedor; o segundo Delete apaga a mola.

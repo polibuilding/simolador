@@ -1,7 +1,8 @@
 // Estado da aplicação (zustand). O modelo vive dentro de um histórico para desfazer/refazer.
 import { create } from "zustand";
 import { catalog } from "../core/catalog";
-import { bodyMoveOptions, codeOf, moveGroup, nodeMoveNearest, removeMany, removeSelection, rotateSelection, selAfter, type BodyRef, type Sel } from "../core/edit";
+import { codeOf, moveGroup, nodeMoveNearest, nodeMoveOptions, removeMany, removeSelection, rotateSelection, selAfter, type Sel } from "../core/edit";
+import { globalMoveOptions, type MoveRef } from "../core/globalMove";
 import { createHistory, push, redo, undo, type History } from "../core/history";
 import { defaultInventory, type InventoryConfig } from "../core/inventory";
 import { boardsOf, emptyModel, membersAt, rotateNodes, rotYRad, toDisp, type Model, type Vec3 } from "../core/model";
@@ -22,8 +23,8 @@ export type Tool =
   | { kind: "moveGroup"; nodeId: string; turns: number; viaDrag: boolean }
   /** mover só um nó: as barras presas a partes fixas giram em torno da ponta fixa */
   | { kind: "moveNode"; nodeId: string; viaDrag: boolean }
-  /** duplo clique numa mola, diagonal ou placa: o conjunto gira em torno das GC em que se apoia */
-  | { kind: "moveBody"; ref: BodyRef; viaDrag: boolean }
+  /** duplo clique: a peça anda e o resto da estrutura acompanha o que precisar (caminho, livre ou travado) */
+  | { kind: "moveBody"; ref: MoveRef; viaDrag: boolean }
   /** colar (ou mover várias peças: `moving.base` = modelo sem elas). R gira, X/Z espelha, ↑/↓ muda a altura */
   | { kind: "paste"; clip: Clip; turns: number; mirrorX: boolean; mirrorZ: boolean; dy: number; viaDrag: false; moving?: { base: Model } };
 
@@ -114,7 +115,7 @@ interface State {
   startMove: (viaDrag: boolean) => void;
   /** N / botão "Mover só o nó" */
   startMoveNode: (viaDrag: boolean) => void;
-  /** duplo clique numa mola/diagonal/placa: girar o conjunto em torno das GC (se travado, a peça vai para outro lugar) */
+  /** duplo clique: mexer a peça com a estrutura acompanhando (esfera: só ela, se o resto não precisar mexer) */
   startMoveBody: () => void;
   /** arrastar uma peça: leva a estrutura inteira dela (qualquer peça) */
   startMoveStructure: (viaDrag: boolean) => void;
@@ -366,15 +367,27 @@ export const useApp = create<State>((set, get) => ({
   startMoveBody: () => {
     const s = get();
     const sel = s.selection;
-    if (sel?.kind !== "member" && sel?.kind !== "plate") return s.startMove(false);
-    const ref: BodyRef = { kind: sel.kind, id: sel.id };
-    const set0 = bodyMoveOptions(catalog, s.history.present, ref);
-    if (set0.locked) {
-      s.startMove(false);
-      return set({ hint: `${set0.locked} Por isso a peça vai para outro lugar (como Mover).` });
+    if (!sel || sel.kind === "connector") return s.startMove(false);
+    const m = s.history.present;
+    const ref: MoveRef = { kind: sel.kind, id: sel.id };
+    const g = globalMoveOptions(catalog, m, ref);
+    if (sel.kind === "node") {
+      // esfera: se só ela precisa mexer (o caminho local tem a mesma liberdade), fica o "mover só o nó"
+      const local = nodeMoveOptions(catalog, m, sel.id);
+      const dim = local.locked ? -1 : local.locus?.kind === "sphere" ? 2 : local.locus?.kind === "circle" ? 1 : 0;
+      const hand = g.mode === "locked" ? 0 : g.mode === "path" ? 1 : g.hand;
+      if (dim >= 0 && (dim === hand || (dim === 0 && hand === 0))) return s.startMoveNode(false);
     }
-    const how = set0.axis ? `gira em torno da linha entre as ${set0.anchors.length} GC` : "gira em volta da GC";
-    set({ tool: { kind: "moveBody", ref, viaDrag: false }, ghost: null, hint: `O conjunto ${how}: leve pelo caminho (azul pode, vermelho não). Tab pula para os limites; Esc cancela.` });
+    if (g.mode === "locked") return set({ hint: g.reason });
+    const dof = g.dof > 1 ? ` O conjunto tem ${g.dof} graus de liberdade.` : "";
+    set({
+      tool: { kind: "moveBody", ref, viaDrag: false },
+      ghost: null,
+      hint:
+        g.mode === "path"
+          ? `Essa peça anda num caminho (1 grau de liberdade): azul pode, vermelho não. Tab pula para os limites e para as posições na horizontal/vertical; Esc cancela.${dof}`
+          : `Livre (${g.hand} graus de liberdade aqui): arraste; o resto mexe só o que precisar. Esc cancela.${dof}`,
+    });
   },
   startMoveStructure: (viaDrag) => {
     const s = get();

@@ -123,10 +123,14 @@ function useShortcuts() {
         // pontos de encaixe sobrepostos perto do cursor: Tab escolhe o próximo
         e.preventDefault();
         useApp.setState({ snapCycle: st.snapCycle + 1 });
-      } else if (e.key === "Tab" && !mod && st.tool.kind === "place" && catalog.pieces[st.tool.code]?.type === "bar" && st.guides.yellow) {
-        // barras: Tab percorre os pontos amarelos e laranja da esfera de partida (Shift+Tab volta)
+      } else if (e.key === "Tab" && !mod && st.tool.kind === "place" && catalog.pieces[st.tool.code]?.type === "bar" && st.guides.yellow && st.triAnchor) {
+        // barras sobre uma esfera: Tab percorre os pontos amarelos e laranja dela (Shift+Tab volta)
         e.preventDefault();
         useApp.setState({ snapCycle: st.snapCycle + (e.shiftKey ? -1 : 1) });
+      } else if (e.key === "Tab" && !mod && (st.tool.kind === "place" || st.tool.kind === "paste")) {
+        // colocando uma peça: Tab dá a próxima opção (o mesmo que R)
+        e.preventDefault();
+        st.rotate();
       } else if (!mod && e.key === " ") {
         e.preventDefault();
         st.repeatLast();

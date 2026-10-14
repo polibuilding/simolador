@@ -8,7 +8,8 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 import { catalog } from "../core/catalog";
-import { bodyMoveOptions, connectReach, locusStatus, moveGroup, nodeMoveOptions, sphereMeridianLimits, type BodyRef, type LocusStatus, type NodeMoveSet } from "../core/edit";
+import { alignStops, connectReach, locusCirclePoint, locusSpherePoint, locusStatus, moveGroup, nodeMoveOptions, sphereMeridianLimits, type LocusStatus, type NodeMove, type NodeMoveSet } from "../core/edit";
+import { globalMoveOptions, type GlobalMove, type MoveRef } from "../core/globalMove";
 import { pasteClip, transformClip, type Clip, type PasteResult } from "../core/clipboard";
 import { AXES, add, boardsOf, dot, findNodeAt, len, norm, rotDir, scale, sub, toDisp, type Model, type Vec3 } from "../core/model";
 import { frameRadAt } from "../core/boards";
@@ -135,13 +136,13 @@ export function nodeOptionsFor(model: Model, nodeId: string) {
   return nodeMoveCache.r;
 }
 
-// giro do conjunto em torno das GC (duplo clique numa mola, diagonal ou placa)
-let bodyCache: { model: Model; key: string; r: ReturnType<typeof bodyMoveOptions> } | null = null;
-export function bodyOptionsFor(model: Model, ref: BodyRef) {
+// movimento global (duplo clique): o que a estrutura deixa a peça fazer (caminho, livre ou travado)
+let globalCache: { model: Model; key: string; r: GlobalMove } | null = null;
+export function globalFor(model: Model, ref: MoveRef): GlobalMove {
   const key = `${ref.kind}:${ref.id}`;
-  if (bodyCache && bodyCache.model === model && bodyCache.key === key) return bodyCache.r;
-  bodyCache = { model, key, r: bodyMoveOptions(catalog, model, ref) };
-  return bodyCache.r;
+  if (globalCache && globalCache.model === model && globalCache.key === key) return globalCache.r;
+  globalCache = { model, key, r: globalMoveOptions(catalog, model, ref) };
+  return globalCache.r;
 }
 
 /** Caminho de quem anda pelo azul: a esfera (mover só o nó) ou o conjunto (giro em torno das GC). */
@@ -152,8 +153,9 @@ export function pathFor(model: Model, tool: Tool): { set: NodeMoveSet; start: Ve
     return { set: nodeOptionsFor(model, tool.nodeId), start: n.pos, lift: n.kind === "support", key: `n:${tool.nodeId}` };
   }
   if (tool.kind === "moveBody") {
-    const set = bodyOptionsFor(model, tool.ref);
-    return { set, start: set.handle, lift: false, key: `b:${tool.ref.kind}:${tool.ref.id}` };
+    const g = globalFor(model, tool.ref);
+    if (g.mode !== "path") return null;
+    return { set: g.set, start: g.handle, lift: false, key: `b:${tool.ref.kind}:${tool.ref.id}` };
   }
   return null;
 }
@@ -164,6 +166,72 @@ export function locusStatusFor(model: Model, key: string, set: NodeMoveSet): Loc
   if (locusCache && locusCache.model === model && locusCache.key === key) return locusCache.r;
   locusCache = { model, key, r: locusStatus(set) };
   return locusCache.r;
+}
+
+/**
+ * Paradas do Tab num caminho: os limites azul ↔ vermelho e as posições (azuis) em que a peça pega ou as molas que
+ * chegam nela ficam na horizontal ou na vertical. Em ordem ao longo do caminho.
+ */
+function tabStops(model: Model, tool: Tool, set: NodeMoveSet, key: string, toward: Vec3): { pos: Vec3; label: string }[] {
+  const loc = set.locus;
+  if (!loc || !set.evalAt) return [];
+  const tracked =
+    set.tracked ??
+    (tool.kind === "moveNode" ? Object.values(model.members).filter((m) => (m.a === tool.nodeId || m.b === tool.nodeId) && catalog.pieces[m.code]?.type === "bar").map((m) => m.id) : []);
+  const out: { pos: Vec3; label: string; t: number }[] = [];
+  let at: (t: number) => NodeMove | null;
+  let posAt: (t: number) => Vec3;
+  let t0 = 0;
+  let t1 = 1;
+  let n = 90;
+  let paramOf: (p: Vec3) => number;
+  let limits: Vec3[];
+  if (loc.kind === "circle") {
+    posAt = (t) => locusCirclePoint(loc, t);
+    at = (t) => set.evalAt!(posAt(t));
+    t1 = 2 * Math.PI;
+    n = 144;
+    paramOf = (p) => {
+      const w = sub(p, loc.p);
+      const t = Math.atan2(dot(w, loc.e2), dot(w, loc.e1));
+      return t < 0 ? t + 2 * Math.PI : t;
+    };
+    limits = locusStatusFor(model, key, set).limits;
+  } else if (loc.kind === "sphere") {
+    const d = sub(toward, loc.c);
+    const phi = Math.hypot(d[0], d[2]) < 1e-6 ? 0 : Math.atan2(d[2], d[0]);
+    posAt = (t) => locusSpherePoint(loc, t, phi);
+    at = (t) => set.evalAt!(posAt(t));
+    t1 = Math.PI;
+    paramOf = (p) => Math.acos(Math.max(-1, Math.min(1, (p[1] - loc.c[1]) / loc.r)));
+    limits = sphereMeridianLimits(set, toward);
+  } else if (loc.kind === "path" && set.evalParam) {
+    const ev = set.evalParam;
+    at = (t) => ev(t);
+    posAt = (t) => ev(t)?.pos ?? loc.pts[Math.round(t)];
+    t1 = Math.max(1, loc.pts.length - 1);
+    n = Math.min(360, loc.pts.length - 1);
+    paramOf = (p) => {
+      let best = 0;
+      let bd = Infinity;
+      loc.pts.forEach((q, i) => {
+        const dd = len(sub(q, p));
+        if (dd < bd) (bd = dd), (best = i);
+      });
+      return best;
+    };
+    limits = locusStatusFor(model, key, set).limits;
+  } else {
+    return locusStatusFor(model, key, set).limits.map((p) => ({ pos: p, label: "Posição" }));
+  }
+  for (const p of limits) out.push({ pos: p, label: "Limite do trecho azul", t: paramOf(p) });
+  const closed = loc.kind === "circle" || (loc.kind === "path" && loc.closed);
+  for (const s of alignStops(catalog, at, t0, t1, n, tracked, closed)) {
+    const mv = at(s.t);
+    if (mv?.check.ok) out.push({ pos: loc.kind === "path" ? mv.pos : posAt(s.t), label: s.label, t: s.t });
+  }
+  out.sort((a, b) => a.t - b.t);
+  return out.filter((s, i) => i === 0 || len(sub(s.pos, out[i - 1].pos)) > 1e-3);
 }
 
 /** A GC sendo colocada/movida "puxa" para um ponto-guia perto do cursor (na tela), em qualquer modo de encaixe. */
@@ -366,7 +434,7 @@ export function Placement() {
     // A esfera sob o cursor vira a partida e fica até outra esfera ser apontada; perto de um ponto amarelo,
     // o fantasma mostra o triângulo inteiro (R: só a barra).
     let triTab: { x: number; y: number; anchor: string | null } | null = null;
-    let nodeTab: { x: number; y: number; nodeId: string; pts: Vec3[]; start: number } | null = null;
+    let nodeTab: { x: number; y: number; nodeId: string; pts: Vec3[]; labels: string[]; start: number } | null = null;
     const triangleStep = (ev: PointerEvent, rect: DOMRect, model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"]): boolean => {
       const st = useApp.getState();
       const dpx = (p: Vec3) => {
@@ -615,6 +683,25 @@ export function Placement() {
 
       // ---- mover só o nó (duplo clique na esfera) ou girar o conjunto (duplo clique numa mola, diagonal ou placa):
       //      desliza pelo caminho possível (esfera, círculo ou pontos) ----
+      // ---- conjunto livre (2 ou mais graus de liberdade): a peça segue o cursor e o resto mexe o mínimo ----
+      if (tool.kind === "moveBody" && globalFor(st.history.present, tool.ref).mode !== "path") {
+        const g = globalFor(st.history.present, tool.ref);
+        if (g.mode === "locked") return st.setGhost(null, g.reason);
+        if (g.mode !== "free") return;
+        const ray = rayAt(ev, rect);
+        const H = toWorld(g.handle);
+        const nrm = camera.getWorldDirection(new THREE.Vector3());
+        const hit = ray.intersectPlane(new THREE.Plane().setFromNormalAndCoplanarPoint(nrm, H), new THREE.Vector3());
+        if (!hit) return;
+        const mv = g.drag(toModule(hit));
+        const moved = len(sub(mv.pos, g.handle)).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+        return st.setGhost(
+          { kind: "group", model: mv.model, ids: mv.ids, check: mv.check },
+          mv.check.ok
+            ? `Clique para deixar aqui (a peça anda ${moved} M; mexem ${mv.ids.size} ${mv.ids.size === 1 ? "esfera" : "esferas"}).${mv.check.warnings[0] ? ` ${mv.check.warnings[0]}` : ""}`
+            : mv.check.errors[0],
+        );
+      }
       if (tool.kind === "moveNode" || tool.kind === "moveBody") {
         const present = st.history.present;
         const path = pathFor(present, tool);
@@ -646,23 +733,24 @@ export function Placement() {
               const hit = ray.intersectSphere(new THREE.Sphere(C, loc.r * M), new THREE.Vector3());
               if (hit) toward = toModule(hit);
             }
-            const pts = loc.kind === "sphere" ? sphereMeridianLimits(set, toward) : locusStatusFor(present, pathKey, set).limits;
+            const stops = tabStops(present, tool, set, pathKey, toward);
+            const pts = stops.map((x) => x.pos);
             let first = 0;
             pts.forEach((p, i) => { if (dpx(p) < dpx(pts[first])) first = i; });
-            nodeTab = { x: ev.clientX, y: ev.clientY, nodeId: pathKey, pts, start: first };
+            nodeTab = { x: ev.clientX, y: ev.clientY, nodeId: pathKey, pts, labels: stops.map((x) => x.label), start: first };
           }
           const n = nodeTab.pts.length;
           if (!n) {
             nodeTab = null;
             useApp.setState({ snapCycle: 0, nodeLimits: null });
-            return st.setGhost(null, "Esse caminho não tem limites: é todo azul (ou todo vermelho).");
+            return st.setGhost(null, "Esse caminho não tem limites nem posições na horizontal/vertical.");
           }
           const c = useApp.getState().snapCycle;
           const i = (((nodeTab.start + (c > 0 ? c - 1 : c)) % n) + n) % n;
           pick = nodeTab.pts[i];
           const cur = useApp.getState().nodeLimits;
           if (!cur || cur.i !== i || cur.pts !== nodeTab.pts) useApp.setState({ nodeLimits: { pts: nodeTab.pts, i } });
-          tabInfo = ` Limite ${i + 1} de ${n}: Tab próximo, Shift+Tab volta.`;
+          tabInfo = ` ${nodeTab.labels[i]} (${i + 1} de ${n}): Tab próximo, Shift+Tab volta.`;
         }
         // 1) posições "redondas" (eixos, passos de 15°) perto do cursor: encaixa nelas
         let best = 14;
@@ -698,17 +786,13 @@ export function Placement() {
           if (pick && set.nearest) pick = set.nearest(pick) ?? pick;
         }
         const o = pick && set.evalAt ? set.evalAt(pick) : null;
-        if (!o) return st.setGhost(null, body ? "Leve o cursor pelo caminho azul: é por ali que o conjunto pode girar." : "Leve o cursor pelo caminho azul: é por ali que a esfera pode andar.");
+        if (!o) return st.setGhost(null, body ? "Leve o cursor pelo caminho azul: é por ali que o conjunto pode andar." : "Leve o cursor pelo caminho azul: é por ali que a esfera pode andar.");
         const f = (p: Vec3) => `(${toDisp(p).map((v) => +v.toFixed(2)).join("; ")})`;
         const moved = len(sub(o.pos, start)).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
-        const tabHint = tabInfo || (locusStatusFor(present, pathKey, set).limits.length || loc?.kind === "sphere" ? " Tab pula para os limites." : "");
-        let what = `Clique para deixar o nó em ${f(o.pos)} (anda ${moved} M).`;
-        if (body) {
-          const bs = set as ReturnType<typeof bodyMoveOptions>;
-          const ctr = bs.axis ? add(bs.axis.a, scale(norm(sub(bs.axis.b, bs.axis.a)), dot(sub(start, bs.axis.a), norm(sub(bs.axis.b, bs.axis.a))))) : bs.pivot!;
-          const ang = (Math.acos(Math.max(-1, Math.min(1, dot(norm(sub(start, ctr)), norm(sub(o.pos, ctr)))))) * 180) / Math.PI;
-          what = `Clique para deixar o conjunto girado ${ang.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}° ${bs.axis ? "em torno da linha das GC" : "em volta da GC"}.`;
-        }
+        const tabHint = tabInfo || " Tab: limites e posições na horizontal/vertical.";
+        const what = body
+          ? `Clique para deixar aqui (a peça anda ${moved} M; mexem ${o.ids.size} ${o.ids.size === 1 ? "esfera" : "esferas"}).${o.check.warnings[0] ? ` ${o.check.warnings[0]}` : ""}`
+          : `Clique para deixar o nó em ${f(o.pos)} (anda ${moved} M).`;
         return st.setGhost(
           { kind: "group", model: o.model, ids: o.ids, check: o.check },
           o.check.ok

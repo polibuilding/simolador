@@ -161,12 +161,18 @@ export interface NodeMoveSet {
   locus?: NodeLocus;
   /** como `nearest`, com mais um vínculo: o nó a `L` módulos de `c` (para ligar uma mola nova até ele) */
   nearestWith?: (extra: { c: Vec3; L: number }, target: Vec3) => Vec3 | null;
+  /** peças acompanhadas nas paradas do Tab (posições na horizontal e na vertical) */
+  tracked?: string[];
+  /** caminho: a configuração num ponto qualquer entre amostras (t fracionário) */
+  evalParam?: (t: number) => NodeMove | null;
 }
 
 export type NodeLocus =
   | { kind: "sphere"; c: Vec3; r: number }
   | { kind: "circle"; p: Vec3; h: number; e1: Vec3; e2: Vec3 }
-  | { kind: "points"; pts: Vec3[] };
+  | { kind: "points"; pts: Vec3[] }
+  /** caminho do conjunto (1 grau de liberdade), em amostras da mão */
+  | { kind: "path"; pts: Vec3[]; closed: boolean };
 
 export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): NodeMoveSet {
   const node = model.nodes[nodeId];
@@ -515,6 +521,8 @@ export interface LocusStatus {
   grid?: { rows: number; cols: number; ok: boolean[] };
   /** pontos: quais são possíveis */
   pointsOk?: boolean[];
+  /** caminho do conjunto: quais amostras são possíveis */
+  pathOk?: boolean[];
   /** posições-limite (do lado possível), para o Tab */
   limits: Vec3[];
 }
@@ -528,6 +536,16 @@ export function locusStatus(set: NodeMoveSet, opts: { circleSteps?: number; rows
   if (loc.kind === "points") {
     const ok = loc.pts.map(okAt);
     return { pointsOk: ok, limits: loc.pts.filter((_, i) => ok[i]) };
+  }
+  if (loc.kind === "path") {
+    const ok = loc.pts.map(okAt);
+    const n = ok.length;
+    const limits: Vec3[] = [];
+    for (let i = 0; i < n - (loc.closed ? 0 : 1); i++) {
+      const j = (i + 1) % n;
+      if (ok[i] !== ok[j]) limits.push(ok[i] ? loc.pts[i] : loc.pts[j]);
+    }
+    return { pathOk: ok, limits };
   }
   if (loc.kind === "circle") {
     const at = (t: number) => locusCirclePoint(loc, t);
@@ -726,4 +744,72 @@ export function bodyMoveOptions(cat: Catalog, model: Model, ref: BodyRef): BodyM
     options: [], evalAt, nearest: (q) => (len(sub(q, o)) < 1e-9 ? handle : add(o, scale(norm(sub(q, o)), R))),
     locus: { kind: "sphere", c: o, r: R }, handle, pivot: o, ids, anchors: A,
   };
+}
+
+
+/* ---------- paradas do Tab: peças na horizontal ou na vertical ---------- */
+
+export interface AlignStop {
+  t: number;
+  label: string;
+}
+
+/**
+ * Ao longo de um caminho t ∈ [t0, t1] (configuração por `at`), os pontos em que alguma das peças acompanhadas fica
+ * na horizontal (componente vertical troca de sinal) ou na vertical (|componente vertical| chega a 1).
+ */
+export function alignStops(cat: Catalog, at: (t: number) => NodeMove | null, t0: number, t1: number, n: number, tracked: string[], closed = false): AlignStop[] {
+  if (!tracked.length) return [];
+  const ts = Array.from({ length: n + 1 }, (_, k) => t0 + ((t1 - t0) * k) / n);
+  const dirAt = (mv: NodeMove | null, id: string): Vec3 | null => {
+    const m = mv?.model.members[id];
+    if (!m) return null;
+    return norm(sub(mv!.model.nodes[m.b].pos, mv!.model.nodes[m.a].pos));
+  };
+  const out: AlignStop[] = [];
+  const samples = ts.map(at);
+  for (const id of tracked) {
+    const code = samples[0]?.model.members[id]?.code ?? "";
+    const label = (what: string) => `${cat.pieces[code]?.type === "bar" ? code : code} ${what}`;
+    const ys = samples.map((s) => dirAt(s, id)?.[1] ?? NaN);
+    // peça que não muda de inclinação no caminho (ex.: viga que gira em torno do próprio eixo): não é parada
+    const fin = ys.filter(Number.isFinite);
+    if (!fin.length || Math.max(...fin) - Math.min(...fin) < 1e-4) continue;
+    for (let k = 0; k < n; k++) {
+      const [a, b] = [ys[k], ys[k + 1]];
+      if (!Number.isFinite(a) || !Number.isFinite(b)) continue;
+      // horizontal: a componente vertical troca de sinal
+      if ((a > 1e-6 && b < -1e-6) || (a < -1e-6 && b > 1e-6)) {
+        let [lo, hi] = [ts[k], ts[k + 1]];
+        for (let i = 0; i < 24; i++) {
+          const mid = (lo + hi) / 2;
+          const ym = dirAt(at(mid), id)?.[1] ?? 0;
+          if (Math.sign(ym) === Math.sign(a)) lo = mid;
+          else hi = mid;
+        }
+        out.push({ t: (lo + hi) / 2, label: label("na horizontal") });
+      } else if (Math.abs(a) < 1e-6 && Math.abs(ys[k - 1] ?? a) > 1e-6) out.push({ t: ts[k], label: label("na horizontal") });
+    }
+    for (let k = closed ? 0 : 1; k < n; k++) {
+      // vertical: máximo de |y| perto de 1 (no caminho fechado, a volta emenda no começo)
+      const km = k === 0 ? n - 1 : k - 1;
+      const [a, b, c] = [Math.abs(ys[km]), Math.abs(ys[k]), Math.abs(ys[k + 1])];
+      if (!(b >= a && b >= c && b > 0.98)) continue;
+      let [lo, hi] = [k === 0 ? ts[0] - (ts[1] - ts[0]) : ts[k - 1], ts[k + 1]];
+      for (let i = 0; i < 40; i++) {
+        const m1 = lo + (hi - lo) / 3;
+        const m2 = hi - (hi - lo) / 3;
+        const f1 = Math.abs(dirAt(at(m1), id)?.[1] ?? 0);
+        const f2 = Math.abs(dirAt(at(m2), id)?.[1] ?? 0);
+        if (f1 < f2) lo = m1;
+        else hi = m2;
+      }
+      let t = (lo + hi) / 2;
+      if (closed && t < t0) t += t1 - t0;
+      if (Math.abs(dirAt(at(t), id)?.[1] ?? 0) > 1 - 1e-5) out.push({ t, label: label("na vertical") });
+    }
+  }
+  // tira repetidos (duas peças alinhadas no mesmo ponto)
+  out.sort((a, b) => a.t - b.t);
+  return out.filter((s, i) => i === 0 || Math.abs(s.t - out[i - 1].t) > (t1 - t0) * 1e-4 || s.label !== out[i - 1].label);
 }
