@@ -770,3 +770,15 @@ dl { margin: 0 0 16px; }
 }
 .selection-tag.is-hidden { opacity: 0; }
 @media (max-width: 900px) { .selection-tag { display: none; } }
+/* Kit 3: ícones do cabo e do enrijecedor; unidade do cabo na paleta */
+.i-tube { fill: rgba(190, 215, 232, 0.45); stroke: #7fa6c2; stroke-width: 1; }
+.piece-count small { font-size: 10px; color: var(--graphite); }
+.props .rope-total { margin: 0 0 8px; font-size: 13px; color: var(--graphite); font-variant-numeric: tabular-nums; }
+.props .rope-total b { color: var(--ink); font-weight: 600; }
+.props .rope-roll-title { margin: 6px 0 2px; font-size: 12px; color: var(--graphite); }
+.props .rope-roll ol { margin: 0; padding-left: 22px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+/* com o Kit 3 a paleta ficou mais longa: peças um pouco mais baixas e sem rolagem lateral */
+.palette { overflow-x: hidden; }
+.piece { padding-top: 6px; padding-bottom: 6px; }
+.palette section + section { margin-top: 10px; }
+.piece-count { white-space: nowrap; }

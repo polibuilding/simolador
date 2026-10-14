@@ -7,11 +7,11 @@ import { available, usage, type InventoryConfig } from "./inventory";
 import {
   type Connector, type Member, type Model, type Vec3, add, canonicalDir, findNodeAt, plateKey, prune, rotY, round4, samePos, sub,
 } from "./model";
-import { validateConnector, validateMember, validatePlate, validateSupport, type Check, type PlateGeom } from "./rules";
+import { validateConnector, validateMember, validatePlate, validateRope, validateSupport, type Check, type PlateGeom } from "./rules";
 
 export interface Clip {
   nodes: { key: string; kind: "support" | "sphere"; rel: Vec3 }[];
-  members: { code: string; a: string; b: string }[];
+  members: { code: string; a: string; b: string; stiff?: boolean }[];
   plates: { code: string; corners: [string, string, string, string] }[];
   connectors: { code: string; node: string; dirs: Vec3[]; base?: boolean; side?: Vec3 }[];
   /** âncora na posição original (centro da planta arredondado, no nível mais baixo) */
@@ -42,7 +42,7 @@ export function makeClip(model: Model, sels: Sel[]): Clip | null {
   const anchor: Vec3 = [Math.round((lo[0] + hi[0]) / 2), lo[1], Math.round((lo[2] + hi[2]) / 2)];
   return {
     nodes: [...nodeIds].map((id) => ({ key: id, kind: model.nodes[id].kind, rel: round4(sub(model.nodes[id].pos, anchor)) })),
-    members: [...memberIds].map((id) => ({ code: model.members[id].code, a: model.members[id].a, b: model.members[id].b })),
+    members: [...memberIds].map((id) => ({ code: model.members[id].code, a: model.members[id].a, b: model.members[id].b, ...(model.members[id].stiff ? { stiff: true } : {}) })),
     plates: [...plateIds].map((id) => ({ code: model.plates[id].code, corners: model.plates[id].corners })),
     connectors: [...connIds].map((id) => {
       const c = model.connectors[id];
@@ -112,7 +112,7 @@ export function pasteClip(cat: Catalog, inv: InventoryConfig, model: Model, clip
     const b = map.get(mb.b)!;
     if (Object.values(m.members).some((x) => (x.a === a && x.b === b) || (x.a === b && x.b === a))) continue;
     const mid = id("m");
-    m.members[mid] = { id: mid, code: mb.code, a, b } as Member;
+    m.members[mid] = { id: mid, code: mb.code, a, b, ...(mb.stiff ? { stiff: true } : {}) } as Member;
     newMembers.push(mid);
   }
   for (const p of clip.plates) {
@@ -154,7 +154,7 @@ export function pasteClip(cat: Catalog, inv: InventoryConfig, model: Model, clip
   for (const mid of newMembers) {
     const mb = m.members[mid];
     const base = { ...m, members: without(m.members, mid) };
-    errors.push(...validateMember(cat, inv2, base, mb.code, mb.a, m.nodes[mb.b].pos).errors);
+    errors.push(...(cat.pieces[mb.code]?.type === "rope" ? validateRope(cat, inv2, base, mb.a, mb.b) : validateMember(cat, inv2, base, mb.code, mb.a, m.nodes[mb.b].pos)).errors);
   }
   for (const pid of newPlates) {
     const p = m.plates[pid];
@@ -168,7 +168,7 @@ export function pasteClip(cat: Catalog, inv: InventoryConfig, model: Model, clip
     errors.push(...validateConnector(cat, inv2, base, { code: c.code, node: c.node, dirs: c.dirs, base: c.base, side: c.side }).errors);
   }
   if (!inv.unlimited) {
-    const used = usage(m);
+    const used = usage(m, cat);
     for (const [code, n] of Object.entries(used)) {
       const total = available(cat, inv, code);
       if (n > total) errors.push(`Faltariam ${n - total} ${code} no estoque.`);

@@ -224,7 +224,7 @@ Análise estrutural: fora do escopo (Q09).
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0`, `v1.1`…).
 
-- **1.x — geométrica** (atual: 1.17): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.18): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: o módulo extra ajustável.
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
@@ -239,7 +239,17 @@ Em aberto:
 - **Medidas da CC e da CC90**: necessárias para desenhá-las (o programa usa um formato provisório até lá). **Lembrete pedido pela equipe (13/10): ajeitar as peças CC e CC90.**
 - **Configurações** (botão de engrenagem ao lado de Arquivo): hoje só mostra os valores internos (módulo, ângulos, chapa). **Lembrete pedido pela equipe (13/10): fazer a parte de configurações.**
 - **Simolar** (botão ao lado de Pranchas): por enquanto "em breve"; é a porta da linha 3.x (deformação, estaticidade, estabilidade).
-- **Kit 3 (fica para quando a equipe estiver com o kit; pedido em 13/10)**: o estoque já mostra o Kit 3 (em breve) e o Kit A (versões 2.x). Peças do Kit 3 em `kit-mola-pecas.md`. As que o programa já sabe montar: esferas, RC90, GC, B6, B12, D6x6, D6x12 e as duas chapas. As novas pedem regra e desenho: **cabo** (3,35 m, cortado no comprimento que se quiser), **ligação de cabo**, **grampo de cabo** e **grampo múltiplo**, **anéis** (pequeno e médio) e **enrijecedores** de B6 e B12. Falta a equipe dizer como cada uma prende (na esfera, na mola, no cabo) e as medidas.
+- **Kit 3 (1.18: cabo simples e enrijecedor)**: Kit 3 no estoque; cabo em dois cliques (esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera, com as ligações e clipes automáticos), pedaço em bolinhas, plano de corte dos rolos no resumo e na capa; enrijecedor clicando na mola B6/B12. **Medidas estimadas pelas fotos** (`kit-mola-pecas.md`): confirmar com o kit em mãos. Próximas montagens de cabo, mapeadas abaixo.
+- **Kit 3: outras montagens de cabo (mapa)** — o que o manual permite e como poderia entrar no programa:
+  1. **Clip de múltiplos cabos (M CABLE CLIP C)**: até 5 cabos numa só CABLE C (leque saindo de uma esfera). No programa: ao ligar um cabo numa esfera que já tem cabo saindo quase na mesma direção, oferecer juntar no mesmo clip múltiplo (economiza CABLE C; conta MCLIP-C).
+  2. **Anéis (CABLE R pequeno e médio)**: vários cabos chegando radialmente num ponto no ar (redes de cabos, cobertura suspensa, tensegridade). No programa: um novo tipo de nó, "anel", que não é esfera e só recebe cabos; posição de equilíbrio calculada (3.x) ou definida pelo usuário (1.x).
+  3. **Emenda linear (dois cabos num CABLE CLIP C)**: cabos maiores que um pedaço, ou reaproveitar sobras. No programa: o plano de corte pode propor emendas quando um cabo não cabe no que sobrou de um rolo.
+  4. **Cabo perpendicular ou inclinado a outro cabo (clip no meio)**: pendurais de ponte pênsil, cabos que saem de um cabo principal. No programa: clicar num cabo (não numa esfera) cria um ponto de ligação no meio dele.
+  5. **Laço e furo central do clip**: o clip prende qualquer bolinha, não só a da ponta; dá para fazer laços e não cortar o cabo na medida exata. No programa: opção "sem cortar" (o resto do cabo sobra para fora) no plano de corte.
+  6. **Cruz de cabos (dois clips sobrepostos + pino, não incluso)**: ligação fixa em cruz entre cabos.
+  7. **Cabo frouxo / forma funicular**: cabo mais longo que a distância, com flecha (catenária, formas funiculares com pesos). Fica para 2.x/3.x (forma depende das cargas).
+  8. **Enrijecedor**: confirmar se convive com RC90 e CC na mesma mola; na 3.x, a mola enrijecida vira barra rígida no cálculo.
+  9. **Régua de bolinhas na prancha**: imprimir em 1:1 a lista de cortes com uma régua de bolinhas, como a do manual, para cortar o cabo direto da folha.
 - **Responsáveis por frente** (Q08).
 - **Repositório**: nome e dono no GitHub.
 

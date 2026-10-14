@@ -2,6 +2,7 @@
 // P_01 capa (isométrica + lista de peças) · P_02… plantas por pavimento (2×2 por folha) · vistas A e B · vistas C e D.
 import type { Catalog } from "../core/catalog";
 import type { InventoryConfig } from "../core/inventory";
+import { ropePlan } from "../core/rope";
 import { usage } from "../core/inventory";
 import { boardsOf, type Model } from "../core/model";
 import { boardCorners, fromBoardLocal } from "../core/boards";
@@ -49,11 +50,12 @@ const LABEL: Partial<Record<Item["kind"], string>> = {
   rc90: "LIGAÇÃO RÍGIDA",
   cc: "LIGAÇÃO CONTÍNUA",
   cable: "CONTRAVENTAMENTO",
+  rope: "CABO",
   "plate-v": "PAREDE",
   "plate-h": "LAJE",
 };
-const PLAN_LABELS: Item["kind"][] = ["base", "rc90", "cable", "plate-h", "plate-v", "cc"];
-const ELEV_LABELS: Item["kind"][] = ["cable", "bar-v", "node", "rc90", "cc", "base", "plate-v"];
+const PLAN_LABELS: Item["kind"][] = ["base", "rc90", "cable", "rope", "plate-h", "plate-v", "cc"];
+const ELEV_LABELS: Item["kind"][] = ["cable", "rope", "bar-v", "node", "rc90", "cc", "base", "plate-v"];
 
 const fmtScale = (n: number) => `1/${String(n).replace(".", ",")}`;
 const letters = (i: number) => (i < 26 ? String.fromCharCode(65 + i) : `A${String.fromCharCode(65 + i - 26)}`);
@@ -334,7 +336,7 @@ function planItems(cat: Catalog, model: Model, levelY: number, isGround: boolean
     if (it.kind === "base") return isGround;
     if (it.kind === "node") return near(it.level);
     if (it.kind === "plate-h" || it.kind === "bar-h") return near(it.level);
-    if (it.kind === "bar-v" || it.kind === "cable") return it.top !== undefined && Math.abs((it.top ?? 0) - (it.level ?? 0)) > 0.5 ? arrival(it.top) : near(it.level);
+    if (it.kind === "bar-v" || it.kind === "cable" || it.kind === "rope") return it.top !== undefined && Math.abs((it.top ?? 0) - (it.level ?? 0)) > 0.5 ? arrival(it.top) : near(it.level);
     if (it.kind === "plate-v") return near(it.level);
     if (it.kind === "rc90" || it.kind === "cc") return near(it.level);
     return false;
@@ -567,8 +569,9 @@ function coverDrawing(input: SheetInput, n: number): Prim[] {
   y += 5 * fs;
   const tab: Prim[] = [];
   H(tab, "LISTA DE PEÇAS");
-  const used = usage(model);
+  const used = usage(model, cat);
   const codes = Object.keys(used).sort();
+  const plan = ropePlan(cat, model);
   const rowH = 7 * fs;
   const colCode = px + 2;
   const colName = px + 20 * fs;
@@ -587,12 +590,16 @@ function coverDrawing(input: SheetInput, n: number): Prim[] {
   codes.forEach((code, i) => {
     const p = cat.pieces[code];
     const stock = Object.entries(inventory.kits).reduce((s2, [k, cnt]) => s2 + (cat.kits[k]?.pieces[code] ?? 0) * cnt, 0);
-    total += used[code];
+    // cabo: conta os pedaços; o nome traz o total em cm e bolinhas
+    const rope = code === "CABLE";
+    const n = rope ? plan.cuts.length : used[code];
+    total += n;
     if (i % 2) tab.push(rect(yy, rowH, "#f3f3f3"));
     tab.push(txt([colCode, mid(yy)], code, 3.2 * fs, { bold: true }));
-    tab.push(txt([colName, mid(yy)], p?.name.replace(` ${code}`, "") ?? code, 3 * fs));
-    tab.push(txt([colUsed, mid(yy) + 0.3], String(used[code]), 4 * fs, { anchor: "end", bold: true }));
-    tab.push(txt([colStock, mid(yy)], inventory.unlimited ? "∞" : String(stock), 3 * fs, { anchor: "end", fill: "#555" }));
+    const cm = (mm: number) => (mm / 10).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+    tab.push(txt([colName, mid(yy)], rope ? `Cabo: ${cm(plan.mm)} cm | ${plan.balls} bolinhas` : p?.name.replace(` ${code}`, "") ?? code, 3 * fs));
+    tab.push(txt([colUsed, mid(yy) + 0.3], String(n), 4 * fs, { anchor: "end", bold: true }));
+    tab.push(txt([colStock, mid(yy)], inventory.unlimited ? "∞" : rope ? `${stock} rolo${stock === 1 ? "" : "s"}` : String(stock), 3 * fs, { anchor: "end", fill: "#555" }));
     yy += rowH;
   });
   tab.push(rect(yy, rowH * 1.15, "#1d1d1d"));
@@ -606,6 +613,15 @@ function coverDrawing(input: SheetInput, n: number): Prim[] {
     ? "Sem limite de peças"
     : Object.entries(inventory.kits).filter(([, c]) => c > 0).map(([k, c]) => `${c}× ${cat.kits[k]?.name ?? `Kit ${k}`}`).join("; ");
   tab.push(txt([px, yy], `Kits: ${kitTxt || "—"}`, 2.5 * fs));
+  // cortes do cabo: o que tirar de cada rolo (maiores primeiro)
+  if (plan.cuts.length) {
+    const order = new Map(plan.cuts.map((c, i) => [c.id, i + 1]));
+    plan.rolls.forEach((r, i) => {
+      yy += 4.2 * fs;
+      const list = r.map((c) => `${order.get(c.id)}) ${c.balls}`).join(" · ");
+      tab.push(txt([px, yy], `Cortes do cabo, rolo ${i + 1} (bolinhas): ${list}`, 2.5 * fs));
+    });
+  }
   out.push(...tagged(tab, "capa:tabela"));
   const d = input.date ?? new Date();
   out.push(txt([px, AREA.y1 - 2], `Gerado pelo siMOLAdor em ${d.toLocaleDateString("pt-BR")}`, 2 * fs, { fill: "#555" }));

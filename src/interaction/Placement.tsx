@@ -12,7 +12,8 @@ import { connectReach, locusStatus, moveGroup, nodeMoveOptions, sphereMeridianLi
 import { pasteClip, transformClip, type Clip, type PasteResult } from "../core/clipboard";
 import { AXES, add, boardsOf, findNodeAt, len, norm, rotDir, scale, sub, toDisp, type Model, type Vec3 } from "../core/model";
 import { frameRadAt } from "../core/boards";
-import { validateMember } from "../core/rules";
+import { validateMember, validateRope, validateStiffener } from "../core/rules";
+import { ropeInfo, ropeText, STIFF_TOOL } from "../core/rope";
 import type { Sel } from "../core/edit";
 import {
   allCandidates, anchorPos, barTriangleGuides, inclinedDirs, markerPos, supportCandidate, supportGuides, supportPosition,
@@ -466,6 +467,61 @@ export function Placement() {
       return true;
     };
 
+    // cabo (Kit 3): primeira esfera (linkFrom) e a outra; o pedaço sai da distância entre elas
+    const ropeStep = (ev: PointerEvent, rect: DOMRect, model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"]): boolean => {
+      const st = useApp.getState();
+      linkPick = null;
+      linkGhost = null;
+      const on = sphereUnder(ev, rect, model);
+      const from = st.linkFrom && model.nodes[st.linkFrom] ? st.linkFrom : null;
+      if (!on) {
+        st.setGhost(null, from ? "Clique na esfera da outra ponta do cabo. Esc cancela." : "Clique na esfera de uma ponta do cabo e depois na da outra.");
+        return true;
+      }
+      if (!from || on === from) {
+        linkPick = on;
+        st.setGhost(null, from ? "Clique na esfera da outra ponta. Clique de novo nesta (ou Esc) cancela." : "Clique para prender o cabo nesta esfera; depois clique na outra.");
+        return true;
+      }
+      const check = validateRope(catalog, inv, model, from, on);
+      const info = ropeInfo(catalog, model.nodes[from].pos, model.nodes[on].pos);
+      const cand: Candidate = { kind: "member", code, fromId: from, toPos: model.nodes[on].pos, check };
+      linkGhost = { moved: 0 };
+      st.setGhost(
+        { kind: "cand", cand },
+        check.ok && info ? `Cabo de ${ropeText(info.balls, info.cutMm)}. Clique para colocar.` : check.errors[0],
+      );
+      return true;
+    };
+
+    // enrijecedor (Kit 3): a mola mais perto do cursor; clicar põe (ou tira, se já tem)
+    const stiffStep = (ev: PointerEvent, rect: DOMRect, model: Model, inv: ReturnType<typeof useApp.getState>["inventory"]) => {
+      const st = useApp.getState();
+      linkPick = null;
+      linkGhost = null;
+      let best: { id: string; d: number } | null = null;
+      for (const m of Object.values(model.members)) {
+        if (catalog.pieces[m.code]?.type !== "bar") continue;
+        const p = toScreen(toWorld(model.nodes[m.a].pos), rect);
+        const q = toScreen(toWorld(model.nodes[m.b].pos), rect);
+        if (p.z > 1 || q.z > 1) continue;
+        const [dx, dy] = [q.x - p.x, q.y - p.y];
+        const t = Math.max(0.12, Math.min(0.88, ((ev.clientX - p.x) * dx + (ev.clientY - p.y) * dy) / (dx * dx + dy * dy || 1)));
+        const d = Math.hypot(p.x + t * dx - ev.clientX, p.y + t * dy - ev.clientY);
+        if (d < 14 && (!best || d < best.d)) best = { id: m.id, d };
+      }
+      if (!best) return st.setGhost(null, "Clique numa mola B6 ou B12 para pôr o enrijecedor (numa mola enrijecida, tira).");
+      const m = model.members[best.id];
+      const r = validateStiffener(catalog, inv, model, m.id);
+      const next: Model = { ...model, members: { ...model.members, [m.id]: { ...m, stiff: !m.stiff || undefined } } };
+      if (!next.members[m.id].stiff) delete next.members[m.id].stiff;
+      const part: Model = { ...next, nodes: { [m.a]: model.nodes[m.a], [m.b]: model.nodes[m.b] }, members: { [m.id]: next.members[m.id] }, plates: {}, connectors: {} };
+      st.setGhost(
+        { kind: "group", model: next, ids: new Set(), part, keep: true, check: { ok: r.ok, errors: r.errors, warnings: [] } },
+        r.ok ? (r.remove ? `Clique para tirar o enrijecedor desta ${m.code}.` : `Clique para pôr o enrijecedor ${r.code} nesta ${m.code}.`) : r.errors[0],
+      );
+    };
+
     const inGizmo = (ev: PointerEvent, rect: DOMRect) => {
       const s = useApp.getState();
       const off = s.propsOpen ? PROPS_W : 0; // painel aberto: o cubo se afasta
@@ -660,6 +716,10 @@ export function Placement() {
 
       const code = tool.code;
       const inv = tool.moving ? { ...st.inventory, unlimited: true } : st.inventory;
+
+      // ---- Kit 3: enrijecedor (clique numa mola) e cabo (clique numa esfera e depois em outra) ----
+      if (code === STIFF_TOOL) return stiffStep(ev, rect, model, inv);
+      if (catalog.pieces[code]?.type === "rope") return void ropeStep(ev, rect, model, code, inv);
 
       // ---- ligação de base ----
       if (catalog.pieces[code]?.type === "support") {

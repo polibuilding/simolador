@@ -88,28 +88,45 @@ Mola: fio Ø 0,6 mm, diâmetro médio 3,4 mm, ~112 espiras ativas; EA medido ≈
 
 ## Kit 3 (cor azul) — 205 peças + cortador, manual bilíngue
 
-Levantado em 13/10/2026 na página oficial (a página diz 205 no texto e 235 na descrição; a soma da lista dá 205). Códigos das peças novas ainda a confirmar com o kit e o manual.
+Levantado em 13/10/2026 (página oficial, fotos da caixa e do manual enviadas pela equipe). A soma da lista dá 205, com o cabo contado como 1. No siMOLAdor desde a 1.18 (cabo simples e enrijecedor).
 
-| Peça (nome oficial) | Código provável | Qtd | Já existe no siMOLAdor? |
+| Peça (nome do manual) | Código no siMOLAdor | Qtd | No programa |
 |---|---|---|---|
-| Connection (esfera) | C | 18 | sim |
-| Rigid Connection | RC90 | 12 | sim (confirmar se é a mesma RC90) |
-| Ground Connection | GC | 8 | sim |
-| Ground (chapa de base) | G | 2 | sim (várias chapas desde 1.10) |
-| Bar B6 | B6 | 30 | sim |
-| Bar B12 | B12 | 9 | sim |
-| Diagonal D6x6 | D6x6 | 9 | sim |
-| Diagonal D6x12 | D6x12 | 9 | sim |
-| Cable (3,35 m, cortado com o cortador) | — | 1 | **não**: cabo de comprimento livre |
-| Cable Connection | — | 24 | **não**: prende a ponta do cabo (na esfera?) |
-| Cable Clip Connection | — | 50 | **não**: grampo de cabo |
-| Multiple Cable Clip Connection | — | 4 | **não**: grampo para vários cabos |
-| Cable Ring, small / medium | — | 10 + 10 | **não**: anéis (redes de cabo, tensegridade?) |
-| Bar Stiffener B6 / B12 | — | 3 + 6 | **não**: enrijecedor da mola |
+| Ligação (C) | C | 18 | sim |
+| Ligação rígida | RC90 | 12 | sim (é a mesma RC90) |
+| Ligação de base | GC | 8 | sim |
+| Chapa de base | G | 2 | sim (iguais às dos Kits 1 e 2) |
+| Barra B6 / B12 | B6 / B12 | 30 / 9 | sim |
+| Diagonal D6x6 / D6x12 | D6x6 / D6x12 | 9 / 9 | sim |
+| Cabo (CABLE), 3,35 m | CABLE | 1 rolo | sim: dois cliques (esfera e esfera); pedaço em bolinhas |
+| Ligação de cabo (CABLE C) | CABLE-C | 24 | entra sozinha, 2 por cabo |
+| Clip de cabo (CABLE CLIP C) | CLIP-C | 50 | entra sozinho, 2 por cabo |
+| Clip de múltiplos cabos (M CABLE CLIP C) | MCLIP-C | 4 | ainda não (até 5 cabos numa CABLE C) |
+| Anel de cabo pequeno / médio (CABLE R) | RING-P / RING-M | 10 / 10 | ainda não (cabos radiais num ponto) |
+| Enrijecedor B6 / B12 (BAR STIFFENER) | BS6 / BS12 | 3 / 6 | sim: clique na mola |
+
+### Medidas estimadas pelas fotos (a confirmar com o kit)
+
+Escala tirada da esfera (15 mm) e da mola (6 mm) na foto do nó com cabos (≈ 14,3 px/mm).
+
+| Parâmetro (`parametros.xlsx`) | Valor | Como foi estimado / como medir |
+|---|---|---|
+| `cabo_passo_mm` | 3,2 mm | corrente de bolinhas padrão nº 3; **medir**: contar as bolinhas em 10 cm (≈ 31) e dividir 100 mm pela contagem |
+| `cabo_bolinha_mm` | 2,4 mm | foto: bolinha ≈ 2,1–2,4 mm |
+| `cabo_rolo_mm` | 3350 mm | site oficial (≈ 1046 bolinhas) |
+| `cabo_ligacao_mm` | 16 mm | CABLE C: mola ≈ 4 mm de diâmetro e ≈ 13 mm de comprimento + anel ≈ 3 mm |
+| `cabo_clip_mm` | 9 mm | CABLE CLIP C ≈ 10,5 × 3,5 mm (do anel ao centro da bolinha da ponta) |
+| `cabo_ajuste_mm` | 4 mm | quanto o esticador da CABLE C estica girando |
+| `cabo_angulo_minimo_graus` | 20° | lugar da CABLE C na esfera ao lado de outras peças |
+| `enrijecedor_diametro_mm` | 9 mm | tubo ≈ 1,5 × o diâmetro da mola |
+| anel pequeno / médio | ≈ 10 / 15 mm | foto da caixa, comparando com as esferas |
+| M CABLE CLIP C | ≈ 11 mm | foto do nó com cabos |
+
+Com essas medidas, um cabo entre esferas a 12 módulos (178 mm) tem 36 bolinhas (≈ 11,5 cm); o mínimo entre centros para caber um cabo é ≈ 68 mm.
+
+Dúvida: os 3 quadrados transparentes da foto "Conteúdo da caixa" não estão na lista oficial. São placas P6x6 ou embalagem?
 
 Sistemas do manual: cabo, reações de apoio do cabo, formas funiculares, viga com cabo, rede de cabos (sela), cobertura suspensa, ponte estaiada, ponte pênsil, tensegridade, busca de forma.
-
-Perguntas para a equipe (com o kit em mãos): onde prende cada peça nova (esfera, mola, outro cabo); medidas e fotos; se o cabo tem comprimento livre (múltiplo do módulo ou qualquer); se o enrijecedor deixa a mola rígida e se muda o desenho; se as duas chapas vêm iguais à do Kit 1/2 (18 × 12 M).
 
 ## Fontes
 

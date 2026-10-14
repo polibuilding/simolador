@@ -39,7 +39,7 @@ export function projector(id: ViewId): Projector {
 export interface Item {
   depth: number;
   order: number; // desempate: placas < barras < cabos < ligações < esferas
-  kind: "plate-h" | "plate-v" | "bar-v" | "bar-h" | "cable" | "node" | "base" | "rc90" | "cc";
+  kind: "plate-h" | "plate-v" | "bar-v" | "bar-h" | "cable" | "rope" | "node" | "base" | "rc90" | "cc";
   anchor: [number, number]; // ponto para a chamada
   draw: (to: (q: [number, number]) => Pt, s: number) => Prim[];
   level?: number; // y (mm) do elemento, para plantas
@@ -150,7 +150,7 @@ export function itemsFor(cat: Catalog, model: Model, pr: Projector): Item[] {
   // trechos das barras na projeção: diagonal que cai em cima de uma barra (vista de lado, atrás dela) não é desenhada
   const barSegs: [Pt, Pt][] = [];
   for (const m of Object.values(model.members)) {
-    if (typeOf(m.code) === "cable") continue;
+    if (typeOf(m.code) === "cable" || typeOf(m.code) === "rope") continue;
     const [ah, av] = pr.p(P(m.a));
     const [bh, bv] = pr.p(P(m.b));
     barSegs.push([[ah, av], [bh, bv]]);
@@ -179,6 +179,26 @@ export function itemsFor(cat: Catalog, model: Model, pr: Projector): Item[] {
     const depth = (ad + bd) / 2;
     const level = Math.min(a[1], b[1]);
     const top = Math.max(a[1], b[1]);
+    if (typeOf(m.code) === "rope") {
+      // cabo (Kit 3): linha fina da ligação de cabo de uma esfera à outra, com o clip marcado em cada ponta
+      if (pr.id !== "iso" && hiddenBehindBar(a2, b2)) continue;
+      const L3 = Math.hypot(...sub(b, a));
+      const kk = L / L3;
+      const conn = Number(s.cabo_ligacao_mm ?? 16);
+      const p1 = add2(a2, mul2(u, R * kk));
+      const p2 = sub2(b2, mul2(u, R * kk));
+      const c1 = add2(a2, mul2(u, (R + conn) * kk));
+      const c2 = sub2(b2, mul2(u, (R + conn) * kk));
+      items.push({
+        depth, order: 3, kind: "rope", anchor: mul2(add2(p1, p2), 0.5), level, top,
+        draw: (to) => [
+          { t: "line", a: to(p1), b: to(p2), stroke: "#000", pen: PEN.thin * 1.2, layer: "MOLA-DIAGONAL" },
+          { t: "circle", c: to(c1), r: 0.55, fill: "#000", stroke: null, layer: "MOLA-DIAGONAL" },
+          { t: "circle", c: to(c2), r: 0.55, fill: "#000", stroke: null, layer: "MOLA-DIAGONAL" },
+        ],
+      });
+      continue;
+    }
     if (typeOf(m.code) === "cable") {
       // diagonal vista de lado (cai em cima de uma barra) some atrás dela, como nas pranchas de 2022;
       // as demais aparecem, inclusive em planos inclinados e contraventamentos 3D

@@ -1,6 +1,7 @@
 // Estoque: quantos kits de cada tipo o usuário tem (A-CONFIRMAR Q03) e quantas peças já foram usadas.
-import type { Catalog } from "./catalog";
+import { catalog as defaultCatalog, type Catalog } from "./catalog";
 import type { Model } from "./model";
+import { isRopeCode, kit3Usage } from "./rope";
 
 export interface InventoryConfig {
   kits: Record<string, number>; // id do kit → quantidade de caixas
@@ -22,19 +23,24 @@ export function available(cat: Catalog, inv: InventoryConfig, code: string): num
   return total;
 }
 
-/** Quantidade usada de cada peça no modelo. A esfera da GC é embutida e não conta como C (N1). */
-export function usage(model: Model): Record<string, number> {
+/**
+ * Quantidade usada de cada peça no modelo. A esfera da GC é embutida e não conta como C (N1).
+ * Cabos (Kit 3): CABLE conta rolos (pelo plano de corte); CABLE C e CABLE CLIP C entram 2 por cabo; enrijecedores
+ * contam pelas molas com `stiff`.
+ */
+export function usage(model: Model, cat: Catalog = defaultCatalog): Record<string, number> {
   const u: Record<string, number> = {};
-  const inc = (k: string) => (u[k] = (u[k] ?? 0) + 1);
+  const inc = (k: string, n = 1) => (u[k] = (u[k] ?? 0) + n);
   for (const n of Object.values(model.nodes)) inc(n.kind === "support" ? "GC" : "C");
-  for (const m of Object.values(model.members)) inc(m.code);
+  for (const m of Object.values(model.members)) if (!isRopeCode(cat, m.code)) inc(m.code);
   for (const p of Object.values(model.plates)) inc(p.code);
   for (const c of Object.values(model.connectors)) inc(c.code);
+  for (const [k, n] of Object.entries(kit3Usage(cat, model))) inc(k, n);
   return u;
 }
 
 export function remaining(cat: Catalog, inv: InventoryConfig, model: Model, code: string): number {
-  return available(cat, inv, code) - (usage(model)[code] ?? 0);
+  return available(cat, inv, code) - (usage(model, cat)[code] ?? 0);
 }
 
 /**

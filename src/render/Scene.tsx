@@ -13,7 +13,7 @@ import { locusCirclePoint, locusSpherePoint } from "../core/edit";
 import { useApp, useDisplayModel, useModel, inclineOn, workingModel } from "../ui/store";
 import type { Sel } from "../core/edit";
 import { Bar, GroundConnection, Sphere, type Look } from "./pieces/pieces";
-import { Cable, ContinuousConnector, PlateMesh, RigidConnector } from "./pieces/more";
+import { Cable, ContinuousConnector, PlateMesh, RigidConnector, Rope } from "./pieces/more";
 import { COLORS, M, PLATE_D, PLATE_W, toWorld } from "./units";
 import { Boards } from "./Boards";
 import { SnapshotHook } from "./snapshot";
@@ -76,8 +76,10 @@ function ModelGroup({
       {Object.values(model.members).map((m) =>
         typeOf(m.code) === "cable" ? (
           <Cable key={m.id} a={pos[m.a]} b={pos[m.b]} look={lookOf(m.id)} {...handlers("member", m.id)} />
+        ) : typeOf(m.code) === "rope" ? (
+          <Rope key={m.id} a={pos[m.a]} b={pos[m.b]} look={lookOf(m.id)} {...handlers("member", m.id)} />
         ) : (
-          <Bar key={m.id} a={pos[m.a]} b={pos[m.b]} code={m.code} look={lookOf(m.id)} {...handlers("member", m.id)} />
+          <Bar key={m.id} a={pos[m.a]} b={pos[m.b]} code={m.code} stiff={!!m.stiff} look={lookOf(m.id)} {...handlers("member", m.id)} />
         ),
       )}
       {Object.values(model.plates).map((p) => (

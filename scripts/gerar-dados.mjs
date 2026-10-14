@@ -9,6 +9,8 @@
 //   diagonal: centro a centro = √(a² + b²) × M ; cabo = c/c − diagonal_desconto_mm
 //   placa:    lado = vão × M − placa_desconto_mm
 //   chapa:    chapa_modulos_x × M  por  chapa_modulos_y × M
+//   cabo (Kit 3): corrente de bolinhas; o comprimento de cada pedaço sai da distância entre as esferas (programa)
+//   enrijecedor: comprimento = vão × M − barra_desconto_mm (o da mola)
 // Uma coluna "medido" preenchida na aba Peças substitui a regra só para aquela peça.
 
 import ExcelJS from "exceljs";
@@ -20,7 +22,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const INPUT = resolve(process.argv[2] ?? join(ROOT, "data", "parametros.xlsx"));
 const OUTDIR = resolve(process.argv[3] ?? join(ROOT, "data"));
 
-const TYPES = new Set(["node", "support", "connector", "bar", "cable", "plate", "ground"]);
+const TYPES = new Set(["node", "support", "connector", "bar", "cable", "plate", "ground", "rope", "accessory", "stiffener"]);
 const REQUIRED = [
   "modulo_mm", "esfera_diametro_mm", "barra_diametro_mm", "barra_desconto_mm",
   "diagonal_desconto_mm", "diagonal_terminal_mm", "cabo_diametro_mm",
@@ -178,6 +180,23 @@ async function main() {
             thicknessMm: mHgt ?? P.placa_espessura_mm,
           };
           sources = { lengthMm: src(mLen), widthMm: src(mWid), thicknessMm: mHgt != null ? "medido" : pStatus.placa_espessura_mm };
+          break;
+        case "rope":
+          geometry = {
+            pitchMm: P.cabo_passo_mm, ballMm: P.cabo_bolinha_mm, rollMm: P.cabo_rolo_mm,
+            connectionMm: P.cabo_ligacao_mm, clipMm: P.cabo_clip_mm, adjustMm: P.cabo_ajuste_mm ?? 0,
+          };
+          for (const k of ["cabo_passo_mm", "cabo_bolinha_mm", "cabo_rolo_mm", "cabo_ligacao_mm", "cabo_clip_mm"]) {
+            if (!positive(P[k])) err(`${where}: falta o parâmetro "${k}" (número > 0) em Geral.`);
+          }
+          break;
+        case "accessory":
+          geometry = { lengthMm: mLen ?? (code === "CABLE-C" ? P.cabo_ligacao_mm : code === "CLIP-C" ? P.cabo_clip_mm : null) };
+          break;
+        case "stiffener":
+          needSpan(1);
+          spanM = [a];
+          geometry = { lengthMm: round(mLen ?? a * M - P.barra_desconto_mm), diameterMm: mWid ?? P.enrijecedor_diametro_mm ?? 9 };
           break;
         case "ground":
           spanM = [P.chapa_modulos_x, P.chapa_modulos_y];

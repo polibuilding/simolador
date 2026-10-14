@@ -2,7 +2,7 @@
   "_meta": {
     "generatedBy": "scripts/gerar-dados.mjs",
     "source": "data/parametros.xlsx",
-    "generatedAt": "2026-10-13T23:19:56.027Z",
+    "generatedAt": "2026-10-14T02:09:43.895Z",
     "doNotEdit": "Arquivo gerado. Edite data/parametros.xlsx e rode npm run dados."
   },
   "schemaVersion": 2,
@@ -35,7 +35,15 @@
     "gc_encaixe_padrao": "grade",
     "tolerancia_encaixe_mm": 0.5,
     "passo_inclinacao_graus": 15,
-    "gc_angulo_minimo_base_graus": 40
+    "gc_angulo_minimo_base_graus": 40,
+    "cabo_passo_mm": 3.2,
+    "cabo_bolinha_mm": 2.4,
+    "cabo_rolo_mm": 3350,
+    "cabo_ligacao_mm": 16,
+    "cabo_clip_mm": 9,
+    "cabo_ajuste_mm": 4,
+    "cabo_angulo_minimo_graus": 20,
+    "enrijecedor_diametro_mm": 9
   },
   "pieces": [
     {
@@ -286,6 +294,113 @@
       "behavior": null,
       "status": "desenho",
       "notes": "Tamanho pela grade em Geral"
+    },
+    {
+      "code": "CABLE",
+      "name": "Cabo",
+      "type": "rope",
+      "spanM": null,
+      "geometry": {
+        "pitchMm": 3.2,
+        "ballMm": 2.4,
+        "rollMm": 3350,
+        "connectionMm": 16,
+        "clipMm": 9,
+        "adjustMm": 4
+      },
+      "behavior": "só tração",
+      "status": "estimado",
+      "notes": "Corrente de bolinhas; vem um rolo de 3,35 m por Kit 3 e é cortado na montagem. Comprimento contado em bolinhas (régua do manual)"
+    },
+    {
+      "code": "CABLE-C",
+      "name": "Ligação de cabo (CABLE C)",
+      "type": "accessory",
+      "spanM": null,
+      "geometry": {
+        "lengthMm": 16
+      },
+      "behavior": "esticador",
+      "status": "estimado",
+      "notes": "Duas partes enroscadas: ímã na esfera, anel na outra ponta; girar ajusta o comprimento. Entra sozinha: 2 por cabo"
+    },
+    {
+      "code": "CLIP-C",
+      "name": "Clip de cabo (CABLE CLIP C)",
+      "type": "accessory",
+      "spanM": null,
+      "geometry": {
+        "lengthMm": 9
+      },
+      "behavior": null,
+      "status": "estimado",
+      "notes": "Bolinha da ponta do cabo numa ponta, anel na outra; também une dois cabos. Entra sozinho: 2 por cabo"
+    },
+    {
+      "code": "MCLIP-C",
+      "name": "Clip de múltiplos cabos (M CABLE CLIP C)",
+      "type": "accessory",
+      "spanM": null,
+      "geometry": {
+        "lengthMm": 11
+      },
+      "behavior": null,
+      "status": "estimado",
+      "notes": "Até 5 cabos numa só CABLE C. Ainda não usado pelo programa"
+    },
+    {
+      "code": "RING-P",
+      "name": "Anel de cabo pequeno (CABLE R)",
+      "type": "accessory",
+      "spanM": null,
+      "geometry": {
+        "lengthMm": 10
+      },
+      "behavior": null,
+      "status": "estimado",
+      "notes": "Liga vários cabos num ponto (radial). Ainda não usado pelo programa"
+    },
+    {
+      "code": "RING-M",
+      "name": "Anel de cabo médio (CABLE R)",
+      "type": "accessory",
+      "spanM": null,
+      "geometry": {
+        "lengthMm": 15
+      },
+      "behavior": null,
+      "status": "estimado",
+      "notes": "Liga vários cabos num ponto (radial). Ainda não usado pelo programa"
+    },
+    {
+      "code": "BS6",
+      "name": "Enrijecedor B6 (BAR STIFFENER)",
+      "type": "stiffener",
+      "spanM": [
+        6
+      ],
+      "geometry": {
+        "lengthMm": 74.62,
+        "diameterMm": 9
+      },
+      "behavior": "deixa a mola rígida",
+      "status": "estimado",
+      "notes": "Tubo transparente em volta da mola B6"
+    },
+    {
+      "code": "BS12",
+      "name": "Enrijecedor B12 (BAR STIFFENER)",
+      "type": "stiffener",
+      "spanM": [
+        12
+      ],
+      "geometry": {
+        "lengthMm": 163.84,
+        "diameterMm": 9
+      },
+      "behavior": "deixa a mola rígida",
+      "status": "estimado",
+      "notes": "Tubo transparente em volta da mola B12"
     }
   ]
 }
