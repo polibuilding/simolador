@@ -22,3 +22,4 @@ v1.18 229902b Kit 3: cabo e enrijecedor
 v1.19 e92b637 Enter, destaque e resumo no duplo clique
 v1.20 92d146a Configurações e biblioteca
 v1.21 888d2ef Girar o conjunto em torno das GC, atalhos novos
+v1.22 59871df Rigidez: a estrutura acompanha ou trava
