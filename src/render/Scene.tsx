@@ -8,9 +8,11 @@ import { catalog } from "../core/catalog";
 import { boardsOf, componentOf, type Model, type Vec3 } from "../core/model";
 import { markerPos, type Candidate } from "../core/snapping";
 import { boardCorners } from "../core/boards";
-import { barGuidesFor, candidatesFor, globalFor, guidesFor, locusStatusFor, nodeOptionsFor, pathFor, Placement } from "../interaction/Placement";
+import { barGuidesFor, candidatesFor, globalFor, guidesFor, locusStatusFor, nodeOptionsFor, pathFor, Placement, reachFor } from "../interaction/Placement";
+import { reachPoint } from "../core/reach";
+import { validateSupport } from "../core/rules";
 import { locusCirclePoint, locusSpherePoint } from "../core/edit";
-import { panelOpen, useApp, useDisplayModel, useModel, inclineOn, workingModel } from "../ui/store";
+import { panelOpen, scopesOf, useApp, useDisplayModel, useModel, inclineOn, workingModel } from "../ui/store";
 import type { Sel } from "../core/edit";
 import { Bar, GroundConnection, Sphere, type Look } from "./pieces/pieces";
 import { Cable, ContinuousConnector, PlateMesh, RigidConnector, Rope } from "./pieces/more";
@@ -314,6 +316,82 @@ function Markers() {
   );
 }
 
+/**
+ * GC perto da estrutura: círculos azuis na chapa onde uma mola chega até a GC (nova, até uma esfera baixa; ou a
+ * pendurada, que desce girando) e um anel no ponto logo abaixo da esfera quando a mola fica em pé. Vermelho: fora da
+ * chapa ou encostando em outra GC.
+ */
+function ReachView() {
+  const tool = useApp((s) => s.tool);
+  const blue = useApp((s) => s.guides.blue);
+  const present = useApp((s) => s.history.present);
+  const inventory = useApp((s) => s.inventory);
+  const on = tool.kind === "place" && !tool.moving && catalog.pieces[tool.code]?.type === "support" && blue;
+  const shapes = useMemo(() => {
+    if (!on) return null;
+    const lift = (p: Vec3) => new THREE.Vector3(p[0] * M, 0.6, p[2] * M);
+    const okAt = (p: Vec3) => validateSupport(catalog, { kits: {}, unlimited: true }, present, p).ok;
+    const seen = new Set<string>();
+    const rings: { pts: THREE.Vector3[]; ok: boolean; swing: boolean }[] = [];
+    const dots: { p: THREE.Vector3; ok: boolean }[] = [];
+    for (const g of reachFor(present, inventory)) {
+      const k = `${g.center.join(",")}|${g.r.toFixed(3)}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      if (g.r === 0) {
+        // ponto logo abaixo da esfera: só quando cabe a GC (o vermelho ali só atrapalharia)
+        if (okAt(g.center)) dots.push({ p: lift(g.center), ok: true });
+        continue;
+      }
+      const n = 72;
+      const pts = Array.from({ length: n + 1 }, (_, i) => reachPoint(g, (i * 2 * Math.PI) / n));
+      const ok = pts.map(okAt);
+      runs(pts.map(lift), ok).forEach((r) => rings.push({ ...r, swing: g.kind === "swing" }));
+    }
+    return { rings, dots };
+  }, [on, present, inventory]);
+  if (!shapes) return null;
+  return (
+    <group raycast={() => null}>
+      {shapes.rings.map((r, i) => (
+        <Line key={i} points={r.pts} color={r.ok ? COLORS.guideBlue : COLORS.invalid} lineWidth={r.ok ? (r.swing ? 2.6 : 2.2) : 1} dashed dashSize={r.swing ? 6 : 4} gapSize={3} transparent opacity={r.ok ? 1 : 0.25} />
+      ))}
+      {shapes.dots.map((d, i) => (
+        <mesh key={`d${i}`} position={d.p} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null} renderOrder={5}>
+          <ringGeometry args={[5, 7.5, 24]} />
+          <meshBasicMaterial color={d.ok ? COLORS.guideBlue : COLORS.invalid} transparent opacity={0.85} depthTest={false} side={THREE.DoubleSide} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/**
+ * Conjunto escolhido com o Tab (peça andando): halos azuis leves nas esferas que podem mexer; o resto fica parado.
+ * Na estrutura toda não marca nada (tudo pode).
+ */
+function ScopeMark() {
+  const tool = useApp((s) => s.tool);
+  const present = useApp((s) => s.history.present);
+  const nodes = useMemo(() => {
+    if (tool.kind !== "moveBody") return [];
+    const sc = scopesOf(present, tool.ref)[tool.level];
+    if (!sc?.free || sc.kind !== "set") return [];
+    return [...sc.free].map((id) => present.nodes[id]).filter((n) => n && n.kind !== "support");
+  }, [tool, present]);
+  if (!nodes.length) return null;
+  return (
+    <group raycast={() => null}>
+      {nodes.map((n) => (
+        <mesh key={n.id} position={toWorld(n.pos)} raycast={() => null} renderOrder={5}>
+          <sphereGeometry args={[9, 20, 14]} />
+          <meshBasicMaterial color={COLORS.select} transparent opacity={0.22} depthWrite={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 /** Halo azul na esfera em destaque: a primeira de uma ligação (dois cliques) ou a que está andando sozinha. */
 function LinkMark() {
   const from = useApp((s) => s.linkFrom ?? (s.tool.kind === "moveNode" ? s.tool.nodeId : null));
@@ -363,7 +441,7 @@ function NodeLocusView() {
   // conjunto andando num caminho: o rastro das esferas da peça (bem de leve; mostra o "cilindro" que ela varre)
   const trails = useMemo(() => {
     if (tool.kind !== "moveBody") return null;
-    const g = globalFor(present, tool.ref);
+    const g = globalFor(present, tool);
     return g.mode === "path" ? g.trails.map((t) => t.map(toWorld)) : null;
   }, [tool, present]);
   const w = (p: Vec3) => {
@@ -755,6 +833,8 @@ export function Scene() {
       <GhostView />
       <Markers />
       <LinkMark />
+      <ScopeMark />
+      <ReachView />
       <NodeLocusView />
       <Placement />
       <CameraRig />

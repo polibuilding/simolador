@@ -9,7 +9,8 @@ import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 import { catalog } from "../core/catalog";
 import { alignStops, connectReach, locusCirclePoint, locusSpherePoint, locusStatus, moveGroup, nodeMoveOptions, sphereMeridianLimits, type LocusStatus, type NodeMove, type NodeMoveSet } from "../core/edit";
-import { globalMoveOptions, type GlobalMove, type MoveRef } from "../core/globalMove";
+import { type GlobalMove } from "../core/globalMove";
+import { reachAction, reachPoint, supportReach, type ReachGuide } from "../core/reach";
 import { pasteClip, transformClip, type Clip, type PasteResult } from "../core/clipboard";
 import { AXES, add, boardsOf, dot, findNodeAt, len, norm, rotDir, scale, sub, toDisp, type Model, type Vec3 } from "../core/model";
 import { frameRadAt } from "../core/boards";
@@ -21,7 +22,7 @@ import {
   type BarGuide, type Candidate, type SupportGuide,
 } from "../core/snapping";
 import { componentOf } from "../core/model";
-import { freeOn, inclineOn, panelOpen, useApp, workingModel, type Tool } from "../ui/store";
+import { freeOn, globalOf, inclineOn, panelOpen, scopeTag, useApp, workingModel, type Tool } from "../ui/store";
 import { BASE_Y, M, toWorld } from "../render/units";
 import { PROPS_W } from "../render/Scene";
 
@@ -92,6 +93,14 @@ export function guidesFor(model: Model, inv: ReturnType<typeof useApp.getState>[
   return guideCache.guides;
 }
 
+// fundação perto da estrutura: círculos na chapa onde uma mola (nova ou pendurada) chega até a GC
+let reachCache: { model: Model; inv: unknown; r: ReachGuide[] } | null = null;
+export function reachFor(model: Model, inv: ReturnType<typeof useApp.getState>["inventory"]) {
+  if (reachCache && reachCache.model === model && reachCache.inv === inv) return reachCache.r;
+  reachCache = { model, inv, r: supportReach(catalog, inv, model) };
+  return reachCache.r;
+}
+
 // pontos amarelos de barras (triângulos a partir de uma esfera)
 let barGuideCache: { model: Model; code: string; inv: unknown; anchor: string; guides: BarGuide[] } | null = null;
 export function barGuidesFor(model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"], anchor: string) {
@@ -136,13 +145,9 @@ export function nodeOptionsFor(model: Model, nodeId: string) {
   return nodeMoveCache.r;
 }
 
-// movimento global (duplo clique): o que a estrutura deixa a peça fazer (caminho, livre ou travado)
-let globalCache: { model: Model; key: string; r: GlobalMove } | null = null;
-export function globalFor(model: Model, ref: MoveRef): GlobalMove {
-  const key = `${ref.kind}:${ref.id}`;
-  if (globalCache && globalCache.model === model && globalCache.key === key) return globalCache.r;
-  globalCache = { model, key, r: globalMoveOptions(catalog, model, ref) };
-  return globalCache.r;
+// movimento global (duplo clique): o que o conjunto escolhido deixa a peça fazer (caminho, livre ou travado)
+export function globalFor(model: Model, tool: Extract<Tool, { kind: "moveBody" }>): GlobalMove {
+  return globalOf(model, tool.ref, tool.level);
 }
 
 /** Caminho de quem anda pelo azul: a esfera (mover só o nó) ou o conjunto (giro em torno das GC). */
@@ -153,9 +158,9 @@ export function pathFor(model: Model, tool: Tool): { set: NodeMoveSet; start: Ve
     return { set: nodeOptionsFor(model, tool.nodeId), start: n.pos, lift: n.kind === "support", key: `n:${tool.nodeId}` };
   }
   if (tool.kind === "moveBody") {
-    const g = globalFor(model, tool.ref);
+    const g = globalFor(model, tool);
     if (g.mode !== "path") return null;
-    return { set: g.set, start: g.handle, lift: false, key: `b:${tool.ref.kind}:${tool.ref.id}` };
+    return { set: g.set, start: g.handle, lift: false, key: `b:${tool.ref.kind}:${tool.ref.id}:${tool.level}` };
   }
   return null;
 }
@@ -326,6 +331,68 @@ export function Placement() {
       const tail = near.length > 1 ? ` (${near.length} pontos aqui: Tab alterna)` : "";
       if (pick.kind === "grid" && near.length === 1) return { pos: pick.pos, hint: null };
       return { pos: pick.pos, hint: `${KIND_NAME[pick.kind]}${pick.text ? `: ${pick.text}` : ""}${tail}` };
+    };
+
+    /**
+     * GC perto da estrutura: o cursor perto de um círculo azul (ou do ponto logo abaixo de uma esfera) encaixa nele.
+     * Clique: GC + mola nova até a esfera, ou a mola pendurada desce até a GC. R alterna para só a GC.
+     */
+    const REACH_PX = 16;
+    let reachSpot = "";
+    const reachStep = (ev: PointerEvent, rect: DOMRect, model: Model, inv: ReturnType<typeof useApp.getState>["inventory"]): boolean => {
+      const st = useApp.getState();
+      const guides = reachFor(model, inv);
+      if (!guides.length) return false;
+      const dpx = (p: Vec3) => {
+        const q = toScreen(new THREE.Vector3(p[0] * M, 0.6, p[2] * M), rect);
+        return q.z > 1 ? Infinity : Math.hypot(q.x - ev.clientX, q.y - ev.clientY);
+      };
+      let best: { g: ReachGuide; pos: Vec3; d: number } | null = null;
+      for (const g of guides) {
+        if (g.r === 0) {
+          const d = dpx(g.center);
+          if (d < REACH_PX && (!best || d < best.d - 2)) best = { g, pos: g.center, d };
+          continue;
+        }
+        let bt = 0;
+        let bd = Infinity;
+        for (let k = 0; k < 180; k++) {
+          const t = (k * Math.PI) / 90;
+          const d = dpx(reachPoint(g, t));
+          if (d < bd) (bd = d), (bt = t);
+        }
+        // passos de 15° em volta da esfera (os "redondos") puxam quando estão perto
+        const t15 = Math.round(bt / (Math.PI / 12)) * (Math.PI / 12);
+        const p15 = reachPoint(g, t15);
+        const pos = dpx(p15) < 10 ? p15 : reachPoint(g, bt);
+        const d = dpx(pos);
+        if (d < REACH_PX && (!best || d < best.d)) best = { g, pos, d };
+      }
+      if (!best) return false;
+      const pos = best.pos.map((v) => Math.round(v * 1e4) / 1e4 + 0) as Vec3;
+      // todas as molas que chegam neste ponto (a pendurada primeiro: não gasta peça nova) e, por último, só a GC
+      const here = guides
+        .filter((g) => Math.abs(Math.hypot(pos[0] - g.center[0], pos[2] - g.center[2]) - g.r) < 1e-3)
+        .sort((x, y) => (x.kind === "swing" ? 0 : 1) - (y.kind === "swing" ? 0 : 1));
+      const n = here.length + 1;
+      // outro ponto: as opções recomeçam
+      const spotKey = `${pos[0].toFixed(2)},${pos[2].toFixed(2)}`;
+      if (spotKey !== reachSpot) {
+        reachSpot = spotKey;
+        if (st.rotIndex) useApp.setState({ rotIndex: 0 });
+      }
+      const k = useApp.getState().rotIndex % n;
+      const more = ` R: ${k + 1 < n ? "próxima opção" : "volta"} (${k + 1} de ${n}).`;
+      if (k === here.length) {
+        const cand = supportCandidate(catalog, inv, model, pos);
+        st.setGhost({ kind: "cand", cand }, cand.check.ok ? `Só a GC.${more}` : cand.check.errors[0]);
+        return true;
+      }
+      const g = here[k];
+      const a = reachAction(catalog, inv, model, g, pos);
+      const what = g.kind === "swing" ? `Clique: ${g.text} (a ponta vira a GC).` : `Clique: GC e ${g.text}.`;
+      st.setGhost({ kind: "group", model: a.model, ids: a.ids, check: a.check, keep: true }, a.check.ok ? `${what}${more}` : `${a.check.errors[0].replace(/\.$/, "")}.${more}`);
+      return true;
     };
 
     // ---- barras livres: a ponta segue o cursor na esfera do comprimento da barra, com encaixes ----
@@ -684,9 +751,10 @@ export function Placement() {
       // ---- mover só o nó (duplo clique na esfera) ou girar o conjunto (duplo clique numa mola, diagonal ou placa):
       //      desliza pelo caminho possível (esfera, círculo ou pontos) ----
       // ---- conjunto livre (2 ou mais graus de liberdade): a peça segue o cursor e o resto mexe o mínimo ----
-      if (tool.kind === "moveBody" && globalFor(st.history.present, tool.ref).mode !== "path") {
-        const g = globalFor(st.history.present, tool.ref);
-        if (g.mode === "locked") return st.setGhost(null, g.reason);
+      if (tool.kind === "moveBody" && globalFor(st.history.present, tool).mode !== "path") {
+        const g = globalFor(st.history.present, tool);
+        const tag = scopeTag(st.history.present, tool);
+        if (g.mode === "locked") return st.setGhost(null, g.reason + tag);
         if (g.mode !== "free") return;
         const ray = rayAt(ev, rect);
         const H = toWorld(g.handle);
@@ -698,8 +766,8 @@ export function Placement() {
         return st.setGhost(
           { kind: "group", model: mv.model, ids: mv.ids, check: mv.check },
           mv.check.ok
-            ? `Clique para deixar aqui (a peça anda ${moved} M; mexem ${mv.ids.size} ${mv.ids.size === 1 ? "esfera" : "esferas"}).${mv.check.warnings[0] ? ` ${mv.check.warnings[0]}` : ""}`
-            : mv.check.errors[0],
+            ? `Clique para deixar aqui (a peça anda ${moved} M; mexem ${mv.ids.size} ${mv.ids.size === 1 ? "esfera" : "esferas"}).${mv.check.warnings[0] ? ` ${mv.check.warnings[0]}` : ""}${tag}`
+            : `${mv.check.errors[0]}${tag}`,
         );
       }
       if (tool.kind === "moveNode" || tool.kind === "moveBody") {
@@ -715,7 +783,7 @@ export function Placement() {
           const q = toScreen(w, rect);
           return q.z > 1 ? Infinity : Math.hypot(q.x - ev.clientX, q.y - ev.clientY);
         };
-        // Tab: pula entre os limites azul ↔ vermelho do caminho (mexer o cursor mais de TAB_PX volta ao normal)
+        // ←/→: pulam entre os limites azul ↔ vermelho do caminho (mexer o cursor mais de TAB_PX volta ao normal)
         if (nodeTab && (!st.snapCycle || nodeTab.nodeId !== pathKey || Math.hypot(ev.clientX - nodeTab.x, ev.clientY - nodeTab.y) > TAB_PX)) {
           nodeTab = null;
           useApp.setState({ ...(st.snapCycle ? { snapCycle: 0 } : {}), nodeLimits: null });
@@ -750,7 +818,7 @@ export function Placement() {
           pick = nodeTab.pts[i];
           const cur = useApp.getState().nodeLimits;
           if (!cur || cur.i !== i || cur.pts !== nodeTab.pts) useApp.setState({ nodeLimits: { pts: nodeTab.pts, i } });
-          tabInfo = ` ${nodeTab.labels[i]} (${i + 1} de ${n}): Tab próximo, Shift+Tab volta.`;
+          tabInfo = ` ${nodeTab.labels[i]} (${i + 1} de ${n}): → próximo, ← volta.`;
         }
         // 1) posições "redondas" (eixos, passos de 15°) perto do cursor: encaixa nelas
         let best = 14;
@@ -789,7 +857,8 @@ export function Placement() {
         if (!o) return st.setGhost(null, body ? "Leve o cursor pelo caminho azul: é por ali que o conjunto pode andar." : "Leve o cursor pelo caminho azul: é por ali que a esfera pode andar.");
         const f = (p: Vec3) => `(${toDisp(p).map((v) => +v.toFixed(2)).join("; ")})`;
         const moved = len(sub(o.pos, start)).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
-        const tabHint = tabInfo || " Tab: limites e posições na horizontal/vertical.";
+        const tag = scopeTag(present, tool);
+        const tabHint = (tabInfo || " ←/→: limites e posições na horizontal/vertical.") + tag;
         const what = body
           ? `Clique para deixar aqui (a peça anda ${moved} M; mexem ${o.ids.size} ${o.ids.size === 1 ? "esfera" : "esferas"}).${o.check.warnings[0] ? ` ${o.check.warnings[0]}` : ""}`
           : `Clique para deixar o nó em ${f(o.pos)} (anda ${moved} M).`;
@@ -797,7 +866,7 @@ export function Placement() {
           { kind: "group", model: o.model, ids: o.ids, check: o.check },
           o.check.ok
             ? `${what}${tabHint}`
-            : `${o.check.errors[0]}${tabInfo || " Tab pula para os limites do trecho azul."}`,
+            : `${o.check.errors[0]}${tabInfo || " ←/→ pulam para os limites do trecho azul."}${tag}`,
         );
       }
 
@@ -850,6 +919,8 @@ export function Placement() {
       if (catalog.pieces[code]?.type === "support") {
         const hit = planeHit(ev, rect, 0);
         if (!hit) return st.setGhost(null, "Aponte para a chapa.");
+        // perto de uma estrutura: os círculos azuis onde uma mola chega até a GC (clique põe a GC e liga a mola)
+        if (st.guides.blue && !tool.moving && reachStep(ev, rect, model, inv)) return;
         const choice = pickSupport(ev, rect, { x: hit.x / M, z: hit.z / M }, guidesFor(model, inv));
         if (!choice.pos) return st.setGhost(null, choice.hint);
         const cand = supportCandidate(catalog, inv, model, choice.pos);

@@ -515,6 +515,8 @@ export interface Mobility {
   hand: number;
   /** movimento inicial (todas as esferas) que mais mexe a mão */
   v0?: Float64Array;
+  /** esferas que conseguem mexer nesse conjunto (índices do mecanismo) */
+  moving?: number[];
 }
 
 /**
@@ -523,7 +525,7 @@ export interface Mobility {
  * do plano). Cada direção do núcleo é testada: anda um pouco nela e projeta de volta nos vínculos; se o movimento
  * some na projeção, não é um grau de liberdade de verdade.
  */
-export function mobility(mech: Mech, x: Float64Array, hand: number[]): Mobility {
+export function mobility(mech: Mech, x: Float64Array, hand: number[], opts: { finite?: boolean } = {}): Mobility {
   const n = mech.ids.length;
   const colOf = new Array(n).fill(-1);
   let C = 0;
@@ -532,7 +534,7 @@ export function mobility(mech: Mech, x: Float64Array, hand: number[]): Mobility 
   const { basis } = nullSpace(rigidityRows(mech, x, (i) => colOf[i]), C);
   if (!basis.length) return { dof: 0, hand: 0 };
   // estruturas muito grandes: fica a conta linear (o teste finito custaria caro)
-  const finite = C <= 450;
+  const finite = C <= 450 && opts.finite !== false;
   // teste finito de cada direção
   const eps = 0.1;
   const w = Float64Array.from(mech.fixed, (f) => (f ? 0 : 1));
@@ -575,7 +577,16 @@ export function mobility(mech: Mech, x: Float64Array, hand: number[]): Mobility 
     const hm = Math.hypot(...handVecs[j]);
     if (hm > best) (best = hm), (v0 = moves[j]);
   }
-  return { dof: dofKeep.length, hand: best > 0.05 ? Math.max(1, handKeep.length) : 0, v0: best > 0.05 ? v0 : undefined };
+  // quem consegue mexer (em algum movimento que sobreviveu à projeção): para comparar conjuntos
+  const moving: number[] = [];
+  if (best > 0.05) {
+    const alive = moves.filter((d) => d.reduce((s, v) => Math.max(s, Math.abs(v)), 0) > 0.3);
+    for (let i = 0; i < n; i++) {
+      if (colOf[i] < 0) continue;
+      if (alive.some((d) => Math.hypot(d[3 * i], d[3 * i + 1], d[3 * i + 2]) > 0.05)) moving.push(i);
+    }
+  }
+  return { dof: dofKeep.length, hand: best > 0.05 ? Math.max(1, handKeep.length) : 0, v0: best > 0.05 ? v0 : undefined, moving };
 }
 
 /**
