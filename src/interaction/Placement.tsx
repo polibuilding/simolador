@@ -20,7 +20,7 @@ import {
   type BarGuide, type Candidate, type SupportGuide,
 } from "../core/snapping";
 import { componentOf } from "../core/model";
-import { freeOn, inclineOn, useApp, workingModel } from "../ui/store";
+import { freeOn, inclineOn, panelOpen, useApp, workingModel } from "../ui/store";
 import { BASE_Y, M, toWorld } from "../render/units";
 import { PROPS_W } from "../render/Scene";
 
@@ -467,12 +467,17 @@ export function Placement() {
       return true;
     };
 
+    const markHover = (id: string | null) => {
+      if (useApp.getState().toolHover !== id) useApp.setState({ toolHover: id });
+    };
+
     // cabo (Kit 3): primeira esfera (linkFrom) e a outra; o pedaço sai da distância entre elas
     const ropeStep = (ev: PointerEvent, rect: DOMRect, model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"]): boolean => {
       const st = useApp.getState();
       linkPick = null;
       linkGhost = null;
       const on = sphereUnder(ev, rect, model);
+      markHover(on); // a esfera sob o cursor fica destacada antes do clique
       const from = st.linkFrom && model.nodes[st.linkFrom] ? st.linkFrom : null;
       if (!on) {
         st.setGhost(null, from ? "Clique na esfera da outra ponta do cabo. Esc cancela." : "Clique na esfera de uma ponta do cabo e depois na da outra.");
@@ -510,6 +515,7 @@ export function Placement() {
         const d = Math.hypot(p.x + t * dx - ev.clientX, p.y + t * dy - ev.clientY);
         if (d < 14 && (!best || d < best.d)) best = { id: m.id, d };
       }
+      markHover(best?.id ?? null); // a mola sob o cursor fica destacada antes do clique
       if (!best) return st.setGhost(null, "Clique numa mola B6 ou B12 para pôr o enrijecedor (numa mola enrijecida, tira).");
       const m = model.members[best.id];
       const r = validateStiffener(catalog, inv, model, m.id);
@@ -524,7 +530,7 @@ export function Placement() {
 
     const inGizmo = (ev: PointerEvent, rect: DOMRect) => {
       const s = useApp.getState();
-      const off = s.propsOpen ? PROPS_W : 0; // painel aberto: o cubo se afasta
+      const off = panelOpen(s) ? PROPS_W : 0; // painel aberto: o cubo se afasta
       return (ev.clientX > rect.right - off - GIZMO_PX && ev.clientX < rect.right - off && ev.clientY < rect.top + GIZMO_PX) || // cubo de vistas
       (ev.clientX < rect.left + AXES_PX && ev.clientY > rect.bottom - AXES_PX); // eixos X, Y, Z
     };
@@ -577,6 +583,8 @@ export function Placement() {
       }
       const tool = useApp.getState().tool;
       if (tool.kind === "select") return;
+      const offScene = !insideOf(ev, rect) || (!tool.viaDrag && !!(ev.target as HTMLElement | null)?.closest?.(".props, .dock, .summary-tab, .palette, .palette-mini-wrap"));
+      if (offScene && st.toolHover) markHover(null);
       if (!insideOf(ev, rect)) return st.setGhost(null, tool.viaDrag ? "Solte a peça sobre a cena." : st.hint);
       // cursor sobre o painel da direita, a barra de baixo ou a aba do resumo (por cima da cena): sem fantasma
       if (!tool.viaDrag && (ev.target as HTMLElement | null)?.closest?.(".props, .dock, .summary-tab")) return st.setGhost(null, st.hint);
@@ -881,6 +889,11 @@ export function Placement() {
       const d = down.current;
       down.current = null;
       if (!inside || !d || Math.hypot(d.x - ev.clientX, d.y - ev.clientY) > CLICK_PX) return; // foi giro de câmera
+      clickAt(ev);
+    };
+
+    /** Clique da colocação (também o Enter, no lugar do cursor). */
+    const clickAt = (ev: PointerEvent) => {
       update(ev);
       // clique numa esfera: escolhe a primeira da ligação (ou cancela, se for a mesma)
       if (linkPick) {
@@ -910,6 +923,34 @@ export function Placement() {
     // R também atualiza o fantasma sem mexer o mouse
     let lastEv: PointerEvent | null = null;
     const track = (ev: PointerEvent) => ((lastEv = ev), update(ev));
+
+    // Enter = clique: colocando uma peça (ou movendo), vale no lugar do cursor; selecionando, pega a peça sob o cursor
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key !== "Enter" || ev.ctrlKey || ev.metaKey || ev.altKey || ev.repeat) return;
+      const t = ev.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      // botão com foco: só os da paleta e da barra de baixo cedem o Enter para a cena (os outros continuam valendo)
+      if (t?.tagName === "BUTTON") {
+        if (!t.closest(".palette, .palette-mini-wrap, .dock")) return;
+        t.blur();
+      }
+      const st = useApp.getState();
+      if (st.sheetsOpen || st.helpOpen) return;
+      if (st.tool.kind !== "select") {
+        if (!lastEv || !insideOf(lastEv, el.getBoundingClientRect())) return;
+        ev.preventDefault();
+        if (st.tool.viaDrag) useApp.setState({ tool: { ...st.tool, viaDrag: false } as typeof st.tool });
+        clickAt(lastEv);
+        return;
+      }
+      const id = st.hoverId;
+      if (!id) return;
+      const m = st.history.present;
+      const kind = m.nodes[id] ? "node" : m.members[id] ? "member" : m.plates[id] ? "plate" : m.connectors[id] ? "connector" : null;
+      if (!kind) return;
+      ev.preventDefault();
+      st.select({ kind, id });
+    };
     const unsub = useApp.subscribe((s, p) => {
       if (s.tool !== p.tool && s.triAnchor && !(s.tool.kind === "place" && p.tool.kind === "place" && s.tool.code === p.tool.code)) {
         useApp.setState({ triAnchor: null });
@@ -939,11 +980,13 @@ export function Placement() {
     });
 
     window.addEventListener("pointermove", track);
+    window.addEventListener("keydown", onKey);
     window.addEventListener("pointerdown", onDown);
     window.addEventListener("pointerup", onUp);
     return () => {
       unsub();
       window.removeEventListener("pointermove", track);
+      window.removeEventListener("keydown", onKey);
       window.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onUp);
     };

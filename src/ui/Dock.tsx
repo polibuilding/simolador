@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
-import { useApp } from "./store";
+import { panelOpen, useApp } from "./store";
 
 const svg = (d: JSX.Element) => (
   <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -38,7 +38,7 @@ export function Dock() {
   const step = catalog.settings.passo_inclinacao_graus ?? 15;
   // a barra fica só com ícones quando não cabe na parte visível da cena (entre a paleta e o resumo);
   // os textos encolhem com transição, junto com a paleta e o resumo deslizando
-  const propsOpen = useApp((s) => s.propsOpen);
+  const propsOpen = useApp(panelOpen);
   const mini = useApp((s) => s.paletteMini);
   const ref = useRef<HTMLElement>(null);
   const full = useRef(0);

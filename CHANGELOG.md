@@ -14,6 +14,12 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.19 — Enter, destaque e resumo no duplo clique · 13/10/2026
+- **Enter = clique**: colocando uma peça, ligando esferas, pondo cabo ou enrijecedor, ou movendo só o nó (inclusive depois do Tab nos limites), o Enter vale como clique no lugar do cursor; sem ferramenta, seleciona a peça sob o cursor.
+- **Duplo clique abre o resumo** com a peça, até o **Esc** (que também cancela o movimento). A preferência de resumo aberto/fechado pelas setas não muda.
+- **Destaque antes do clique**: com o cabo na mão, a esfera sob o cursor fica azul; com o enrijecedor, a mola.
+- **Menu pequeno com duas colunas**: os números (restam/total) ficam numa linha por linha do menu, "esquerda · direita", sem se sobrepor.
+
 ## 1.18 — Kit 3: cabo e enrijecedor · 13/10/2026
 - **Kit 3 no estoque** (azul): C 18, RC90 12, GC 8, 2 chapas, B6 30, B12 9, D6x6 9, D6x12 9, cabo (rolo de 3,35 m), 24 ligações de cabo, 50 clipes, 4 clipes múltiplos, 20 anéis e 9 enrijecedores. As bolinhas azuis na paleta mostram o que vem dele.
 - **Cabo** (CABLE, grupo "Cabos" da paleta): clique numa esfera e depois em outra. O programa monta esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera (ligações e clipes entram sozinhos) e diz o pedaço em **bolinhas** e cm. O cabo aparece como corrente de bolinhas, com as ligações nas pontas. Regras: mínimo de duas bolinhas, lugar da ligação na esfera (20° das outras peças), não atravessa esferas, molas, placas nem RC90; em Mover só o nó ele estica junto (só tração).

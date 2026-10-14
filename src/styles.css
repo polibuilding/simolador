@@ -760,7 +760,8 @@ dl { margin: 0 0 16px; }
   font-size: 10.5px; color: #b3bab7; font-variant-numeric: tabular-nums; text-shadow: 0 0 3px var(--bg, #eef0ef);
 }
 .pm-count b { font-weight: 600; color: #8f9894; }
-.pm-count.out, .pm-count.out b { color: #e5a3a5; }
+.pm-count .out, .pm-count .out b { color: #e5a3a5; }
+.pm-count-sep { font-style: normal; color: #cfd5d2; }
 /* a dica cabe na parte visível da cena, sem passar por cima dos eixos */
 .app .hint-line { max-width: min(760px, calc(100% - var(--pal-cur) - var(--props-cur) - 260px)); }
 /* nome da peça selecionada, bem de leve no canto de baixo, à direita (antes da versão) */

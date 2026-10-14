@@ -6,7 +6,7 @@ import { boardCenter, boardName, boardSelection, boardSize, boardsGap } from "..
 import { NumField } from "../render/Boards";
 import { Chevrons } from "./Palette";
 import { ballsPerRoll, ropePlan, ropeSpec, ropeText, ropeInfo, stiffenerFor } from "../core/rope";
-import { useApp, useModel } from "./store";
+import { panelOpen, useApp, useModel } from "./store";
 
 const M = catalog.settings.modulo_mm;
 const STATUS_TEXT: Record<string, string> = {
@@ -656,7 +656,7 @@ export function PropertiesPanel({ hidden = false }: { hidden?: boolean }) {
   const many = useApp((s) => s.multi.length > 0);
   const board = useApp((s) => s.selectedBoard);
   // o painel só abre e fecha pelas setas (« »): selecionar uma peça não o abre; aberto, mostra a peça selecionada
-  const close = () => useApp.getState().setPropsOpen(false);
+  const close = () => (useApp.getState().setPropsOpen(false), useApp.setState({ propsPeek: false }));
   return (
     <aside className={`props${hidden ? " is-hidden" : ""}`} aria-hidden={hidden || undefined}>
       <button className="props-close" onClick={close} title="Recolher o resumo" aria-label="Recolher o resumo"><Chevrons dir="right" /></button>
@@ -683,7 +683,7 @@ export function SelectionTag() {
   const multi = useApp((s) => s.multi.length);
   const board = useApp((s) => s.selectedBoard);
   const extra = useApp((s) => s.boardExtra.length);
-  const open = useApp((s) => s.propsOpen);
+  const open = useApp(panelOpen);
   let text = "";
   if (multi) text = `${multi} peças selecionadas`;
   else if (sel?.kind === "node") {

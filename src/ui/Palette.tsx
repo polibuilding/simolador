@@ -266,9 +266,11 @@ export function PaletteMini() {
     if (!btns.length) return marks.length ? setMarks([]) : undefined;
     const x0 = Math.min(...btns.map((b) => b.offsetLeft));
     const base = el.offsetLeft + el.offsetWidth + 8;
-    const next = btns.map((b) => ({ code: b.dataset.code!, top: b.offsetTop + b.offsetHeight / 2, left: base + Math.round((b.offsetLeft - x0) / 46) * 54 }));
+    const next = btns.map((b) => ({ code: b.dataset.code!, top: b.offsetTop + b.offsetHeight / 2, left: base + Math.round((b.offsetLeft - x0) / 46) }));
     if (JSON.stringify(next) !== JSON.stringify(marks)) setMarks(next);
   });
+  // os números começam logo depois do menu (left guarda base + coluna)
+  const base = (row: { left: number }[]) => Math.floor(row[0].left);
   return (
     <div ref={wrap} className="palette-mini-wrap" onPointerDown={(e) => e.stopPropagation()}>
       <button className="palette-max" onClick={() => useApp.getState().setPaletteMini(false)} title="Abrir a paleta de peças" aria-label="Abrir a paleta">
@@ -298,12 +300,22 @@ export function PaletteMini() {
           </div>
         ))}
       </nav>
-      {marks.map(({ code, top, left }) => {
-        const { total, left: rest, unit } = info(code);
-        if (!Number.isFinite(total)) return null;
+      {/* uma linha de números por linha do menu: com duas colunas, "esquerda · direita", sem se sobrepor */}
+      {[...new Set(marks.map((m) => m.top))].map((top) => {
+        const row = marks.filter((m) => m.top === top).sort((a, b) => a.left - b.left);
+        const items = row
+          .map(({ code }) => ({ code, ...info(code) }))
+          .filter((x) => Number.isFinite(x.total));
+        if (!items.length) return null;
         return (
-          <span key={code} className={`pm-count${rest <= 0 ? " out" : ""}`} style={{ top, left }} aria-hidden>
-            <b>{rest}</b>/{total}{unit ? ` ${unit}` : ""}
+          <span key={top} className="pm-count" style={{ top, left: row[0] ? base(row) : 0 }} aria-hidden>
+            {items.map((x, i) => (
+              <span key={x.code} className={x.left <= 0 ? "out" : ""}>
+                {i > 0 && <i className="pm-count-sep"> · </i>}
+                <b>{x.left}</b>/{x.total}
+                {x.unit ? ` ${x.unit}` : ""}
+              </span>
+            ))}
           </span>
         );
       })}
