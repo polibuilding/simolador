@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import { catalog } from "../core/catalog";
 import { codeOf, moveGroup, nodeMoveNearest, nodeMoveOptions, removeMany, removeSelection, rotateSelection, selAfter, type Sel } from "../core/edit";
-import { globalMoveOptions, type MoveRef } from "../core/globalMove";
+import { globalMoveAt, globalMoveOptions, moveScopes, type GlobalMove, type MoveRef, type MoveScope } from "../core/globalMove";
 import { createHistory, push, redo, undo, type History } from "../core/history";
 import { defaultInventory, type InventoryConfig } from "../core/inventory";
 import { boardsOf, emptyModel, membersAt, rotateNodes, rotYRad, toDisp, type Model, type Vec3 } from "../core/model";
@@ -23,8 +23,11 @@ export type Tool =
   | { kind: "moveGroup"; nodeId: string; turns: number; viaDrag: boolean }
   /** mover só um nó: as barras presas a partes fixas giram em torno da ponta fixa */
   | { kind: "moveNode"; nodeId: string; viaDrag: boolean }
-  /** duplo clique: a peça anda e o resto da estrutura acompanha o que precisar (caminho, livre ou travado) */
-  | { kind: "moveBody"; ref: MoveRef; viaDrag: boolean }
+  /**
+   * duplo clique: a peça anda e o resto da estrutura acompanha o que precisar (caminho, livre ou travado).
+   * `level`: qual conjunto pode mexer (Tab amplia: só a peça → vizinhas → pavimento → estrutura toda).
+   */
+  | { kind: "moveBody"; ref: MoveRef; viaDrag: boolean; level: number }
   /** colar (ou mover várias peças: `moving.base` = modelo sem elas). R gira, X/Z espelha, ↑/↓ muda a altura */
   | { kind: "paste"; clip: Clip; turns: number; mirrorX: boolean; mirrorZ: boolean; dy: number; viaDrag: false; moving?: { base: Model } };
 
@@ -115,8 +118,10 @@ interface State {
   startMove: (viaDrag: boolean) => void;
   /** N / botão "Mover só o nó" */
   startMoveNode: (viaDrag: boolean) => void;
-  /** duplo clique: mexer a peça com a estrutura acompanhando (esfera: só ela, se o resto não precisar mexer) */
+  /** duplo clique: mexer a peça com a estrutura acompanhando, começando pelo menor conjunto que mexe */
   startMoveBody: () => void;
+  /** Tab / Shift+Tab mexendo uma peça: amplia ou reduz o conjunto que mexe junto */
+  cycleScope: (dir: 1 | -1) => void;
   /** arrastar uma peça: leva a estrutura inteira dela (qualquer peça) */
   startMoveStructure: (viaDrag: boolean) => void;
   /** área de transferência (Ctrl+C) */
@@ -362,7 +367,7 @@ export const useApp = create<State>((set, get) => ({
   startMoveNode: (viaDrag) => {
     const sel = get().selection;
     if (sel?.kind !== "node") return set({ hint: "Selecione uma esfera ou ligação de base para mover só o nó." });
-    set({ tool: { kind: "moveNode", nodeId: sel.id, viaDrag }, ghost: null, hint: "Leve a esfera pelo caminho: azul pode, vermelho não. Tab pula para os limites; Esc cancela." });
+    set({ tool: { kind: "moveNode", nodeId: sel.id, viaDrag }, ghost: null, hint: "Leve a esfera pelo caminho: azul pode, vermelho não. ←/→ pulam para os limites; Tab amplia o que mexe junto; Esc cancela." });
   },
   startMoveBody: () => {
     const s = get();
@@ -370,24 +375,24 @@ export const useApp = create<State>((set, get) => ({
     if (!sel || sel.kind === "connector") return s.startMove(false);
     const m = s.history.present;
     const ref: MoveRef = { kind: sel.kind, id: sel.id };
-    const g = globalMoveOptions(catalog, m, ref);
-    if (sel.kind === "node") {
-      // esfera: se só ela precisa mexer (o caminho local tem a mesma liberdade), fica o "mover só o nó"
-      const local = nodeMoveOptions(catalog, m, sel.id);
-      const dim = local.locked ? -1 : local.locus?.kind === "sphere" ? 2 : local.locus?.kind === "circle" ? 1 : 0;
-      const hand = g.mode === "locked" ? 0 : g.mode === "path" ? 1 : g.hand;
-      if (dim >= 0 && (dim === hand || (dim === 0 && hand === 0))) return s.startMoveNode(false);
+    const scopes = scopesOf(m, ref);
+    if (!scopes.length) {
+      const g = globalMoveOptions(catalog, m, ref);
+      return set({ hint: g.mode === "locked" ? g.reason : "Essa peça não mexe com a estrutura no lugar." });
     }
-    if (g.mode === "locked") return set({ hint: g.reason });
-    const dof = g.dof > 1 ? ` O conjunto tem ${g.dof} graus de liberdade.` : "";
-    set({
-      tool: { kind: "moveBody", ref, viaDrag: false },
-      ghost: null,
-      hint:
-        g.mode === "path"
-          ? `Essa peça anda num caminho (1 grau de liberdade): azul pode, vermelho não. Tab pula para os limites e para as posições na horizontal/vertical; Esc cancela.${dof}`
-          : `Livre (${g.hand} graus de liberdade aqui): arraste; o resto mexe só o que precisar. Esc cancela.${dof}`,
-    });
+    enterScope(set, get, ref, 0);
+  },
+  cycleScope: (dir) => {
+    const s = get();
+    const t = s.tool;
+    if (t.kind !== "moveBody" && t.kind !== "moveNode") return;
+    const ref: MoveRef = t.kind === "moveBody" ? t.ref : { kind: "node", id: t.nodeId };
+    const level = t.kind === "moveBody" ? t.level : 0;
+    const scopes = scopesOf(s.history.present, ref);
+    if (scopes.length < 2) {
+      return set({ hint: scopes.length ? `Só há um conjunto que mexe aqui: ${scopes[0].label}.` : "Nada mais pode mexer junto com essa peça." });
+    }
+    enterScope(set, get, ref, (level + dir + scopes.length) % scopes.length, t.viaDrag);
   },
   startMoveStructure: (viaDrag) => {
     const s = get();
@@ -749,3 +754,54 @@ export const useDisplayModel = () =>
     displayCache = { m, ids, out: filterByBoards(catalog, m, ids) };
     return displayCache.out;
   });
+
+/* ---------- conjuntos que mexem (duplo clique + Tab) ---------- */
+
+/** Conjuntos da peça: na esfera, o primeiro é o "mover só o nó" (quando ela consegue andar sozinha). */
+export function scopesOf(model: Model, ref: MoveRef): MoveScope[] {
+  const local = ref.kind === "node" && !!model.nodes[ref.id] && !nodeMoveOptions(catalog, model, ref.id).locked;
+  return moveScopes(catalog, model, ref, local);
+}
+
+/** Movimento da peça no conjunto `level` (o caminho ou o arraste livre daquele conjunto). */
+export function globalOf(model: Model, ref: MoveRef, level: number): GlobalMove {
+  const sc = scopesOf(model, ref)[level];
+  return globalMoveAt(catalog, model, ref, sc && sc.kind !== "local" ? sc : null);
+}
+
+/** "Conjunto 2 de 4: pavimento Z ≥ 6 M (Tab amplia)": o rodapé diz o que está mexendo. */
+export function scopeTag(model: Model, tool: Tool): string {
+  if (tool.kind !== "moveBody" && tool.kind !== "moveNode") return "";
+  const ref: MoveRef = tool.kind === "moveBody" ? tool.ref : { kind: "node", id: tool.nodeId };
+  const scopes = scopesOf(model, ref);
+  if (scopes.length < 2) return "";
+  const i = tool.kind === "moveBody" ? tool.level : 0;
+  return ` Mexe: ${scopes[i]?.short ?? "?"} (${i + 1} de ${scopes.length}; Tab amplia, Shift+Tab reduz).`;
+}
+
+type SetFn = (p: Partial<State>) => void;
+function enterScope(set: SetFn, get: () => State, ref: MoveRef, level: number, viaDrag = false) {
+  const m = get().history.present;
+  const scopes = scopesOf(m, ref);
+  const sc = scopes[level];
+  if (!sc) return;
+  const n = scopes.length;
+  const head = n > 1 ? `Conjunto ${level + 1} de ${n}: ${sc.label}. ` : "";
+  const tail = n > 1 ? " Tab amplia, Shift+Tab reduz; Esc cancela." : " Esc cancela.";
+  if (sc.kind === "local") {
+    set({ tool: { kind: "moveNode", nodeId: ref.id, viaDrag }, ghost: null, hint: `${head}Leve a esfera pelo caminho: azul pode, vermelho não. ←/→ pulam para os limites.${tail}` });
+    return;
+  }
+  const g = globalMoveAt(catalog, m, ref, sc);
+  if (g.mode === "free") g.reset();
+  set({
+    tool: { kind: "moveBody", ref, viaDrag, level },
+    ghost: null,
+    hint:
+      g.mode === "locked"
+        ? `${head}${g.reason}`
+        : g.mode === "path"
+          ? `${head}Anda num caminho (1 grau de liberdade): azul pode, vermelho não. ←/→: limites e posições na horizontal/vertical.${tail}`
+          : `${head}Livre (${g.hand} graus de liberdade): arraste; o resto do conjunto mexe só o que precisar.${tail}`,
+  });
+}
