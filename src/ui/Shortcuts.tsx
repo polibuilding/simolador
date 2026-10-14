@@ -30,14 +30,14 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
     title: "Encaixe",
     keys: [
       ["1 · 2 · 3", "bolinhas do encaixe: grade (verde) · vão (azul) · triângulos (amarela e laranja)"],
-      ["Tab", "barras: percorre os pontos amarelos e laranja da esfera (Shift+Tab volta); GC: próximo ponto sobreposto; esfera ou conjunto andando: limites do caminho azul"],
+      ["Tab", "mais opções: colocando uma peça, a próxima opção (como R); barra sobre uma esfera: pontos amarelos e laranja; GC: ponto sobreposto; peça andando no caminho azul: limites e posições na horizontal/vertical (Shift+Tab volta)"],
     ],
   },
   {
     title: "Editar",
     keys: [
       ["Arrastar", "segurar e arrastar uma peça move a estrutura inteira"],
-      ["Duplo clique", "esfera: só ela anda, pelo caminho azul · mola, diagonal ou placa: o conjunto gira em torno das GC (travado: a peça vai para outro lugar) · ligação: outro lugar"],
+      ["Duplo clique", "a peça anda e a estrutura acompanha o que as ligações deixam: caminho azul (1 grau de liberdade), livre (2 ou mais) ou travada · ligação: outro lugar"],
       ["Delete", "mola com enrijecedor: o primeiro tira o enrijecedor, o segundo apaga a mola"],
       ["M", "mover a peça ou a seleção"],
       ["N", "mover só o nó (esfera selecionada)"],

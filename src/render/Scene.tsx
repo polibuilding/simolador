@@ -5,10 +5,10 @@ import { GizmoViewcube as ViewCubeRaw } from "./gizmo/ViewCube";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { catalog } from "../core/catalog";
-import { add, boardsOf, componentOf, cross, dot, len, norm, scale, sub, type Model, type Vec3 } from "../core/model";
+import { boardsOf, componentOf, type Model, type Vec3 } from "../core/model";
 import { markerPos, type Candidate } from "../core/snapping";
 import { boardCorners } from "../core/boards";
-import { barGuidesFor, bodyOptionsFor, candidatesFor, guidesFor, locusStatusFor, nodeOptionsFor, pathFor, Placement } from "../interaction/Placement";
+import { barGuidesFor, candidatesFor, globalFor, guidesFor, locusStatusFor, nodeOptionsFor, pathFor, Placement } from "../interaction/Placement";
 import { locusCirclePoint, locusSpherePoint } from "../core/edit";
 import { panelOpen, useApp, useDisplayModel, useModel, inclineOn, workingModel } from "../ui/store";
 import type { Sel } from "../core/edit";
@@ -57,9 +57,9 @@ function ModelGroup({
             st.setPendingDrag(null);
             select({ kind, id });
             // esfera: só ela anda; mola, diagonal ou placa: o conjunto gira em torno das GC; ligação: vai para outro lugar
-            if (kind === "node") useApp.getState().startMoveNode(false);
-            else if (kind === "member" || kind === "plate") useApp.getState().startMoveBody();
-            else useApp.getState().startMove(false);
+            // ligação: vai para outro lugar; o resto: a peça anda e a estrutura acompanha (ou trava)
+            if (kind === "connector") useApp.getState().startMove(false);
+            else useApp.getState().startMoveBody();
           },
         }
       : {};
@@ -360,32 +360,12 @@ function NodeLocusView() {
   const status = useMemo(() => (path && !path.set.locked ? locusStatusFor(present, path.key, path.set) : null), [path, present]);
   const loc = set && !set.locked ? set.locus : undefined;
   const lift = !!path?.lift;
-  // giro do conjunto: o eixo (tracejado) e o cilindro que a peça varre (círculos das pontas, bem de leve)
-  const bodyExtras = useMemo(() => {
-    if (tool.kind !== "moveBody" || !set || set.locked) return null;
-    const bs = set as ReturnType<typeof bodyOptionsFor>;
-    if (!bs.axis) return null;
-    const u = norm(sub(bs.axis.b, bs.axis.a));
-    const ext = 3;
-    const axisPts = [toWorld(add(bs.axis.a, scale(u, -ext))), toWorld(add(bs.axis.b, scale(u, ext)))];
-    const ends = tool.ref.kind === "member" ? [present.members[tool.ref.id]?.a, present.members[tool.ref.id]?.b] : present.plates[tool.ref.id]?.corners ?? [];
-    const rings = ends
-      .filter((id): id is string => !!id && present.nodes[id]?.kind !== "support")
-      .map((id) => {
-        const p = present.nodes[id].pos;
-        const c = add(bs.axis!.a, scale(u, dot(sub(p, bs.axis!.a), u)));
-        const r = len(sub(p, c));
-        if (r < 1e-3) return null;
-        const e1 = scale(sub(p, c), 1 / r);
-        const e2 = cross(u, e1);
-        return Array.from({ length: 121 }, (_, k) => {
-          const t = (k * 2 * Math.PI) / 120;
-          return toWorld(add(c, add(scale(e1, r * Math.cos(t)), scale(e2, r * Math.sin(t)))));
-        });
-      })
-      .filter(Boolean) as THREE.Vector3[][];
-    return { axisPts, rings };
-  }, [tool, set, present]);
+  // conjunto andando num caminho: o rastro das esferas da peça (bem de leve; mostra o "cilindro" que ela varre)
+  const trails = useMemo(() => {
+    if (tool.kind !== "moveBody") return null;
+    const g = globalFor(present, tool.ref);
+    return g.mode === "path" ? g.trails.map((t) => t.map(toWorld)) : null;
+  }, [tool, present]);
   const w = (p: Vec3) => {
     const v = toWorld(p);
     if (lift) v.y = 0.6;
@@ -439,7 +419,7 @@ function NodeLocusView() {
   useEffect(() => () => sphere?.geo.dispose(), [sphere]);
   if (!loc || !status) return null;
   // pontos-limite (para onde o Tab pula): os do círculo sempre; os da esfera, quando o Tab está em uso
-  const limits = tabbed?.pts ?? (loc.kind === "circle" ? status.limits : []);
+  const limits = tabbed?.pts ?? (loc.kind === "circle" || loc.kind === "path" ? status.limits : []);
   const limitDots = limits.map((p, i) => (
     <mesh key={`l${i}`} position={w(p)} raycast={() => null} renderOrder={6}>
       <sphereGeometry args={[tabbed && tabbed.i === i ? 4.6 : 3, 16, 12]} />
@@ -462,10 +442,21 @@ function NodeLocusView() {
   if (loc.kind === "circle" && circle) {
     return (
       <group raycast={() => null}>
-        {bodyExtras && <Line points={bodyExtras.axisPts} color="#6b7570" lineWidth={1.2} dashed dashSize={6} gapSize={4} transparent opacity={0.8} />}
-        {bodyExtras?.rings.map((r, i) => <Line key={`c${i}`} points={r} color={COLORS.select} lineWidth={1} dashed dashSize={3} gapSize={4} transparent opacity={0.35} />)}
         {circle.map((a, i) => (
           <Line key={i} points={a.pts} color={a.ok ? COLORS.select : COLORS.invalid} lineWidth={2} dashed dashSize={5} gapSize={3.5} transparent opacity={a.ok ? 1 : 0.75} />
+        ))}
+        {limitDots}
+      </group>
+    );
+  }
+  if (loc.kind === "path" && status.pathOk) {
+    const pts = loc.pts.map(w);
+    const segs = runs(loc.closed ? [...pts, pts[0]] : pts, loc.closed ? [...status.pathOk, status.pathOk[0]] : status.pathOk);
+    return (
+      <group raycast={() => null}>
+        {trails?.map((t, i) => t.length > 1 && <Line key={`t${i}`} points={t} color={COLORS.select} lineWidth={1} dashed dashSize={3} gapSize={4} transparent opacity={0.3} />)}
+        {segs.map((r, i) => (
+          <Line key={i} points={r.pts} color={r.ok ? COLORS.select : COLORS.invalid} lineWidth={2} dashed dashSize={5} gapSize={3.5} transparent opacity={r.ok ? 1 : 0.75} />
         ))}
         {limitDots}
       </group>

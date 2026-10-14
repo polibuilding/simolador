@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { pieceMobility, structureMobility, type MoveRef } from "../core/globalMove";
 import { catalog } from "../core/catalog";
 import { available, usage } from "../core/inventory";
 import { boardsOf, componentOf, DISP_AXIS, len, sub, toDisp, type Vec3 } from "../core/model";
@@ -205,6 +206,7 @@ function Selected() {
             {conns.length > 0 && <Row k="Ligações" v={countText(conns.map((c) => c.code))} />}
             {plates.length > 0 && <Row k="Placas" v={countText(plates.map((p) => p.code))} />}
             <Row k="Estrutura" v={`${group} ${group === 1 ? "nó" : "nós"} ligados`} />
+            <MobilityRow refx={{ kind: "node", id: n.id }} />
           </dl>
         </Section>
         <Actions removeLabel={gc ? "Remover GC e o que sai dela" : "Remover esfera e peças ligadas"} />
@@ -269,6 +271,7 @@ function Selected() {
             <Row k={`Na ponta ${posText(A)}`} v={atEnd(m.a).length ? countText(atEnd(m.a)) : "só esta peça"} />
             <Row k={`Na ponta ${posText(B)}`} v={atEnd(m.b).length ? countText(atEnd(m.b)) : "só esta peça"} />
             {conns.length > 0 && <Row k="Ligações nas pontas" v={countText(conns.map((c) => c.code))} />}
+            <MobilityRow refx={{ kind: "member", id: m.id }} />
           </dl>
         </Section>
         <Actions removeLabel={cable ? "Remover diagonal" : "Remover mola"} />
@@ -298,6 +301,7 @@ function Selected() {
         <Section title="Ligações">
           <dl>
             <Row k="Esferas nos cantos" v={cs.map(posText).join(" ")} />
+            <MobilityRow refx={{ kind: "plate", id: pl.id }} />
           </dl>
         </Section>
         <Actions removeLabel="Remover placa" />
@@ -483,9 +487,7 @@ function Summary() {
         </tbody>
       </table>
       <RopeSummary />
-      <Section title="Estabilidade" className="future">
-        <p className="soon">Em breve</p>
-      </Section>
+      <Stability />
     </>
   );
 }
@@ -710,4 +712,48 @@ export function SelectionTag() {
       {text}
     </span>
   );
+}
+
+
+/** Graus de liberdade da estrutura (estudo de rigidez): esferas = rótulas; RC90, CC, CC90 e placas travam. */
+function Stability() {
+  const model = useModel();
+  const parts = useMemo(() => {
+    try {
+      return structureMobility(catalog, model);
+    } catch {
+      return null;
+    }
+  }, [model]);
+  if (!parts) return null;
+  const fixed = parts.filter((p) => p.supports > 0);
+  const loose = parts.filter((p) => !p.supports).length;
+  const dof = fixed.reduce((s, p) => s + p.dof, 0);
+  return (
+    <Section title="Estabilidade">
+      <dl>
+        <Row k="Graus de liberdade" v={!fixed.length ? "—" : dof === 0 ? "0: rígida (as ligações travam tudo)" : `${dof}: mecanismo`} />
+        {fixed.length > 1 && (
+          <Row k="Por parte (as GC separam)" v={fixed.map((p) => `${p.dof}`).join(" · ")} />
+        )}
+        {loose > 0 && <Row k="Soltas (sem GC)" v={`${loose} ${loose === 1 ? "parte" : "partes"}`} />}
+      </dl>
+      <p className="stab-note">Esferas giram livres; RC90, CC/CC90 e placas travam ângulos; diagonais e cabos seguram só um sentido (não entram na conta). Duplo clique numa peça mostra como ela pode mexer.</p>
+    </Section>
+  );
+}
+
+/** "travada", "1 grau de liberdade (caminho)" ou "livre, N graus" para a peça selecionada. */
+function MobilityRow({ refx }: { refx: MoveRef }) {
+  const model = useModel();
+  const m = useMemo(() => {
+    try {
+      return pieceMobility(catalog, model, refx);
+    } catch {
+      return null;
+    }
+  }, [model, refx.kind, refx.id]);
+  if (!m) return null;
+  const text = m.free ? "solta (sem GC): arraste para mover" : m.hand === 0 ? "travada pelas ligações" : m.hand === 1 ? "1 grau de liberdade: anda num caminho" : `livre: ${m.hand} graus de liberdade`;
+  return <Row k="Movimento (duplo clique)" v={text} />;
 }
