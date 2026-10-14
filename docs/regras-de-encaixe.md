@@ -1,6 +1,6 @@
 # Regras de encaixe — siMOLAdor
 
-Versão 4.5 · 13/10/2026 (siMOLAdor 1.11) (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
+Versão 4.6 · 13/10/2026 (siMOLAdor 1.12) (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
 
 Uma regra **bloqueia** quando torna o encaixe inválido (fantasma vermelho, não deixa soltar). Uma regra **avisa** quando a montagem é possível, mas não é recomendada (fantasma verde, aviso na barra de status).
 
@@ -73,7 +73,7 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | G5 | A esfera da GC fica a `gc_centro_esfera_mm` acima da chapa. É o nível zero (PAV. TÉRREO) da estrutura. | geometria | pranchas 2022 |
 | G6 | Nada deitado no nível da chapa: barras, diagonais ou placas horizontais em y = 0 (por exemplo, barra entre duas GC). | bloqueia | equipe 08/10 |
 | G10 | **Grade desligada e azul/amarelo ligados**: a GC só vai para os pontos ligados (puxa de até 90 px); longe deles, não há fantasma. Se ainda não existe nenhum ponto daquela cor, a GC vai livre. Um ponto que é ao mesmo tempo azul e amarelo aparece como amarelo. | equipe 08/10 |
-| G9 | **Liga/desliga dos pontos** (barra de cima, "Encaixe"): **Grade** (verde: pontos de encaixe de todas as peças e grade da chapa para a GC; desligada = livre), **Vão** (azul) e **Triângulo** (amarelo). Entre os pontos ligados perto do cursor vale o mais perto; quando há vários quase no mesmo lugar, **Tab** alterna e o rodapé diz qual está valendo. | — | equipe 08/10 |
+| G9 | **Liga/desliga dos pontos** (barra de baixo da cena, "Encaixe", bolinhas coloridas): **Grade** (verde: pontos de encaixe de todas as peças e grade da chapa para a GC; desligada = livre), **Vão** (azul) e **Triângulo** (amarelo). Entre os pontos ligados perto do cursor vale o mais perto; quando há vários quase no mesmo lugar, **Tab** alterna e o rodapé diz qual está valendo. | — | equipe 08/10 |
 | G7 | **Guias ao colocar ou mover uma GC** (nos dois modos de encaixe): **azul** = a 4, 6 ou 12 módulos (vão de B4, B6 ou B12) de outra GC, em X ou Z; **amarelo** = terceiro vértice de um triângulo cujos lados são vãos de barra, com todos os ângulos ≥ 45°, apoiado em duas GC que já estão a um vão de barra uma da outra (na prática, triângulos equiláteros de B4, B6 ou B12). A GC "puxa" para o guia a menos de 18 px do cursor; o rodapé diz qual é. | — | equipe 08/10 |
 | G8 | **Coordenadas** (na tela, **Z é a altura**: (X, Y, Z) = (x, z, y) do arquivo .mola, que continua com y para cima): com uma GC selecionada, o painel aceita X e Y em módulos (ex.: 5,196) ou em mm (ex.: 77,3 mm); a estrutura ligada vai junto, com as mesmas regras de Mover. Com uma **esfera**, X, Y e **Z** movem só o nó (as barras acompanham, como em Mover só o nó); se as barras não deixam chegar exatamente, ele vai para o ponto possível mais perto e o painel avisa. O painel também lista a distância às GC mais próximas e marca as que batem com o vão de uma barra. | — | equipe 08/10 |
 
@@ -118,7 +118,7 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | E10 | **Espaço** repete a última peça colocada (arma de novo a peça da paleta). | equipe 08/10 |
 | E12 | **Eixos X, Y, Z** no canto inferior esquerdo (**Z = vertical**, desde 13/10; Y aponta para a frente); clicar num eixo olha a estrutura por ele. | equipe 13/10 |
 | E11 | **Câmera** gira livre, inclusive por baixo da chapa; vista de baixo deixa a chapa translúcida. | equipe 08/10 |
-| E8 | **Cubo de vistas** no canto da cena: clicar numa face dá a vista ortogonal, numa aresta ou canto, as vistas a 45° e isométricas. **Enquadrar** (F) fica ao lado. | equipe 08/10 |
+| E8 | **Cubo de vistas** no canto da cena: clicar numa face dá a vista ortogonal, numa aresta ou canto, as vistas a 45° e isométricas. **Enquadrar** (F), Paralela, Sombras, Render, Inércia e Atalhos ficam na barra de baixo da cena (grupo "Vista"). O cubo segue a projeção: em perspectiva, ele também aparece em perspectiva. | equipe 13/10 |
 
 ## Perguntas que ainda podem mudar estas regras
 

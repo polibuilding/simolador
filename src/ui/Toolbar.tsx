@@ -55,19 +55,58 @@ const Ico = {
   redo: <path d="M10.5 4l3 3-3 3M13.5 7h-7a3.5 3.5 0 0 0 0 7H9" />,
   box: <path d="M2 5.5 8 2.5l6 3v6l-6 3-6-3zM2 5.5l6 3 6-3M8 8.5v6" />,
   sheet: <path d="M2 3.5h12v9H2zM2 10h12M9.5 10v2.5" />,
+  /** engrenagem (desenho no estilo Lucide, licença ISC) */
+  gear: (
+    <g transform="scale(0.6667)" strokeWidth="1.9">
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+      <circle cx="12" cy="12" r="3" />
+    </g>
+  ),
+  /** simulação: onda (resposta da estrutura) com o "play" de rodar */
+  sim: (
+    <>
+      <path d="M1.5 8.5c1.2-3.6 2.4-3.6 3.6 0s2.4 3.6 3.6 0" />
+      <path d="M10.8 4.6l3.7 3.4-3.7 3.4z" fill="currentColor" />
+    </>
+  ),
 };
-const Icon = ({ d }: { d: JSX.Element }) => (
+export const Icon = ({ d }: { d: JSX.Element }) => (
   <svg className="ico" viewBox="0 0 16 16" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round">
     {d}
   </svg>
 );
 
-/** Grupo da barra de cima, com rótulo pequeno em cima */
-function Group({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+/** Logos pequenas (public/logos) e o nome do programa. Sem as imagens, só o nome. */
+function Brand() {
+  const [ok, setOk] = useState<Record<string, boolean>>({ "logo-mola": true, "logo-grupo": true });
   return (
-    <div className={`tb-group ${className}`} role="group" aria-label={label}>
-      <span className="tb-label">{label}</span>
-      <div className="tb-row">{children}</div>
+    <div className="brand" aria-label="siMOLAdor">
+      {(["logo-mola", "logo-grupo"] as const).map((n) =>
+        ok[n] ? (
+          <img key={n} src={`${import.meta.env.BASE_URL}logos/${n}.png`} alt={n === "logo-mola" ? "Mola" : "Poli Building"} onError={() => setOk((o) => ({ ...o, [n]: false }))} />
+        ) : null,
+      )}
+      <span className="brand-name">si<b>MOLA</b>dor</span>
+    </div>
+  );
+}
+
+/** Configurações (por enquanto só mostra os valores internos; as opções entram depois). */
+function ConfigPanel({ onClose }: { onClose: () => void }) {
+  const s = catalog.settings;
+  const f = (n: number) => n.toLocaleString("pt-BR");
+  return (
+    <div className="popover left" role="dialog" aria-label="Configurações">
+      <p className="popover-title">Configurações</p>
+      <p className="popover-text">As configurações do programa vão ficar aqui. Por enquanto, os valores usados (vêm de <code>data/parametros.xlsx</code>):</p>
+      <dl className="config-list">
+        <div><dt>Módulo</dt><dd>{f(s.modulo_mm)} mm</dd></div>
+        <div><dt>Ângulo mínimo entre molas</dt><dd>{f(s.angulo_minimo_membros_graus)}°</dd></div>
+        <div><dt>Mola na GC (mínimo com a chapa)</dt><dd>{f(Number(s.gc_angulo_minimo_base_graus ?? 40))}°</dd></div>
+        <div><dt>Passo das inclinadas</dt><dd>{f(Number(s.passo_inclinacao_graus ?? 15))}°</dd></div>
+        <div><dt>Chapa</dt><dd>{s.chapa_modulos_x} × {s.chapa_modulos_y} módulos</dd></div>
+      </dl>
+      <button className="popover-close" onClick={onClose}>Fechar</button>
     </div>
   );
 }
@@ -76,16 +115,14 @@ export function Toolbar() {
   const name = useApp((s) => s.name);
   const canUndo = useApp((s) => s.history.past.length > 0);
   const canRedo = useApp((s) => s.history.future.length > 0);
-  const snap = useApp((s) => s.snap);
-  const barMode = useApp((s) => s.barMode);
-  const guides = useApp((s) => s.guides);
   const inventory = useApp((s) => s.inventory);
-  const { setName, undo, redo, setSnap, setGuides, setBarMode, setSheetsOpen, newProject, load, serialize } = useApp.getState();
+  const { setName, undo, redo, setSheetsOpen, newProject, load, serialize } = useApp.getState();
   const fileRef = useRef<HTMLInputElement>(null);
   const [stockOpen, setStockOpen] = useState(false);
   const [fileOpen, setFileOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [simOpen, setSimOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const step = catalog.settings.passo_inclinacao_graus ?? 15;
   const model = useModel();
   // modo sem limite: quantas caixas, no mínimo, a estrutura pede
   const need = useMemo(() => (inventory.unlimited ? minKits(catalog, usage(model)) : null), [inventory.unlimited, model]);
@@ -112,14 +149,10 @@ export function Toolbar() {
 
   return (
     <header className="toolbar">
-      <div className="brand" aria-label="siMOLAdor">
-        si<span>MOLA</span>dor
-      </div>
-      <input className="project-name" value={name} onChange={(e) => setName(e.target.value)} aria-label="Nome da estrutura" title="Nome da estrutura (sai nas pranchas)" />
-
-      <Group label="Projeto">
+      <div className="tb-left">
+        <Brand />
         <div className="menu">
-          <button onClick={() => setFileOpen((o) => !o)} aria-expanded={fileOpen} aria-haspopup="menu">
+          <button className="ghost" onClick={() => setFileOpen((o) => !o)} aria-expanded={fileOpen} aria-haspopup="menu">
             <Icon d={Ico.file} /> Arquivo <span className="caret">▾</span>
           </button>
           {fileOpen && (
@@ -130,8 +163,15 @@ export function Toolbar() {
             </div>
           )}
         </div>
-        <button className="icon" onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)" aria-label="Desfazer"><Icon d={Ico.undo} /></button>
-        <button className="icon" onClick={redo} disabled={!canRedo} title="Refazer (Ctrl+Y)" aria-label="Refazer"><Icon d={Ico.redo} /></button>
+        <div className="menu">
+          <button className="icon ghost" onClick={() => setConfigOpen((o) => !o)} aria-expanded={configOpen} title="Configurações" aria-label="Configurações">
+            <Icon d={Ico.gear} />
+          </button>
+          {configOpen && <ConfigPanel onClose={() => setConfigOpen(false)} />}
+        </div>
+        <span className="tb-sep" />
+        <button className="icon ghost" onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)" aria-label="Desfazer"><Icon d={Ico.undo} /></button>
+        <button className="icon ghost" onClick={redo} disabled={!canRedo} title="Refazer (Ctrl+Y)" aria-label="Refazer"><Icon d={Ico.redo} /></button>
         <input
           ref={fileRef}
           type="file"
@@ -149,46 +189,35 @@ export function Toolbar() {
             }
           }}
         />
-      </Group>
+      </div>
 
-      <Group label="Encaixe" className="snap-chips">
-        <button aria-pressed={snap} className={snap ? "on" : ""} onClick={() => setSnap(!snap)}
-          title="Verde: pontos onde a peça escolhida encaixa e grade da chapa para a GC. Desligado = GC livre (G).">
-          <i className="dot green" /> Grade
-        </button>
-        <button aria-pressed={guides.blue} className={guides.blue ? "on" : ""} onClick={() => setGuides({ ...guides, blue: !guides.blue })}
-          title="Azul: GC a um vão de barra (4, 6 ou 12 módulos) de outra GC, em X ou Y (V)">
-          <i className="dot blue" /> Vão
-        </button>
-        <button aria-pressed={guides.yellow} className={guides.yellow ? "on" : ""} onClick={() => setGuides({ ...guides, yellow: !guides.yellow })}
-          title="Vértices de triângulos (T). GC: amarelo = triângulo com duas GC. Barras: passe o cursor numa esfera; amarelo = triângulo (duas barras chegam no ponto), laranja = pirâmide ou treliça (três ou mais); Tab percorre os pontos">
-          <i className="dot yellow" /> Triângulo
-        </button>
-      </Group>
+      <input className="project-name" value={name} onChange={(e) => setName(e.target.value)} aria-label="Nome do projeto" title="Nome do projeto (sai nas pranchas e no arquivo)" spellCheck={false} />
 
-      <Group label="Direção das barras" className="segmented">
-        {([
-          ["eixos", "Eixos", "Barras só nos eixos, como num pórtico (Shift: inclina uma barra) (1; I alterna)"],
-          ["passo", `${step}°`, `Inclinadas em passos de ${step}° nos planos X, Y e Z (2; I alterna)`],
-          ["livre", "Livre", "Qualquer direção 3D: a ponta segue o cursor e encaixa em esferas, triângulos e alturas existentes (treliças 3D, telhados) (3; I alterna)"],
-        ] as const).map(([v, label, title]) => (
-          <button key={v} role="radio" aria-checked={barMode === v} className={barMode === v ? "on" : ""} onClick={() => setBarMode(v)} title={title}>
-            {label}
+      <div className="tb-right">
+        <div className="stock">
+          <button className="ghost" onClick={() => setStockOpen((o) => !o)} aria-expanded={stockOpen} title="Peças disponíveis: quantos kits de cada tipo vocês têm">
+            <Icon d={Ico.box} /> {kits}
           </button>
-        ))}
-      </Group>
-
-      <div className="tb-spacer" />
-
-      <Group label="Peças disponíveis" className="stock">
-        <button onClick={() => setStockOpen((o) => !o)} aria-expanded={stockOpen} title="Quantos kits de cada tipo vocês têm">
-          <Icon d={Ico.box} /> {kits}
+          {stockOpen && <StockPanel onClose={() => setStockOpen(false)} />}
+        </div>
+        <button className="primary" onClick={() => setSheetsOpen(true)} title="Plantas, vistas e capa (PDF, DXF, SVG)">
+          <Icon d={Ico.sheet} /> Pranchas
         </button>
-        {stockOpen && <StockPanel onClose={() => setStockOpen(false)} />}
-      </Group>
-      <button className="primary" onClick={() => setSheetsOpen(true)} title="Plantas, vistas e capa (PDF, DXF, SVG)">
-        <Icon d={Ico.sheet} /> Pranchas
-      </button>
+        <div className="menu">
+          <button className="primary" onClick={() => setSimOpen((o) => !o)} aria-expanded={simOpen} title="Simular a estrutura (em breve)">
+            <Icon d={Ico.sim} /> Simolar
+          </button>
+          {simOpen && (
+            <div className="popover right" role="dialog" aria-label="Simolar">
+              <p className="popover-title">Simolar · em breve</p>
+              <p className="popover-text">
+                Aqui vai entrar a simulação da estrutura montada: deformação, estaticidade e estabilidade (a linha 3.x, "de engenharia").
+              </p>
+              <button className="popover-close" onClick={() => setSimOpen(false)}>Fechar</button>
+            </div>
+          )}
+        </div>
+      </div>
       {error && (
         <p className="toolbar-error" role="alert">
           {error} <button onClick={() => setError(null)}>Ok</button>

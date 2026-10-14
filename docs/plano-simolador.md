@@ -141,12 +141,12 @@ Exemplo de entrada em `catalog.json` (gerado de `data/parametros.xlsx` por `npm 
 
 - **Linguagem visual do manual Mola**: fundo claro, cinza e branco, tipografia limpa, cor de acento por kit (Kit 1 verde, Kit 2 vermelho, Kit 3 azul, Kit 4 amarelo).
 - **Peças realistas, mas leves**: mola como hélice procedural metálica, esferas cromadas, ligações em plástico cinza claro, chapa de base preta com a grade branca igual à real (18 × 12 módulos).
-- **Layout**:
-  - à esquerda, a paleta de peças por kit, com o restante em estoque ("B6 18/24");
-  - no centro, a cena 3D com cubo de vistas (faces, arestas e cantos) e o botão Enquadrar;
-  - à direita, as propriedades da peça selecionada;
-  - no topo, a barra de ferramentas (Selecionar, Mover, Apagar, Desfazer, Vistas, Prancha);
-  - embaixo, a barra de status (avisos de validação, contagem de peças).
+- **Layout** (interface leve, 1.12: traços finos, cantos suaves, pouco peso):
+  - no topo, à esquerda: logos pequenas, siMOLAdor, Arquivo, Configurações (engrenagem), desfazer/refazer; no centro, o nome do projeto; à direita, o estoque, Pranchas e Simolar;
+  - à esquerda, a paleta de peças (só o código; quantidade só com estoque limitado), até o fim da tela;
+  - no centro, a cena 3D com o cubo de vistas (segue a projeção: paralela ou perspectiva), a dica da ferramenta em texto pequeno e a barra de baixo (Encaixe, Barras, Vista);
+  - à direita, o resumo / a peça selecionada, recolhível pela aba "‹ Resumo" (abre sozinho com algo selecionado), até o fim da tela;
+  - a versão, bem de leve, no canto inferior direito.
 - **Modo Prancha** em aba própria: folhas A3 com capa, plantas e vistas, carimbo editável, em preto e branco de desenho técnico.
 - **Feedback de encaixe**: fantasma verde ou vermelho, nós livres destacados ao aproximar a peça.
 
@@ -222,7 +222,7 @@ Análise estrutural: fora do escopo (Q09).
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0`, `v1.1`…).
 
-- **1.x — geométrica** (atual: 1.11): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.12): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: o módulo extra ajustável.
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
@@ -234,7 +234,9 @@ Decisões registradas (A-CONFIRMAR, aba Decisões): navegador agora, app local d
 
 Em aberto:
 - ~~CC90~~: resolvido. Kit 2 tem 12 RC90 (forma 3), 12 CC (forma 1) e 12 CC90 (forma 2, sobreposta à CC). Total de 145 confirmado.
-- **Medidas da CC e da CC90**: necessárias para desenhá-las (o programa usa um formato provisório até lá).
+- **Medidas da CC e da CC90**: necessárias para desenhá-las (o programa usa um formato provisório até lá). **Lembrete pedido pela equipe (13/10): ajeitar as peças CC e CC90.**
+- **Configurações** (botão de engrenagem ao lado de Arquivo): hoje só mostra os valores internos (módulo, ângulos, chapa). **Lembrete pedido pela equipe (13/10): fazer a parte de configurações.**
+- **Simolar** (botão ao lado de Pranchas): por enquanto "em breve"; é a porta da linha 3.x (deformação, estaticidade, estabilidade).
 - **Responsáveis por frente** (Q08).
 - **Repositório**: nome e dono no GitHub.
 

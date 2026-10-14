@@ -1,6 +1,6 @@
 # Histórico de versões do siMOLAdor
 
-A versão aparece no rodapé do programa, depois das logos, e no `package.json`. Cada versão tem uma etiqueta (tag) no Git (`v1.0`, `v1.1`…), que aponta para o código daquela versão.
+A versão aparece bem de leve no canto inferior direito do programa e no `package.json`. Cada versão tem uma etiqueta (tag) no Git (`v1.0`, `v1.1`…), que aponta para o código daquela versão.
 
 ## Linhas de versão
 
@@ -13,6 +13,15 @@ A versão aparece no rodapé do programa, depois das logos, e no `package.json`.
 Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra uma mudança grande ou um conjunto de mudanças menores que muda o jeito de usar. Correções pequenas entram na versão seguinte, sem número próprio.
 
 ---
+
+## 1.12 — Interface leve · 13/10/2026
+- **Visual mais limpo**: traços finos, cantos suaves, menos negrito; botões ligados só levemente tingidos.
+- **Barra de cima**: logos pequenas + siMOLAdor, **Arquivo**, **Configurações** (engrenagem; por enquanto mostra os valores internos, como o módulo) e desfazer/refazer à esquerda; **nome do projeto no centro**; estoque, **Pranchas** e **Simolar** (novo, "em breve": a porta da simulação) à direita.
+- **Barra de baixo** sobre a cena: Encaixe (grade, vão, triângulos), Barras (Eixos, 15°, Livre) e Vista (Enquadrar, Paralela, Sombras, Render, Inércia, Atalhos). Com a cena estreita, só ícones.
+- **Sem rodapé**: a dica virou um texto pequeno direto na cena; ferramenta, peças e módulo saíram (peças estão no resumo; módulo, nas configurações); a versão fica no canto inferior direito.
+- **Resumo recolhível**: aba "‹ Resumo · N peças" na borda da cena; abre sozinho quando algo é selecionado. Sem a linha de kits mínimos (já está no estoque) e sem a coluna "Restam" no modo sem limite.
+- **Paleta**: só o código das peças (GC, RC90, CC, CC90…), sem ∞ no modo sem limite; a paleta e o resumo vão até o fim da tela.
+- **Cubo de vistas segue a projeção**: em perspectiva, o cubo também aparece em perspectiva.
 
 ## 1.11 — Ligar duas esferas · 13/10/2026
 - Com uma mola (ou diagonal) na mão, **clique sobre uma esfera e depois sobre outra**: a peça liga as duas. Se a distância não é a da mola, a segunda esfera anda até o ponto possível mais perto em que ela cabe, e as molas presas a ela giram (como Mover só o nó). O fantasma mostra antes onde ela vai parar; travada ou longe demais, o rodapé explica. Esc ou clicar de novo na primeira cancela.
