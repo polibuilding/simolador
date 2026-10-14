@@ -14,6 +14,15 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.15 — Paleta e resumo deslizando, Arquivo em ícones, estoque com Kit 3 e Kit A · 13/10/2026
+- **Recolher e abrir a paleta sem pulo**: a paleta agora fica por cima da cena e desliza; a cena não muda de tamanho e a estrutura desliza junto, suave, para o meio da parte visível (antes a cena era redimensionada e a imagem pulava). Os eixos e a barra de baixo acompanham.
+- **Resumo no mesmo padrão**: **»** no canto de cima do painel recolhe; recolhido, fica só a **«** transparente no canto de cima da cena (o número de peças aparece ao passar o mouse). O painel entra deslizando.
+- **Painel da peça**: sai o bloco Peça (Trabalha a, Origem da medida).
+- **Arquivo**: no lugar do menu, ".mola" em cinza claro e os ícones **Novo**, **Abrir** e **Salvar** (Ctrl+O e Ctrl+S continuam).
+- **Estoque**: linhas do **Kit 3** (em breve) e do **Kit A** (versões 2.x), ainda desativadas.
+- **Símbolo do programa**: triângulos alternando azul e amarelo; por enquanto só na aba do navegador (saiu da barra de cima).
+- O símbolo da diagonal grande (D6x12) não fica mais cortado no menu pequeno.
+
 ## 1.14 — Paleta recolhível e marca do siMOLAdor · 13/10/2026
 - **Paleta de peças mais enxuta**: as bolinhas dos kits (verde = K1, vermelha = K2) ficam ao lado do código, numa linha só por peça.
 - **Recolher a paleta**: a seta **«** no canto superior direito da aba vira um **menu pequeno** sobre a cena, como o de Encaixe, Barras e Vista, só com os símbolos (separados por grupo; o nome, o que resta e o total aparecem ao passar o mouse). Clicar ou arrastar um símbolo funciona como na paleta. A seta **»** acima dele devolve a paleta inteira. Quando falta altura (ou quando entrarem mais peças, como as do kit 3), o menu passa a ter **duas colunas**. O programa lembra a escolha.

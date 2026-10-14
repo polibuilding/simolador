@@ -1,8 +1,8 @@
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, GizmoHelper, GizmoViewport, Lightformer, Line, OrbitControls } from "@react-three/drei";
 import { GizmoHelper as CubeHelperRaw } from "./gizmo/CubeHelper";
 import { GizmoViewcube as ViewCubeRaw } from "./gizmo/ViewCube";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { catalog } from "../core/catalog";
 import { boardsOf, componentOf, type Model, type Vec3 } from "../core/model";
@@ -438,6 +438,69 @@ const ViewCube = ViewCubeRaw as unknown as React.FC<Record<string, unknown>>;
 /** largura do painel da direita (por cima da cena), em px: o cubo de vistas se afasta dele */
 export const PROPS_W = 272;
 
+/** largura da paleta de peças (por cima da cena, à esquerda), em px */
+export const PALETTE_W = 210;
+/** duração da troca paleta ⇄ menu pequeno (igual à transição do CSS) */
+const SLIDE_MS = 260;
+
+/** Número que vai até o alvo suavemente (ease-out), para acompanhar a paleta abrindo e fechando. */
+function useEased(target: number, ms = SLIDE_MS) {
+  const [v, setV] = useState(target);
+  const cur = useRef(target);
+  useEffect(() => {
+    const from = cur.current;
+    if (from === target) return;
+    const t0 = performance.now();
+    let raf = 0;
+    const step = (t: number) => {
+      const k = Math.min(1, (t - t0) / ms);
+      cur.current = from + (target - from) * (1 - (1 - k) ** 3);
+      setV(cur.current);
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms]);
+  return v;
+}
+
+/** quanto da esquerda da cena a paleta cobre agora (anima junto com ela) */
+function usePaletteInset() {
+  const mini = useApp((s) => s.paletteMini);
+  return useEased(mini ? 0 : PALETTE_W);
+}
+
+/**
+ * A paleta fica por cima da cena (a cena não muda de tamanho ao abrir/fechar). Para a estrutura
+ * continuar no meio da parte visível, a imagem desliza meia paleta para a direita (view offset da câmera),
+ * acompanhando a animação.
+ */
+function PaletteShift() {
+  const inset = usePaletteInset();
+  const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera | THREE.OrthographicCamera;
+  const size = useThree((s) => s.size);
+  useFrame(() => {
+    const off = -inset / 2;
+    const v = camera.view;
+    if (v && v.enabled && v.offsetX === off && v.fullWidth === size.width && v.fullHeight === size.height && v.width === size.width) return;
+    if (inset === 0 && (!v || !v.enabled)) return;
+    if (inset === 0) camera.clearViewOffset();
+    else camera.setViewOffset(size.width, size.height, off, 0, size.width, size.height);
+  }, -1);
+  return null;
+}
+
+/** Eixos X, Y, Z no canto de baixo, à esquerda, fora da paleta. */
+function AxisGizmo() {
+  const inset = usePaletteInset();
+  return (
+    <GizmoHelper alignment="bottom-left" margin={[62 + inset, 62]} renderPriority={2}>
+      {/* Z é a altura: o eixo vertical da cena se chama Z (azul) e o de profundidade, Y (verde) */}
+      <GizmoViewport axisColors={["#e5484d", "#3d8bff", "#19a974"]} labels={["X", "Z", "Y"]} labelColor="#ffffff" axisHeadScale={0.95} font="bold 17px Arial" />
+    </GizmoHelper>
+  );
+}
+
 /** abertura da câmera em perspectiva (graus) */
 const FOV = 35;
 
@@ -606,11 +669,9 @@ export function Scene() {
           />
         </group>
       </CubeHelper>
-      {/* referência de eixos no canto inferior esquerdo (Y = vertical); clicar num eixo olha por ele */}
-      <GizmoHelper alignment="bottom-left" margin={[62, 62]} renderPriority={2}>
-        {/* Z é a altura: o eixo vertical da cena se chama Z (azul) e o de profundidade, Y (verde) */}
-        <GizmoViewport axisColors={["#e5484d", "#3d8bff", "#19a974"]} labels={["X", "Z", "Y"]} labelColor="#ffffff" axisHeadScale={0.95} font="bold 17px Arial" />
-      </GizmoHelper>
+      {/* referência de eixos no canto inferior esquerdo; clicar num eixo olha por ele */}
+      <AxisGizmo />
+      <PaletteShift />
       <Projection />
       <KeyCamera />
       <OrbitControls

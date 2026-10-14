@@ -47,6 +47,12 @@ function useDismiss(onClose: () => void) {
   return ref;
 }
 
+/** Kits que ainda vão entrar (aparecem no estoque, desativados). Somem da lista quando o kit entra no catálogo. */
+const SOON = [
+  { id: "3", name: "Kit 3", color: "#2F6FD6", tag: "em breve", note: "Kit 3 (azul): cabos, anéis, enrijecedores e duas chapas de base · em breve" },
+  { id: "A", name: "Kit A", color: "#9A6BD0", tag: "2.x", note: "Kit A: entra com as versões 2.x (arquitetônica)" },
+];
+
 function StockPanel({ onClose }: { onClose: () => void }) {
   const ref = useDismiss(onClose);
   const inventory = useApp((s) => s.inventory);
@@ -66,6 +72,13 @@ function StockPanel({ onClose }: { onClose: () => void }) {
           </span>
         </label>
       ))}
+      {SOON.filter((k) => !catalog.kits[k.id]).map((k) => (
+        <div key={k.id} className="stock-row soon" title={k.note}>
+          <i className="kit-swatch" style={{ background: k.color }} />
+          <span>{k.name}</span>
+          <span className="soon-tag">{k.tag}</span>
+        </div>
+      ))}
       <label className="stock-unlimited">
         <input
           type="checkbox"
@@ -81,6 +94,12 @@ function StockPanel({ onClose }: { onClose: () => void }) {
 /** Ícones simples (traço) da barra de cima */
 const Ico = {
   file: <path d="M4 1.5h5l3 3v10H4zM9 1.5v3h3" />,
+  /** novo: folha com + */
+  fileNew: <path d="M4 1.5h5l3 3v10H4zM9 1.5v3h3M8 7.5v4.5M5.75 9.75h4.5" />,
+  /** abrir: pasta */
+  open: <path d="M1.5 4.5v8.5h11.5l1.5-6H4L2.5 13M1.5 4.5V3h4.5l1.5 1.5h5V7" />,
+  /** salvar: seta para baixo na bandeja */
+  save: <path d="M8 2v8M4.75 6.75 8 10l3.25-3.25M2.5 11v2.5h11V11" />,
   undo: <path d="M5.5 4 2.5 7l3 3M2.5 7h7a3.5 3.5 0 0 1 0 7H7" />,
   redo: <path d="M10.5 4l3 3-3 3M13.5 7h-7a3.5 3.5 0 0 0 0 7H9" />,
   box: <path d="M2 5.5 8 2.5l6 3v6l-6 3-6-3zM2 5.5l6 3 6-3M8 8.5v6" />,
@@ -107,21 +126,16 @@ export const Icon = ({ d }: { d: JSX.Element }) => (
 );
 
 /**
- * Símbolo do siMOLAdor: o hexágono do Mola (seis triângulos em volta do centro) pintado como um cubo,
- * com o azul e o amarelo da Poli Building (topo amarelo, lado esquerdo azul, lado direito amarelo escuro).
+ * Símbolo do siMOLAdor: o hexágono do Mola (seis triângulos em volta do centro), com os triângulos
+ * alternando o azul e o amarelo da Poli Building. Por enquanto só no ícone da aba (public/favicon.svg).
  */
 export function SoftwareMark({ size = 22 }: { size?: number }) {
   // hexágono de vértice para cima, centro (16, 16)
   const V = [[16, 3], [27.3, 9.5], [27.3, 22.5], [16, 29], [4.7, 22.5], [4.7, 9.5]] as const;
-  const tri = (i: number, j: number) => `M16 16L${V[i][0]} ${V[i][1]}L${V[j][0]} ${V[j][1]}Z`;
-  const fills: [number, number, string][] = [
-    [5, 0, "#F6B035"], [0, 1, "#F6B035"], // topo
-    [1, 2, "#E0981E"], [2, 3, "#E0981E"], // lado direito
-    [3, 4, "#165078"], [4, 5, "#165078"], // lado esquerdo
-  ];
+  const tri = (i: number) => `M16 16L${V[i][0]} ${V[i][1]}L${V[(i + 1) % 6][0]} ${V[(i + 1) % 6][1]}Z`;
   return (
     <svg className="soft-mark" viewBox="0 0 32 32" width={size} height={size} aria-hidden>
-      {fills.map(([i, j, c]) => <path key={`${i}${j}`} d={tri(i, j)} fill={c} />)}
+      {V.map((_, i) => <path key={i} d={tri(i)} fill={i % 2 ? "#F6B035" : "#165078"} />)}
       <g fill="none" stroke="#1d2422" strokeWidth="1.6" strokeLinejoin="round">
         <path d={`M${V.map((v) => v.join(" ")).join("L")}Z`} />
         <path d="M16 3V29M4.7 9.5 27.3 22.5M27.3 9.5 4.7 22.5" />
@@ -131,7 +145,7 @@ export function SoftwareMark({ size = 22 }: { size?: number }) {
   );
 }
 
-/** Logos do Mola e da Poli Building (links) e o símbolo + nome do programa. Sem as imagens, só o símbolo e o nome. */
+/** Logos do Mola e da Poli Building (links) e o nome do programa. */
 function Brand() {
   const [ok, setOk] = useState<Record<string, boolean>>({ "logo-mola": true, "logo-grupo": true });
   const links = {
@@ -149,7 +163,6 @@ function Brand() {
       )}
       <span className="brand-sep" aria-hidden />
       <span className="brand-app" aria-label="siMOLAdor">
-        <SoftwareMark />
         <span className="brand-name">si<b>MOLA</b>dor</span>
       </span>
     </div>
@@ -195,7 +208,6 @@ export function Toolbar() {
   const { setName, undo, redo, setSheetsOpen, newProject, load, serialize } = useApp.getState();
   const fileRef = useRef<HTMLInputElement>(null);
   const [stockOpen, setStockOpen] = useState(false);
-  const [fileOpen, setFileOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [simOpen, setSimOpen] = useState(false);
   const closeStock = useCallback(() => setStockOpen(false), []);
@@ -230,18 +242,12 @@ export function Toolbar() {
     <header className="toolbar">
       <div className="tb-left">
         <Brand />
-        <div className="menu">
-          <button className="ghost" onClick={() => setFileOpen((o) => !o)} aria-expanded={fileOpen} aria-haspopup="menu">
-            <Icon d={Ico.file} /> Arquivo <span className="caret">▾</span>
-          </button>
-          {fileOpen && (
-            <div className="menu-list" role="menu" onMouseLeave={() => setFileOpen(false)}>
-              <button role="menuitem" onClick={() => (setFileOpen(false), doNew())}>Novo</button>
-              <button role="menuitem" onClick={() => (setFileOpen(false), doOpen())}>Abrir .mola… <kbd>Ctrl+O</kbd></button>
-              <button role="menuitem" onClick={() => (setFileOpen(false), doSave())}>Salvar .mola <kbd>Ctrl+S</kbd></button>
-            </div>
-          )}
-        </div>
+        <span className="file-tools" role="group" aria-label="Arquivo .mola">
+          <span className="file-ext" aria-hidden>.mola</span>
+          <button className="icon ghost" onClick={doNew} title="Novo" aria-label="Novo"><Icon d={Ico.fileNew} /></button>
+          <button className="icon ghost" onClick={doOpen} title="Abrir .mola (Ctrl+O)" aria-label="Abrir"><Icon d={Ico.open} /></button>
+          <button className="icon ghost" onClick={doSave} title="Salvar .mola (Ctrl+S)" aria-label="Salvar"><Icon d={Ico.save} /></button>
+        </span>
         <div className="menu">
           <button className="icon ghost" onClick={() => setConfigOpen((o) => !o)} aria-expanded={configOpen} title="Configurações" aria-label="Configurações">
             <Icon d={Ico.gear} />

@@ -4,6 +4,7 @@ import { available, usage } from "../core/inventory";
 import { boardsOf, componentOf, DISP_AXIS, len, sub, toDisp, type Vec3 } from "../core/model";
 import { boardCenter, boardName, boardSelection, boardSize, boardsGap } from "../core/boards";
 import { NumField } from "../render/Boards";
+import { Chevrons } from "./Palette";
 import { useApp, useModel } from "./store";
 
 const M = catalog.settings.modulo_mm;
@@ -249,12 +250,6 @@ function Selected() {
             {conns.length > 0 && <Row k="Ligações nas pontas" v={countText(conns.map((c) => c.code))} />}
           </dl>
         </Section>
-        <Section title="Peça">
-          <dl>
-            <Row k="Trabalha a" v={cable ? "só tração" : "tração, compressão e flexão"} />
-            <Row k="Origem da medida" v={STATUS_TEXT[p?.status ?? ""] ?? "—"} />
-          </dl>
-        </Section>
         <MoveHint only={cable ? "só a diagonal" : "só a mola"} />
         <Actions removeLabel={cable ? "Remover diagonal" : "Remover mola"} />
       </>
@@ -309,11 +304,6 @@ function Selected() {
       <Section title="Ligações">
         <dl>
           <Row k="Molas na esfera" v={countText(bars.map((m) => m.code))} />
-        </dl>
-      </Section>
-      <Section title="Peça">
-        <dl>
-          <Row k="Origem da medida" v={STATUS_TEXT[p?.status ?? ""] ?? "—"} />
         </dl>
       </Section>
       <MoveHint only="só a ligação" />
@@ -622,19 +612,19 @@ export function PropertiesPanel() {
   };
   return (
     <aside className="props">
-      <button className="props-close" onClick={close} title="Recolher o painel" aria-label="Recolher o painel">›</button>
+      <button className="props-close" onClick={close} title="Recolher o resumo" aria-label="Recolher o resumo"><Chevrons dir="right" /></button>
       {many ? <MultiSelected /> : sel ? <Selected /> : board ? <BoardSelected /> : <Summary />}
     </aside>
   );
 }
 
-/** Aba na borda direita da cena, com o painel recolhido. */
+/** Resumo recolhido: só a seta « transparente no canto de cima, à direita (como a » da paleta). */
 export function SummaryTab() {
   const model = useModel();
   const n = Object.keys(model.nodes).length + Object.keys(model.members).length + Object.keys(model.plates).length + Object.keys(model.connectors).length;
   return (
-    <button className="summary-tab" onClick={() => useApp.getState().setPropsOpen(true)} title="Abrir o resumo da estrutura">
-      <span aria-hidden>‹</span> Resumo{n ? ` · ${n} peças` : ""}
+    <button className="summary-open" onClick={() => useApp.getState().setPropsOpen(true)} title={`Abrir o resumo${n ? ` · ${n} peças` : ""}`} aria-label="Abrir o resumo">
+      <Chevrons dir="left" />
     </button>
   );
 }

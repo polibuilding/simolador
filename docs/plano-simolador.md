@@ -143,10 +143,11 @@ Exemplo de entrada em `catalog.json` (gerado de `data/parametros.xlsx` por `npm 
 - **Peças realistas, mas leves**: mola como hélice procedural metálica, esferas cromadas, ligações em plástico cinza claro, chapa de base preta com a grade branca igual à real (18 × 12 módulos).
 - **Layout** (interface leve, 1.12: traços finos, cantos suaves, pouco peso):
   - no topo, à esquerda: logos pequenas, siMOLAdor, Arquivo, Configurações (engrenagem), desfazer/refazer; no centro, o nome do projeto; à direita, o estoque, Pranchas e Simolar;
-  - à esquerda, a paleta de peças (código com as bolinhas dos kits ao lado; quantidade só com estoque limitado), até o fim da tela; a seta « a recolhe num menu pequeno sobre a cena, só com os símbolos (uma coluna, ou duas se faltar altura), e a seta » a devolve (1.14);
-  - marca: o hexágono do Mola com os triângulos no azul e amarelo da Poli Building; os símbolos do Kit Mola e do grupo levam ao site do Mola e ao Instagram da Poli Building;
+  - à esquerda, a paleta de peças (código com as bolinhas dos kits ao lado; quantidade só com estoque limitado), por cima da cena, até o fim da tela; a seta « a recolhe num menu pequeno só com os símbolos (uma coluna, ou duas se faltar altura) e a seta » a devolve; a cena não muda de tamanho: a imagem desliza junto com a paleta (1.14/1.15);
+  - marca: logos do Kit Mola (leva a br.molamodel.com) e da Poli Building (leva ao Instagram), e o nome siMOLAdor; o símbolo do programa (hexágono do Mola com os triângulos alternando azul e amarelo) aparece só na aba do navegador, por enquanto;
+  - Arquivo: ".mola" em cinza claro e os ícones Novo, Abrir e Salvar;
   - no centro, a cena 3D com o cubo de vistas (segue a projeção: paralela ou perspectiva), a dica da ferramenta em texto pequeno e a barra de baixo (Encaixe, Barras, Vista);
-  - à direita, o resumo / a peça selecionada, recolhível pela aba "‹ Resumo" (abre sozinho com algo selecionado), até o fim da tela;
+  - à direita, o resumo / a peça selecionada, por cima da cena: » no canto de cima recolhe; recolhido, fica só a « transparente no canto de cima da cena (abre sozinho com algo selecionado);
   - a versão, bem de leve, no canto inferior direito.
 - **Modo Prancha** em aba própria: folhas A3 com capa, plantas e vistas, carimbo editável, em preto e branco de desenho técnico.
 - **Feedback de encaixe**: fantasma verde ou vermelho, nós livres destacados ao aproximar a peça.
@@ -223,7 +224,7 @@ Análise estrutural: fora do escopo (Q09).
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0`, `v1.1`…).
 
-- **1.x — geométrica** (atual: 1.14): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.15): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: o módulo extra ajustável.
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
@@ -238,6 +239,7 @@ Em aberto:
 - **Medidas da CC e da CC90**: necessárias para desenhá-las (o programa usa um formato provisório até lá). **Lembrete pedido pela equipe (13/10): ajeitar as peças CC e CC90.**
 - **Configurações** (botão de engrenagem ao lado de Arquivo): hoje só mostra os valores internos (módulo, ângulos, chapa). **Lembrete pedido pela equipe (13/10): fazer a parte de configurações.**
 - **Simolar** (botão ao lado de Pranchas): por enquanto "em breve"; é a porta da linha 3.x (deformação, estaticidade, estabilidade).
+- **Kit 3 (próximo passo, pedido em 13/10)**: o estoque já mostra o Kit 3 (em breve) e o Kit A (versões 2.x). Peças do Kit 3 em `kit-mola-pecas.md`. As que o programa já sabe montar: esferas, RC90, GC, B6, B12, D6x6, D6x12 e as duas chapas. As novas pedem regra e desenho: **cabo** (3,35 m, cortado no comprimento que se quiser), **ligação de cabo**, **grampo de cabo** e **grampo múltiplo**, **anéis** (pequeno e médio) e **enrijecedores** de B6 e B12. Falta a equipe dizer como cada uma prende (na esfera, na mola, no cabo) e as medidas.
 - **Responsáveis por frente** (Q08).
 - **Repositório**: nome e dono no GitHub.
 

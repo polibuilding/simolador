@@ -163,7 +163,7 @@ export default function App() {
   return (
     <div className={`app${placing ? " placing" : ""}${propsOpen ? " props-open" : ""}${mini ? " palette-mini-on" : ""}`}>
       <Toolbar />
-      {!mini && <Palette />}
+      <Palette hidden={mini} />
       <main className="viewport" aria-label="Cena 3D">
         <Scene />
         {mini && <PaletteMini />}

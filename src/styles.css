@@ -531,7 +531,6 @@ dl { margin: 0 0 16px; }
 /* o painel da direita abre por cima da cena (a cena não muda de tamanho: nada pula de lugar ao selecionar) */
 .app { --props-w: 272px; }
 .app .props { grid-area: view; justify-self: end; width: var(--props-w); height: 100%; z-index: 7; box-shadow: -8px 0 24px rgba(20, 30, 28, 0.05); }
-.app.props-open .dock, .app.props-open .hint-line { left: calc((100% - var(--props-w)) / 2); }
 
 /* barra de cima: marca + Arquivo + configurações à esquerda, nome do projeto no centro, estoque e botões à direita */
 .toolbar { justify-content: space-between; gap: 12px; padding: 0 12px 0 14px; border-bottom: 1px solid var(--rule); }
@@ -634,10 +633,10 @@ dl { margin: 0 0 16px; }
 .dock-dot.green { background: #19a974; }
 .dock-dot.blue { background: #3d8bff; }
 .dock-dot.tri { background: linear-gradient(90deg, #ffc21a 50%, #ff7a1a 50%); }
-@container (max-width: 1050px) { .dock .txt { display: none; } .dock button { padding: 0 8px; } }
-@container (max-width: 760px) { .dock .lbl { display: none; } }
+@container (max-width: 1260px) { .dock .txt { display: none; } .dock button { padding: 0 8px; } }
+@container (max-width: 970px) { .dock .lbl { display: none; } }
 /* com o painel aberto, sobra menos cena: só ícones */
-@container (max-width: 1320px) { .dock.narrow .txt { display: none; } .dock.narrow button { padding: 0 8px; } }
+@container (max-width: 1530px) { .dock.narrow .txt { display: none; } .dock.narrow button { padding: 0 8px; } }
 .hint-line {
   position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); z-index: 4; margin: 0;
   width: max-content; max-width: min(760px, 80%); text-align: center; pointer-events: none;
@@ -682,7 +681,6 @@ dl { margin: 0 0 16px; }
 .palette-min:hover, .palette-max:hover { background: var(--hover); color: var(--ink); }
 
 /* paleta recolhida: menu pequeno sobre a cena (como a barra de baixo), só símbolos; vira duas colunas se faltar altura */
-.app.palette-mini-on { grid-template-columns: 0 1fr; }
 .palette-mini-wrap { position: absolute; left: 12px; top: 12px; bottom: 150px; z-index: 6; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; pointer-events: none; }
 .palette-mini-wrap > * { pointer-events: auto; }
 .palette-max { background: transparent; opacity: 0.7; }
@@ -699,3 +697,50 @@ dl { margin: 0 0 16px; }
 .pm-piece:hover:not(:disabled) { background: var(--hover); }
 .pm-piece.on { background: var(--on); box-shadow: inset 0 0 0 1px var(--rule-strong); }
 .pm-piece:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* 1.15: a paleta fica por cima da cena e desliza ao recolher; a cena não muda de tamanho (nada pula).
+   A imagem da cena acompanha a paleta (view offset da câmera, em Scene.tsx, com a mesma duração). */
+.app { --ease-slide: cubic-bezier(0.33, 1, 0.68, 1); --pal-w: 210px; --pal-cur: var(--pal-w); --props-cur: 0px; }
+.app.palette-mini-on { --pal-cur: 0px; }
+.app.props-open { --props-cur: var(--props-w); }
+@media (min-width: 901px) {
+  .app { grid-template-columns: 1fr; grid-template-areas: "top" "view"; }
+  .app .palette {
+    grid-area: view; justify-self: start; width: var(--pal-w); height: 100%; z-index: 7; box-shadow: 8px 0 24px rgba(20, 30, 28, 0.05);
+    transition: transform 0.26s var(--ease-slide), opacity 0.18s ease, visibility 0s linear 0s;
+  }
+  .app .palette.is-hidden {
+    transform: translateX(-100%); opacity: 0; visibility: hidden; pointer-events: none;
+    transition: transform 0.26s var(--ease-slide), opacity 0.2s ease 0.06s, visibility 0s linear 0.26s;
+  }
+}
+@media (max-width: 900px) {
+  .app { --pal-cur: 0px; }
+  .app .palette.is-hidden { display: flex; }
+  .palette-mini-wrap, .palette-min { display: none !important; }
+}
+.app .dock, .app .hint-line { left: calc(var(--pal-cur) + (100% - var(--pal-cur) - var(--props-cur)) / 2); transition: left 0.26s var(--ease-slide); }
+.palette-mini-wrap { animation: slide-in-left 0.24s var(--ease-slide) 0.08s both; }
+@keyframes slide-in-left { from { opacity: 0; transform: translateX(-10px); } }
+
+/* resumo: » recolhe (no canto de cima do painel); recolhido, só a « transparente no canto de cima da cena */
+.app .props { animation: slide-in-right 0.24s var(--ease-slide); }
+@keyframes slide-in-right { from { opacity: 0; transform: translateX(14px); } }
+.props-close { display: inline-flex; align-items: center; justify-content: center; color: #a1a9a6; }
+.summary-open {
+  position: absolute; top: 12px; right: 12px; z-index: 6; display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #a1a9a6; opacity: 0.7; cursor: pointer;
+  animation: slide-in-right 0.24s var(--ease-slide) 0.08s both;
+}
+.summary-open:hover { background: var(--hover); color: var(--ink); opacity: 1; }
+
+/* Arquivo: ".mola" bem claro e os ícones novo, abrir, salvar */
+.file-tools { display: inline-flex; align-items: center; gap: 0; margin-left: 4px; }
+.file-ext { font-size: 11.5px; font-weight: 500; color: #b3bab7; letter-spacing: 0.02em; margin: 0 3px 0 6px; user-select: none; }
+
+/* estoque: kits que ainda vão entrar */
+.stock-row.soon { opacity: 0.55; cursor: default; }
+.soon-tag { font-size: 11px; color: var(--graphite); background: var(--hover); border-radius: 6px; padding: 1px 7px; }
+.props .props-close { top: 10px; right: 10px; width: 26px; height: 26px; padding: 0; border: 0; background: transparent; color: #a1a9a6; }
+.props .props-close:hover { background: var(--hover); color: var(--ink); }
+.props .props-close svg { width: 14px; height: 14px; flex: none; }

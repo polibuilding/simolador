@@ -46,9 +46,9 @@ export function Icon({ code }: { code: string }) {
     const [a, b] = p.spanM ?? [6, 6];
     const diag = Math.hypot(a, b);
     const L = 12 + (diag / Math.hypot(6, 12)) * 26;
-    const ang = Math.atan2(b, a * 2.2); // inclinação suave
-    const dx = (L / 2) * Math.cos(ang);
-    const dy = (L / 2) * Math.sin(ang);
+    // inclinação suave, sem passar da altura do símbolo (o D6x12 era cortado em cima e embaixo)
+    const dy = Math.min((L / 2) * Math.sin(Math.atan2(b, a * 2.2)), 7);
+    const dx = Math.sqrt((L / 2) ** 2 - dy * dy);
     const [x1, y1, x2, y2] = [24 - dx, 12 + dy, 24 + dx, 12 - dy];
     return (
       <svg viewBox="0 0 48 24" aria-hidden>
@@ -123,16 +123,16 @@ function pieceHandlers(code: string, armed: boolean, empty: boolean, viaDrag: bo
   };
 }
 
-const Chevrons = ({ dir }: { dir: "left" | "right" }) => (
+export const Chevrons = ({ dir }: { dir: "left" | "right" }) => (
   <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     {dir === "left" ? <path d="M8.5 4 4.5 8l4 4M12.5 4l-4 4 4 4" /> : <path d="M7.5 4l4 4-4 4M3.5 4l4 4-4 4" />}
   </svg>
 );
 
-export function Palette() {
+export function Palette({ hidden = false }: { hidden?: boolean }) {
   const { groups, info, tool } = usePalette();
   return (
-    <aside className="palette" aria-label="Peças">
+    <aside className={`palette${hidden ? " is-hidden" : ""}`} aria-label="Peças" aria-hidden={hidden}>
       <button className="palette-min" onClick={() => useApp.getState().setPaletteMini(true)} title="Recolher a paleta (fica um menu pequeno só com os símbolos)" aria-label="Recolher a paleta">
         <Chevrons dir="left" />
       </button>
