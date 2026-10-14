@@ -720,6 +720,11 @@ export function Placement() {
     };
 
     const update = (ev: PointerEvent) => {
+      // o "clique escolhe a esfera" de uma ligação só vale no mesmo movimento do cursor: zera sempre, e a ligação
+      // (linkStep/ropeStep) liga de novo se for o caso. Antes ficava do comando anterior e o clique só trocava a esfera
+      // de partida, sem colocar nada (ex.: depois de ligar uma mola, o caminho azul ou outra peça não aceitavam o clique).
+      linkPick = null;
+      linkGhost = null;
       const st = useApp.getState();
       const rect = el.getBoundingClientRect();
       if (boxStart && st.tool.kind === "select") {

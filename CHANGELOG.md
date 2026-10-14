@@ -14,6 +14,9 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.23.1 — Correção: clique que não colocava a peça · 14/10/2026
+- Depois de **ligar uma mola clicando nas duas esferas**, o programa guardava a esfera que estava sob o cursor e, nos comandos seguintes (outra peça, GC, caminho azul), o clique só trocava a esfera de partida da ligação, sem colocar nada, até recarregar a página. Agora isso vale só enquanto a própria ligação está em uso.
+
 ## 1.23 — O que mexe junto (Tab amplia) e GC perto da estrutura · 14/10/2026
 - **Tab amplia o que mexe junto**: no duplo clique, começa pelo menor conjunto que mexe e o Tab vai ampliando: **só a peça** (as vizinhas paradas; numa esfera, o "mover só o nó") → **as vizinhas** (a próxima liberdade) → cada **pavimento** (tudo daquela altura para cima; o de baixo fica parado e com a mesma forma) → **a estrutura toda**, até as GC. Shift+Tab reduz. O rodapé diz qual conjunto está valendo ("Mexe: pavimento Z ≥ 12 M (2 de 4)") e as esferas que podem mexer ganham um halo azul leve. Só aparecem os conjuntos que mexem e que trazem uma liberdade nova.
 - **Paradas do caminho azul agora nas setas ← / →** (limites azul/vermelho e posições na horizontal/vertical), porque o Tab passou a ampliar o conjunto.
