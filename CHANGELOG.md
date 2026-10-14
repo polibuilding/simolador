@@ -14,6 +14,14 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.16 — Caminho azul e vermelho, resumo deslizando · 13/10/2026
+- **Caminho da esfera em azul e vermelho**: ao mover só a esfera (duplo clique), o caminho já mostra em **vermelho** onde ela não pode ficar (ângulo mínimo entre molas, 40° na GC, cruzamentos, abaixo da chapa...) e em azul onde pode. Na esfera de uma mola, a superfície e os anéis ficam pintados; no círculo de duas molas, os trechos.
+- **Tab pula para os limites** entre azul e vermelho (Shift+Tab volta); os limites do círculo aparecem como pontinhos azuis. Na esfera, os limites são os do meridiano que passa pelo cursor. Mexer o cursor volta ao normal.
+- **Resumo desliza** como a paleta: abre e fecha por cima da cena, a estrutura desliza junto para o meio da parte visível e a barra de baixo acompanha sem saltar (os textos dela encolhem suavemente, só quando não cabem).
+- **Menu pequeno de peças** com estoque limitado: **restam/total** bem clarinho ao lado de cada símbolo.
+- **Menos orientações**: saíram "setas movem · posição, giro e nome no painel" do menu da chapa, os textos de atalhos do painel da chapa e da seleção, a linha "arraste / duplo clique" do painel da peça e as listas de ajuda da estrutura vazia (tudo continua na lista de atalhos, ? ou H). Dicas da barra de baixo mais curtas.
+- Correções: menus do topo (estoque, arquivo) por cima do resumo e da paleta; sem barra de rolagem horizontal com os painéis recolhidos; a dica da barra de baixo não passa por cima dos eixos.
+
 ## 1.15 — Paleta e resumo deslizando, Arquivo em ícones, estoque com Kit 3 e Kit A · 13/10/2026
 - **Recolher e abrir a paleta sem pulo**: a paleta agora fica por cima da cena e desliza; a cena não muda de tamanho e a estrutura desliza junto, suave, para o meio da parte visível (antes a cena era redimensionada e a imagem pulava). Os eixos e a barra de baixo acompanham.
 - **Resumo no mesmo padrão**: **»** no canto de cima do painel recolhe; recolhido, fica só a **«** transparente no canto de cima da cena (o número de peças aparece ao passar o mouse). O painel entra deslizando.

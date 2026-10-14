@@ -8,7 +8,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 import { catalog } from "../core/catalog";
-import { connectReach, moveGroup, nodeMoveOptions } from "../core/edit";
+import { connectReach, locusStatus, moveGroup, nodeMoveOptions, sphereMeridianLimits, type LocusStatus } from "../core/edit";
 import { pasteClip, transformClip, type Clip, type PasteResult } from "../core/clipboard";
 import { AXES, add, boardsOf, findNodeAt, len, norm, rotDir, scale, sub, toDisp, type Model, type Vec3 } from "../core/model";
 import { frameRadAt } from "../core/boards";
@@ -132,6 +132,14 @@ export function nodeOptionsFor(model: Model, nodeId: string) {
   if (nodeMoveCache && nodeMoveCache.model === model && nodeMoveCache.nodeId === nodeId) return nodeMoveCache.r;
   nodeMoveCache = { model, nodeId, r: nodeMoveOptions(catalog, model, nodeId) };
   return nodeMoveCache.r;
+}
+
+// trechos azuis e vermelhos do caminho (recalcula quando muda o modelo ou o nó)
+let locusCache: { model: Model; nodeId: string; r: LocusStatus } | null = null;
+export function locusStatusFor(model: Model, nodeId: string): LocusStatus {
+  if (locusCache && locusCache.model === model && locusCache.nodeId === nodeId) return locusCache.r;
+  locusCache = { model, nodeId, r: locusStatus(nodeOptionsFor(model, nodeId)) };
+  return locusCache.r;
 }
 
 /** A GC sendo colocada/movida "puxa" para um ponto-guia perto do cursor (na tela), em qualquer modo de encaixe. */
@@ -334,6 +342,7 @@ export function Placement() {
     // A esfera sob o cursor vira a partida e fica até outra esfera ser apontada; perto de um ponto amarelo,
     // o fantasma mostra o triângulo inteiro (R: só a barra).
     let triTab: { x: number; y: number; anchor: string | null } | null = null;
+    let nodeTab: { x: number; y: number; nodeId: string; pts: Vec3[]; start: number } | null = null;
     const triangleStep = (ev: PointerEvent, rect: DOMRect, model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"]): boolean => {
       const st = useApp.getState();
       const dpx = (p: Vec3) => {
@@ -530,15 +539,51 @@ export function Placement() {
           const q = toScreen(w, rect);
           return q.z > 1 ? Infinity : Math.hypot(q.x - ev.clientX, q.y - ev.clientY);
         };
-        // 1) posições "redondas" (eixos, passos de 15°) perto do cursor: encaixa nelas
+        // Tab: pula entre os limites azul ↔ vermelho do caminho (mexer o cursor mais de TAB_PX volta ao normal)
+        if (nodeTab && (!st.snapCycle || nodeTab.nodeId !== tool.nodeId || Math.hypot(ev.clientX - nodeTab.x, ev.clientY - nodeTab.y) > TAB_PX)) {
+          nodeTab = null;
+          useApp.setState({ ...(st.snapCycle ? { snapCycle: 0 } : {}), nodeLimits: null });
+        }
+        const loc = set.locus;
+        let tabInfo = "";
         let pick: Vec3 | null = null;
+        if (useApp.getState().snapCycle && loc) {
+          if (!nodeTab) {
+            // na esfera, os limites são os do meridiano que passa pelo cursor
+            let toward: Vec3 = node.pos;
+            if (loc.kind === "sphere") {
+              const ray = rayAt(ev, rect);
+              const C = toWorld(loc.c);
+              const hit = ray.intersectSphere(new THREE.Sphere(C, loc.r * M), new THREE.Vector3());
+              if (hit) toward = toModule(hit);
+            }
+            const pts = loc.kind === "sphere" ? sphereMeridianLimits(set, toward) : locusStatusFor(present, tool.nodeId).limits;
+            let start = 0;
+            pts.forEach((p, i) => { if (dpx(p) < dpx(pts[start])) start = i; });
+            nodeTab = { x: ev.clientX, y: ev.clientY, nodeId: tool.nodeId, pts, start };
+          }
+          const n = nodeTab.pts.length;
+          if (!n) {
+            nodeTab = null;
+            useApp.setState({ snapCycle: 0, nodeLimits: null });
+            return st.setGhost(null, "Esse caminho não tem limites: é todo azul (ou todo vermelho).");
+          }
+          const c = useApp.getState().snapCycle;
+          const i = (((nodeTab.start + (c > 0 ? c - 1 : c)) % n) + n) % n;
+          pick = nodeTab.pts[i];
+          const cur = useApp.getState().nodeLimits;
+          if (!cur || cur.i !== i || cur.pts !== nodeTab.pts) useApp.setState({ nodeLimits: { pts: nodeTab.pts, i } });
+          tabInfo = ` Limite ${i + 1} de ${n}: Tab próximo, Shift+Tab volta.`;
+        }
+        // 1) posições "redondas" (eixos, passos de 15°) perto do cursor: encaixa nelas
         let best = 14;
-        for (const o of set.options) {
-          const d = dpx(o.pos);
-          if (o.check.ok && d < best) (best = d), (pick = o.pos);
+        if (!pick) {
+          for (const o of set.options) {
+            const d = dpx(o.pos);
+            if (o.check.ok && d < best) (best = d), (pick = o.pos);
+          }
         }
         // 2) contínuo, pelo caminho
-        const loc = set.locus;
         if (!pick && loc) {
           if (loc.kind === "sphere") {
             const ray = rayAt(ev, rect);
@@ -569,7 +614,9 @@ export function Placement() {
         const moved = len(sub(o.pos, node.pos)).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
         return st.setGhost(
           { kind: "group", model: o.model, ids: o.ids, check: o.check },
-          o.check.ok ? `Clique para deixar o nó em ${f(o.pos)} (anda ${moved} M; as barras acompanham). Esc cancela.` : o.check.errors[0],
+          o.check.ok
+            ? `Clique para deixar o nó em ${f(o.pos)} (anda ${moved} M).${tabInfo || (locusStatusFor(present, tool.nodeId).limits.length || loc?.kind === "sphere" ? " Tab pula para os limites." : "")}`
+            : `${o.check.errors[0]}${tabInfo || " Tab pula para os limites do trecho azul."}`,
         );
       }
 
@@ -809,6 +856,12 @@ export function Placement() {
       }
       if (s.tool !== p.tool && s.linkFrom && !(s.tool.kind === "place" && p.tool.kind === "place" && s.tool.code === p.tool.code)) {
         useApp.setState({ linkFrom: null });
+      }
+      // mover só o nó: ao sair ou depois de mexer, o Tab recomeça
+      if ((s.history !== p.history || s.tool !== p.tool) && (nodeTab || s.nodeLimits) && p.tool.kind === "moveNode") {
+        nodeTab = null;
+        useApp.setState({ snapCycle: 0, nodeLimits: null });
+        return;
       }
       // depois de colocar a peça, o Tab recomeça do ponto mais perto
       if ((s.history !== p.history || s.tool !== p.tool) && s.snapCycle && s.tool.kind === "place" && catalog.pieces[s.tool.code]?.type === "bar") {

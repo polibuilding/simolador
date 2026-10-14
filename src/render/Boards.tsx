@@ -84,7 +84,6 @@ function BoardOverlay({ model, b }: { model: Model; b: Board }) {
         <div className="board-menu" {...stop}>
           <div className="board-menu-head">
             <strong>{name}</strong>
-            <span className="board-ref">setas movem · posição, giro e nome no painel</span>
           </div>
           <div className="board-menu-actions">
             <button onClick={() => st.selectBoard(b.id)} title="Seleciona as peças desta chapa (para copiar, mover ou apagar)">Selecionar peças</button>

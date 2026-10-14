@@ -69,6 +69,8 @@ interface State {
   cyclePiece: (dir: 1 | -1, groups: string[][]) => void;
   /** Tab: qual dos pontos sobrepostos perto do cursor vale */
   snapCycle: number;
+  /** mover só o nó com Tab: os limites azul ↔ vermelho do caminho e qual está escolhido */
+  nodeLimits: { pts: Vec3[]; i: number } | null;
   /** barras inclinadas ligadas (botão na barra de ferramentas ou tecla I) */
   incline: boolean;
   /** modo das barras: só eixos, passos de 15° ou livre (qualquer direção 3D, com encaixes) */
@@ -270,6 +272,7 @@ export const useApp = create<State>((set, get) => ({
     set({ hint: `${catalog.pieces[next]?.name ?? next} (Q/E trocam).` });
   },
   snapCycle: 0,
+  nodeLimits: null,
   incline: false,
   barMode: "eixos",
   shiftHeld: false,
@@ -342,7 +345,7 @@ export const useApp = create<State>((set, get) => ({
   startMoveNode: (viaDrag) => {
     const sel = get().selection;
     if (sel?.kind !== "node") return set({ hint: "Selecione uma esfera ou ligação de base para mover só o nó." });
-    set({ tool: { kind: "moveNode", nodeId: sel.id, viaDrag }, ghost: null, hint: "Leve a esfera pelo caminho azul: as barras acompanham. Clique para deixar; Esc cancela." });
+    set({ tool: { kind: "moveNode", nodeId: sel.id, viaDrag }, ghost: null, hint: "Leve a esfera pelo caminho: azul pode, vermelho não. Tab pula para os limites; Esc cancela." });
   },
   startMoveStructure: (viaDrag) => {
     const s = get();
@@ -401,12 +404,12 @@ export const useApp = create<State>((set, get) => ({
   boardExtra: [],
   lastNudge: "",
   lastNudgeAt: 0,
-  pinBoard: (selectedBoard) => set({ selectedBoard, boardExtra: [], selection: null, multi: [], hint: selectedBoard ? `${boardName(boardsOf(get().history.present).find((b) => b.id === selectedBoard) ?? { id: selectedBoard, x: 0, z: 0 })} selecionada: setas movem, Ctrl+clique soma outra chapa, Delete apaga, Esc solta.` : null }),
+  pinBoard: (selectedBoard) => set({ selectedBoard, boardExtra: [], selection: null, multi: [], hint: selectedBoard ? `${boardName(boardsOf(get().history.present).find((b) => b.id === selectedBoard) ?? { id: selectedBoard, x: 0, z: 0 })} selecionada.` : null }),
   toggleBoard: (id) => {
     const s = get();
     const cur = boardSel(s);
     const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
-    set({ selectedBoard: next[0] ?? null, boardExtra: next.slice(1), selection: null, multi: [], hint: next.length > 1 ? `${next.length} chapas selecionadas: defina a distância entre elas no painel; as setas movem todas.` : null });
+    set({ selectedBoard: next[0] ?? null, boardExtra: next.slice(1), selection: null, multi: [], hint: next.length > 1 ? `${next.length} chapas selecionadas.` : null });
   },
   removeSelectedBoard: () => {
     const s = get();
@@ -426,7 +429,7 @@ export const useApp = create<State>((set, get) => ({
     const s = get();
     const r = addBoard(catalog, s.history.present, fromId, side);
     if (!r.model) return set({ hint: r.error ?? null });
-    set({ history: push(s.history, r.model), hoverBoard: null, selectedBoard: r.id ?? null, boardExtra: [], selection: null, multi: [], hint: "Chapa nova (selecionada): as setas movem; nome, centro e giro no painel; Ctrl+clique em outra chapa para a distância entre elas. Esc solta." });
+    set({ history: push(s.history, r.model), hoverBoard: null, selectedBoard: r.id ?? null, boardExtra: [], selection: null, multi: [], hint: "Chapa nova." });
   },
   removeBoardId: (id) => {
     const s = get();
@@ -452,7 +455,7 @@ export const useApp = create<State>((set, get) => ({
     set({
       history: merge ? { ...s.history, present: r.model } : push(s.history, r.model),
       lastNudge: ids.join(","), lastNudgeAt: performance.now(),
-      hint: `${ids.length > 1 ? `${ids.length} chapas` : boardName(b)}: centro em (${f(cx)}; ${f(cz)}). Setas: 1 M · Shift: 6 M · Alt ou Ctrl: 1/4 M, nos eixos da chapa.`,
+      hint: `${ids.length > 1 ? `${ids.length} chapas` : boardName(b)}: centro em (${f(cx)}; ${f(cz)}).`,
     });
   },
   setBoardCenterOf: (id, cx, cz) => {

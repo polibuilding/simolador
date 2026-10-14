@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
 import { available, usage } from "../core/inventory";
 import { useApp, useModel } from "./store";
@@ -192,12 +192,26 @@ export function PaletteMini() {
   };
   let cols = 1;
   while (cols < 4 && heightFor(cols) > avail) cols++;
+  // com estoque limitado: "restam/total" bem clarinho ao lado de cada símbolo, fora do menu
+  // (com duas colunas, os números ficam lado a lado, na ordem das colunas)
+  const nav = useRef<HTMLElement>(null);
+  const [marks, setMarks] = useState<{ code: string; top: number; left: number }[]>([]);
+  useLayoutEffect(() => {
+    const el = nav.current;
+    if (!el) return;
+    const btns = [...el.querySelectorAll<HTMLButtonElement>(".pm-piece")];
+    if (!btns.length) return marks.length ? setMarks([]) : undefined;
+    const x0 = Math.min(...btns.map((b) => b.offsetLeft));
+    const base = el.offsetLeft + el.offsetWidth + 8;
+    const next = btns.map((b) => ({ code: b.dataset.code!, top: b.offsetTop + b.offsetHeight / 2, left: base + Math.round((b.offsetLeft - x0) / 46) * 54 }));
+    if (JSON.stringify(next) !== JSON.stringify(marks)) setMarks(next);
+  });
   return (
     <div ref={wrap} className="palette-mini-wrap" onPointerDown={(e) => e.stopPropagation()}>
       <button className="palette-max" onClick={() => useApp.getState().setPaletteMini(false)} title="Abrir a paleta de peças" aria-label="Abrir a paleta">
         <Chevrons dir="right" />
       </button>
-      <nav className="palette-mini" aria-label="Peças" data-cols={cols} style={{ ["--cols" as string]: cols }}>
+      <nav ref={nav} className="palette-mini" aria-label="Peças" data-cols={cols} style={{ ["--cols" as string]: cols }}>
         {groups.map((g, gi) => (
           <div key={g.title} className="pm-group" role="group" aria-label={g.title}>
             {gi > 0 && <span className="pm-sep" />}
@@ -207,6 +221,7 @@ export function PaletteMini() {
               return (
                 <button
                   key={code}
+                  data-code={code}
                   className={`pm-piece${armed ? " on" : ""}`}
                   aria-pressed={armed}
                   disabled={empty}
@@ -220,6 +235,15 @@ export function PaletteMini() {
           </div>
         ))}
       </nav>
+      {marks.map(({ code, top, left }) => {
+        const { total, left: rest } = info(code);
+        if (!Number.isFinite(total)) return null;
+        return (
+          <span key={code} className={`pm-count${rest <= 0 ? " out" : ""}`} style={{ top, left }} aria-hidden>
+            <b>{rest}</b>/{total}
+          </span>
+        );
+      })}
     </div>
   );
 }

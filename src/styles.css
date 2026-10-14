@@ -20,6 +20,7 @@
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
+.app { overflow: hidden; } /* a paleta e o resumo recolhidos ficam fora da tela, sem barra de rolagem */
 body {
   font-family: var(--font);
   font-size: 14px;
@@ -633,10 +634,12 @@ dl { margin: 0 0 16px; }
 .dock-dot.green { background: #19a974; }
 .dock-dot.blue { background: #3d8bff; }
 .dock-dot.tri { background: linear-gradient(90deg, #ffc21a 50%, #ff7a1a 50%); }
-@container (max-width: 1260px) { .dock .txt { display: none; } .dock button { padding: 0 8px; } }
+/* sem espaço (paleta e resumo abertos, tela estreita): só ícones; os textos encolhem deslizando */
+.dock button { gap: 0; transition: padding 0.26s var(--ease-slide, ease), background-color 0.15s; }
+.dock .txt { display: inline-block; max-width: 96px; margin-left: 6px; overflow: hidden; vertical-align: middle; transition: max-width 0.26s var(--ease-slide, ease), margin 0.26s var(--ease-slide, ease), opacity 0.2s ease; }
+.dock.narrow .txt { max-width: 0; margin-left: 0; opacity: 0; }
+.dock.narrow button { padding: 0 8px; }
 @container (max-width: 970px) { .dock .lbl { display: none; } }
-/* com o painel aberto, sobra menos cena: só ícones */
-@container (max-width: 1530px) { .dock.narrow .txt { display: none; } .dock.narrow button { padding: 0 8px; } }
 .hint-line {
   position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); z-index: 4; margin: 0;
   width: max-content; max-width: min(760px, 80%); text-align: center; pointer-events: none;
@@ -724,14 +727,20 @@ dl { margin: 0 0 16px; }
 @keyframes slide-in-left { from { opacity: 0; transform: translateX(-10px); } }
 
 /* resumo: » recolhe (no canto de cima do painel); recolhido, só a « transparente no canto de cima da cena */
-.app .props { animation: slide-in-right 0.24s var(--ease-slide); }
-@keyframes slide-in-right { from { opacity: 0; transform: translateX(14px); } }
+@media (min-width: 901px) {
+  .app .props { transition: transform 0.26s var(--ease-slide), opacity 0.18s ease, visibility 0s linear 0s; }
+  .app .props.is-hidden {
+    transform: translateX(100%); opacity: 0; visibility: hidden; pointer-events: none;
+    transition: transform 0.26s var(--ease-slide), opacity 0.2s ease 0.06s, visibility 0s linear 0.26s;
+  }
+}
 .props-close { display: inline-flex; align-items: center; justify-content: center; color: #a1a9a6; }
 .summary-open {
   position: absolute; top: 12px; right: 12px; z-index: 6; display: inline-flex; align-items: center; justify-content: center;
   width: 26px; height: 26px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #a1a9a6; opacity: 0.7; cursor: pointer;
-  animation: slide-in-right 0.24s var(--ease-slide) 0.08s both;
+  transition: opacity 0.2s ease 0.12s, visibility 0s linear 0s;
 }
+.summary-open.is-hidden { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.08s ease, visibility 0s linear 0.08s; }
 .summary-open:hover { background: var(--hover); color: var(--ink); opacity: 1; }
 
 /* Arquivo: ".mola" bem claro e os ícones novo, abrir, salvar */
@@ -744,3 +753,13 @@ dl { margin: 0 0 16px; }
 .props .props-close { top: 10px; right: 10px; width: 26px; height: 26px; padding: 0; border: 0; background: transparent; color: #a1a9a6; }
 .props .props-close:hover { background: var(--hover); color: var(--ink); }
 .props .props-close svg { width: 14px; height: 14px; flex: none; }
+
+/* menu pequeno com estoque limitado: restam/total bem clarinho, fora do menu */
+.palette-mini-wrap > .pm-count {
+  position: absolute; transform: translateY(-50%); pointer-events: none; white-space: nowrap;
+  font-size: 10.5px; color: #b3bab7; font-variant-numeric: tabular-nums; text-shadow: 0 0 3px var(--bg, #eef0ef);
+}
+.pm-count b { font-weight: 600; color: #8f9894; }
+.pm-count.out, .pm-count.out b { color: #e5a3a5; }
+/* a dica cabe na parte visível da cena, sem passar por cima dos eixos */
+.app .hint-line { max-width: min(760px, calc(100% - var(--pal-cur) - var(--props-cur) - 260px)); }

@@ -99,6 +99,11 @@ function useShortcuts() {
         st.startMoveSelection();
       } else if (!mod && k === "m" && st.selection) {
         st.startMove(false);
+      } else if (e.key === "Tab" && !mod && st.tool.kind === "moveNode") {
+        // mover só o nó: Tab pula entre os limites azul ↔ vermelho do caminho (Shift+Tab volta)
+        e.preventDefault();
+        const next = st.snapCycle + (e.shiftKey ? -1 : 1);
+        useApp.setState({ snapCycle: next || (e.shiftKey ? -1 : 1) });
       } else if (e.key === "Tab" && !mod && (st.tool.kind === "moveGroup" || (st.tool.kind === "place" && st.tool.code === "GC"))) {
         // pontos de encaixe sobrepostos perto do cursor: Tab escolhe o próximo
         e.preventDefault();
@@ -169,9 +174,9 @@ export default function App() {
         {mini && <PaletteMini />}
         <HintLine />
         <Dock />
-        {!propsOpen && <SummaryTab />}
+        <SummaryTab hidden={propsOpen} />
       </main>
-      {propsOpen && <PropertiesPanel />}
+      <PropertiesPanel hidden={!propsOpen} />
       <VersionTag />
       <SelectBox />
       <Shortcuts />

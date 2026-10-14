@@ -1,3 +1,4 @@
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
 import { useApp } from "./store";
 
@@ -35,10 +36,30 @@ export function Dock() {
   const inertia = useApp((s) => s.inertia);
   const st = useApp.getState();
   const step = catalog.settings.passo_inclinacao_graus ?? 15;
-  // com o painel da direita aberto (por cima da cena), a barra encolhe para só ícones
-  const narrow = useApp((s) => s.propsOpen || !!s.selection || s.multi.length > 0 || !!s.selectedBoard);
+  // a barra fica só com ícones quando não cabe na parte visível da cena (entre a paleta e o resumo);
+  // os textos encolhem com transição, junto com a paleta e o resumo deslizando
+  const propsOpen = useApp((s) => s.propsOpen || !!s.selection || s.multi.length > 0 || !!s.selectedBoard);
+  const mini = useApp((s) => s.paletteMini);
+  const ref = useRef<HTMLElement>(null);
+  const full = useRef(0);
+  const [view, setView] = useState(0);
+  useEffect(() => {
+    const vp = ref.current?.parentElement;
+    if (!vp) return;
+    const ro = new ResizeObserver(() => setView(vp.clientWidth));
+    ro.observe(vp);
+    return () => ro.disconnect();
+  }, []);
+  const wide = typeof window !== "undefined" && window.innerWidth > 900;
+  const visible = view - (wide && !mini ? 210 : 0) - (wide && propsOpen ? 272 : 0);
+  // sobra dos lados pelo menos o espaço dos eixos X, Y, Z (canto de baixo, à esquerda)
+  const narrow = full.current > 0 && visible < full.current + 260;
+  useLayoutEffect(() => {
+    // largura da barra com os textos (medida quando estão à mostra)
+    if (!narrow && ref.current) full.current = Math.max(full.current, ref.current.scrollWidth);
+  });
   return (
-    <nav className={`dock${narrow ? " narrow" : ""}`} aria-label="Encaixe, barras e vista" onPointerDown={(e) => e.stopPropagation()}>
+    <nav ref={ref} className={`dock${narrow ? " narrow" : ""}`} aria-label="Encaixe, barras e vista" onPointerDown={(e) => e.stopPropagation()}>
       <span className="lbl">Encaixe</span>
       <Toggle on={snap} onClick={() => st.setSnap(!snap)} title="Grade: pontos verdes de encaixe e grade da chapa para a GC (G)" icon={<i className="dock-dot green" />} />
       <Toggle on={guides.blue} onClick={() => st.setGuides({ ...guides, blue: !guides.blue })} title="Vão: GC a um vão de barra de outra GC, em X ou Y (V)" icon={<i className="dock-dot blue" />} />
