@@ -10,7 +10,7 @@ import { markerPos, type Candidate } from "../core/snapping";
 import { boardCorners } from "../core/boards";
 import { barGuidesFor, candidatesFor, guidesFor, locusStatusFor, nodeOptionsFor, Placement } from "../interaction/Placement";
 import { locusCirclePoint, locusSpherePoint } from "../core/edit";
-import { useApp, useDisplayModel, useModel, inclineOn, workingModel } from "../ui/store";
+import { panelOpen, useApp, useDisplayModel, useModel, inclineOn, workingModel } from "../ui/store";
 import type { Sel } from "../core/edit";
 import { Bar, GroundConnection, Sphere, type Look } from "./pieces/pieces";
 import { Cable, ContinuousConnector, PlateMesh, RigidConnector, Rope } from "./pieces/more";
@@ -56,6 +56,8 @@ function ModelGroup({
             e.stopPropagation();
             st.setPendingDrag(null);
             select({ kind, id });
+            // o resumo abre para mostrar a peça, até o Esc
+            if (!st.propsOpen) useApp.setState({ propsPeek: true });
             if (kind === "node") useApp.getState().startMoveNode(false);
             else useApp.getState().startMove(false);
           },
@@ -101,6 +103,7 @@ function ModelView() {
   const selection = useApp((s) => s.selection);
   const multi = useApp((s) => s.multi);
   const hoverId = useApp((s) => s.hoverId);
+  const toolHover = useApp((s) => s.toolHover);
   const selecting = useApp((s) => s.tool.kind === "select");
   const groupGhost = useApp((s) => (s.ghost?.kind === "group" ? s.ghost : null));
   const multiIds = useMemo(() => new Set(multi.map((x) => x.id)), [multi]);
@@ -109,7 +112,7 @@ function ModelView() {
       ? "normal"
       : selection?.id === id || multiIds.has(id)
         ? "selected"
-        : selecting && hoverId === id
+        : (selecting && hoverId === id) || toolHover === id
           ? "hover"
           : "normal";
   // durante "mover estrutura", a estrutura original some e aparece o fantasma
@@ -542,7 +545,7 @@ function usePaletteInset() {
 
 /** quanto da direita da cena o resumo cobre agora (anima junto com ele) */
 function usePropsInset() {
-  const open = useApp((s) => s.propsOpen);
+  const open = useApp(panelOpen);
   return useEased(open ? PROPS_W : 0);
 }
 

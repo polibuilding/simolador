@@ -61,6 +61,10 @@ interface State {
   setPaletteMini: (on: boolean) => void;
   /** resumo da estrutura aberto (painel da direita); com algo selecionado ele abre sozinho */
   propsOpen: boolean;
+  /** duplo clique numa peça: o resumo abre até o Esc (sem mudar a preferência de aberto/fechado) */
+  propsPeek: boolean;
+  /** peça sob o cursor com o cabo ou o enrijecedor na mão (destaque antes de clicar) */
+  toolHover: string | null;
   setPropsOpen: (on: boolean) => void;
   /** painel de atalhos do teclado */
   helpOpen: boolean;
@@ -233,6 +237,9 @@ function writePref(key: string, v: boolean) {
   }
 }
 
+/** o resumo está aberto (pela seta ou pelo duplo clique, até o Esc) */
+export const panelOpen = (s: { propsOpen: boolean; propsPeek: boolean }) => s.propsOpen || s.propsPeek;
+
 export const useApp = create<State>((set, get) => ({
   history: createHistory(emptyModel()),
   inventory: defaultInventory(catalog),
@@ -254,6 +261,8 @@ export const useApp = create<State>((set, get) => ({
   paletteMini: readPref("simolador:paleta-mini", false),
   setPaletteMini: (paletteMini) => (writePref("simolador:paleta-mini", paletteMini), set({ paletteMini })),
   propsOpen: readPref("simolador:resumo", false),
+  propsPeek: false,
+  toolHover: null,
   setPropsOpen: (propsOpen) => (writePref("simolador:resumo", propsOpen), set({ propsOpen })),
   helpOpen: false,
   setHelpOpen: (helpOpen) => set({ helpOpen }),
@@ -292,7 +301,7 @@ export const useApp = create<State>((set, get) => ({
   ...restore(),
 
   arm: (code, viaDrag = false) =>
-    set({ tool: { kind: "place", code, viaDrag }, lastCode: code, selection: null, multi: [], ghost: null, rotIndex: 0, hint: null }),
+    set({ tool: { kind: "place", code, viaDrag }, lastCode: code, selection: null, multi: [], ghost: null, rotIndex: 0, hint: null, toolHover: null }),
   repeatLast: () => {
     const s = get();
     if (s.tool.kind !== "select") return;
@@ -300,7 +309,7 @@ export const useApp = create<State>((set, get) => ({
     s.arm(s.lastCode);
     set({ hint: `${catalog.pieces[s.lastCode]?.name ?? s.lastCode} de novo. Esc para parar.` });
   },
-  disarm: () => set({ tool: { kind: "select" }, ghost: null, hint: null, pendingDrag: null }),
+  disarm: () => set({ tool: { kind: "select" }, ghost: null, hint: null, pendingDrag: null, toolHover: null }),
   setGhost: (ghost, hint = null) => set({ ghost, hint }),
 
   commitGhost: () => {

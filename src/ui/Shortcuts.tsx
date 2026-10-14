@@ -21,7 +21,8 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
       ["R", "girar / alternar a opção no ponto"],
       ["1 · 2 · 3", "direção das barras: Eixos · 15° · Livre (I alterna)"],
       ["Shift (segurar)", "barra inclinada no modo Eixos"],
-      ["Esc", "parar / limpar a seleção"],
+      ["Enter", "o mesmo que clicar, no lugar do cursor (colocar, ligar, deixar o nó; sem ferramenta, seleciona a peça sob o cursor)"],
+      ["Esc", "parar / limpar a seleção / fechar o resumo aberto pelo duplo clique"],
     ],
   },
   {

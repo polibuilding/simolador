@@ -8,7 +8,7 @@ import { Dock } from "./ui/Dock";
 import { Toolbar } from "./ui/Toolbar";
 import { Shortcuts } from "./ui/Shortcuts";
 import { GROUPS, PaletteMini } from "./ui/Palette";
-import { useApp } from "./ui/store";
+import { panelOpen, useApp } from "./ui/store";
 import { catalog } from "./core/catalog";
 import { available } from "./core/inventory";
 
@@ -45,6 +45,8 @@ function useShortcuts() {
       }
       const mod = e.ctrlKey || e.metaKey;
       const k = e.key.toLowerCase();
+      // Esc fecha o resumo aberto pelo duplo clique (e segue: cancela o que estiver em andamento)
+      if (e.key === "Escape" && st.propsPeek) useApp.setState({ propsPeek: false });
       if (e.key === "Escape" && st.helpOpen) {
         st.setHelpOpen(false);
       } else if (e.key === "Escape" && st.linkFrom) {
@@ -163,7 +165,7 @@ export default function App() {
   const placing = useApp((s) => s.tool.kind !== "select");
   const sheetsOpen = useApp((s) => s.sheetsOpen);
   // o resumo abre e fecha só pelas setas « »; selecionar não o abre (o nome da peça aparece de leve no canto)
-  const propsOpen = useApp((s) => s.propsOpen);
+  const propsOpen = useApp(panelOpen);
   const mini = useApp((s) => s.paletteMini);
   return (
     <div className={`app${placing ? " placing" : ""}${propsOpen ? " props-open" : ""}${mini ? " palette-mini-on" : ""}`}>
