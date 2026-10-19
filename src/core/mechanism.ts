@@ -27,12 +27,13 @@ export interface Mech {
   fixed: boolean[];
   dists: { a: number; b: number; L: number }[];
   lerps: { n: number; a: number; b: number; wa: number; wb: number }[];
-  rigids: { idx: number[]; rest: Vec3[] }[];
+  /** corpos rígidos (placas e a forma travada das etapas anteriores): os 3 primeiros pontos fora de uma reta */
+  rigids: { idx: number[]; rest: Vec3[]; planar: boolean }[];
   ties: { a: number; b: number; L: number; member: string }[];
   /** ligações e as molas que elas seguram (para acertar as direções depois de mexer) */
   conns: { id: string; members: string[] }[];
   /** o que trava, em palavras (para o painel) */
-  locks: { rc90: number; rc90base: number; cc: number; plates: number; ties: number };
+  locks: { rc90: number; rc90base: number; cc: number; plates: number; ties: number; frozen: number };
 }
 
 const isBar = (cat: Catalog) => (m: Member) => cat.pieces[m.code]?.type === "bar";
@@ -70,7 +71,7 @@ export function buildMech(cat: Catalog, model: Model, ids: Set<string>): Mech {
   const rigids: Mech["rigids"] = [];
   const ties: Mech["ties"] = [];
   const conns: Mech["conns"] = [];
-  const locks = { rc90: 0, rc90base: 0, cc: 0, plates: 0, ties: 0 };
+  const locks = { rc90: 0, rc90base: 0, cc: 0, plates: 0, ties: 0, frozen: 0 };
   const P = (id: string) => model.nodes[id].pos;
   const I = (id: string) => index.get(id);
   for (const m of Object.values(model.members)) {
@@ -135,10 +136,51 @@ export function buildMech(cat: Catalog, model: Model, ids: Set<string>): Mech {
   for (const p of Object.values(model.plates)) {
     const idx = p.corners.map(I);
     if (idx.some((i) => i === undefined)) continue;
-    rigids.push({ idx: idx as number[], rest: p.corners.map(P) });
+    const r = rigidOf(idx as number[], p.corners.map(P));
+    if (!r) continue;
+    rigids.push(r);
     locks.plates++;
   }
   return { ids: list, index, fixed, dists, lerps, rigids, ties, conns, locks };
+}
+
+/** Corpo rígido com os pontos em ordem boa: os 3 primeiros fora de uma reta (base das contas); plano ou não. */
+function rigidOf(idx: number[], rest: Vec3[]): Mech["rigids"][number] | null {
+  const n = idx.length;
+  const ord = [...Array(n).keys()];
+  let found = false;
+  for (let i = 2; i < n && !found; i++) {
+    if (len(cross(sub(rest[1], rest[0]), sub(rest[i], rest[0]))) > 1e-6 * Math.max(1, len(sub(rest[1], rest[0])) ** 2)) {
+      [ord[2], ord[i]] = [ord[i], ord[2]];
+      found = true;
+    }
+  }
+  if (!found) return null;
+  const r = ord.map((k) => rest[k]);
+  const nrm = norm(cross(sub(r[1], r[0]), sub(r[2], r[0])));
+  const planar = r.every((p) => Math.abs(dot(sub(p, r[0]), nrm)) < 1e-6);
+  return { idx: ord.map((k) => idx[k]), rest: r, planar };
+}
+
+/**
+ * Edição por etapas (E2f): cada grupo de `groups` (a etapa anterior e as vizinhas) vira um corpo rígido: a forma dele
+ * não muda mais, e só a liberdade nova mexe. Devolve outro Mech.
+ */
+export function freezeShapes(model: Model, mech: Mech, groups: string[][]): Mech {
+  const rigids = [...mech.rigids];
+  const dists = [...mech.dists];
+  let n = 0;
+  for (const g of groups) {
+    const idx = g.map((id) => mech.index.get(id)).filter((i): i is number => i !== undefined);
+    if (idx.length < 2) continue;
+    const rest = idx.map((i) => model.nodes[mech.ids[i]].pos);
+    const r = idx.length >= 3 ? rigidOf(idx, rest) : null;
+    if (r) rigids.push(r);
+    // pontos numa reta: as distâncias entre eles bastam
+    else for (let k = 1; k < idx.length; k++) dists.push({ a: idx[k - 1], b: idx[k], L: len(sub(rest[k], rest[k - 1])) });
+    n++;
+  }
+  return n ? { ...mech, rigids, dists, locks: { ...mech.locks, frozen: mech.locks.frozen + n } } : mech;
 }
 
 export const positionsOf = (model: Model, mech: Mech): Float64Array => {
@@ -309,6 +351,14 @@ const centerOf = (x: Float64Array, idx: number[]): Vec3 => idx.reduce((s, i) => 
 
 // ---------- graus de liberdade (posto da matriz de rigidez) ----------
 
+/** Distâncias que seguram um corpo rígido: o triângulo da base (0, 1, 2) e cada outro ponto até os 3 da base. */
+function rigidPairs(n: number): [number, number][] {
+  const out: [number, number][] = n >= 2 ? [[0, 1]] : [];
+  if (n >= 3) out.push([0, 2], [1, 2]);
+  for (let i = 3; i < n; i++) out.push([0, i], [1, i], [2, i]);
+  return out;
+}
+
 /** Linhas da matriz de rigidez (vínculos linearizados) nas coordenadas das esferas livres. */
 function rigidityRows(mech: Mech, x: Float64Array, col: (i: number) => number, C = 3 * mech.ids.filter((_, i) => !mech.fixed[i]).length): number[][] {
   const rows: number[][] = [];
@@ -338,15 +388,15 @@ function rigidityRows(mech: Mech, x: Float64Array, col: (i: number) => number, C
   }
   for (const g of mech.rigids) {
     const idx = g.idx;
-    for (let i = 0; i < idx.length; i++) for (let j = i + 1; j < idx.length; j++) {
+    for (const [i, j] of rigidPairs(idx.length)) {
       const d = sub(get(x, idx[i]), get(x, idx[j]));
       const r = row();
       set3(r, idx[i], d);
       set3(r, idx[j], d, -1);
       rows.push(r);
     }
-    // placa plana: os cantos continuam no mesmo plano (senão a conta acharia uma "dobra" que não existe)
-    if (idx.length >= 4) {
+    // corpo plano (placa): os pontos continuam no mesmo plano (senão a conta acharia uma "dobra" que não existe)
+    if (g.planar && idx.length >= 4) {
       const [p1, p2, p3] = idx.slice(0, 3).map((i) => get(x, i));
       const e2 = sub(p2, p1);
       const e3 = sub(p3, p1);
@@ -377,12 +427,12 @@ function residuals(mech: Mech, x: Float64Array): number[] {
   for (const { n, a, b, wa, wb } of mech.lerps) for (let k = 0; k < 3; k++) f.push(x[3 * n + k] - wa * x[3 * a + k] - wb * x[3 * b + k]);
   for (const g of mech.rigids) {
     const idx = g.idx;
-    for (let i = 0; i < idx.length; i++) for (let j = i + 1; j < idx.length; j++) {
+    for (const [i, j] of rigidPairs(idx.length)) {
       const d = sub(get(x, idx[i]), get(x, idx[j]));
       const r = sub(g.rest[i], g.rest[j]);
       f.push(0.5 * (dot(d, d) - dot(r, r)));
     }
-    if (idx.length >= 4) {
+    if (g.planar && idx.length >= 4) {
       const [p1, p2, p3] = idx.slice(0, 3).map((i) => get(x, i));
       const nrm = cross(sub(p2, p1), sub(p3, p1));
       for (const i4 of idx.slice(3)) f.push(dot(nrm, sub(get(x, i4), p1)));

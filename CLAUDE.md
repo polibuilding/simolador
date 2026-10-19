@@ -26,7 +26,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 npm install
 npm run dados     # data/parametros.xlsx → data/catalog.json e data/kits.json (nunca edite os .json à mão)
 npm run dev       # http://localhost:5173/simolador/
-npm test          # Vitest (núcleo); hoje 126 testes, todos passando
+npm test          # Vitest (núcleo); hoje 132 testes, todos passando
 npm run typecheck
 npm run build     # tsc + vite build
 npx vite preview --port 4173 --strictPort   # testar o build em http://localhost:4173/simolador/
@@ -66,7 +66,7 @@ TypeScript, React 18, Three.js via React Three Fiber + drei, Zustand, Vite, Vite
 | `snapping.ts` | Candidatas de encaixe e guias da GC |
 | `edit.ts` | Edições: mover só o nó (`nodeMoveOptions`, loci esfera/círculo/pontos/caminho), ligar duas esferas (`connectReach`), girar, remover, trechos azul/vermelho do caminho (`locusStatus`), paradas na horizontal/vertical (`alignStops`) |
 | `mechanism.ts` | Modelo cinemático (1.22), detalhado abaixo |
-| `globalMove.ts` | Duplo clique: travado, caminho ou livre; conjuntos do Tab (`moveScopes`); estabilidade no resumo |
+| `globalMove.ts` | Duplo clique: travado, caminho ou livre; etapas do Espaço (`moveScopes`, com a forma das anteriores travada); estabilidade no resumo |
 | `reach.ts` | GC perto da estrutura: círculos onde uma mola nova ou pendurada chega à GC (1.23) |
 | `rope.ts` | Cabo do Kit 3 (contado em bolinhas) e plano de corte |
 | `boards.ts` | Várias chapas |
@@ -93,8 +93,8 @@ Em `mechanism.ts` e `globalMove.ts`, cada ligação vira um vínculo:
 |---|---|
 | Esfera | Rótula |
 | Mola | Distância fixa |
-| RC90 | Trava só o ângulo, **não a torção** (confirmado pela equipe em 14/10) |
-| RC90 na base | Engasta o pilar (o topo fica fixo) |
+| RC90 | Trava só a **inclinação no plano em que foi posicionada** (L10, 16/10): distância entre as pontas das duas molas. No plano perpendicular a mola gira, e a torção também fica livre (14/10). No "mover só o nó" (`edit.ts`), vira mais um vínculo de distância, em vez de travar o nó |
+| RC90 na base | Engasta o pilar (o topo fica fixo). **A confirmar**: travar só o plano dela; a chave é `RC90_BASE_ENGASTA` em `model.ts` |
 | CC | Colinear (`lerps`) |
 | CC90 | Também trava o ângulo com o par da CC (**a confirmar**) |
 | Placa | Corpo rígido (shape matching) |
@@ -105,8 +105,9 @@ A **GC como rótula** está **a conferir pela equipe**.
 
 - **Graus de liberdade:** saem do núcleo da matriz de rigidez, mais um teste finito (`newtonProject`) que descarta dobras que só existem no infinitesimal.
 - **Duplo clique:** com 0 graus a peça fica travada e o rodapé diz o que trava. Com 1, ela anda num caminho traçado por `tracePath`, azul onde pode e vermelho onde não pode. Com 2 ou mais, o arraste é livre (`dragTo` mexe o mínimo).
-- **Tab amplia o conjunto** que mexe (1.23), e Shift+Tab reduz. A ordem é só a peça (numa esfera, o "mover só o nó") → vizinhas → pavimentos → estrutura toda. O que fica fora do conjunto é tratado como fixo.
-- **← / →** pulam entre os limites do caminho e as posições na horizontal/vertical.
+- **Edição por etapas (1.24): Espaço amplia** o conjunto que mexe, e Shift+Espaço volta. A ordem é só a peça (numa esfera, o "mover só o nó") → vizinhas → pavimentos → estrutura toda. O que fica fora do conjunto é tratado como fixo. Ao trocar de etapa, a posição atual é gravada e a forma da etapa vira um **bloco rígido** nas seguintes (`MoveScope.frozen`, `shapeGroup`, `freezeShapes`). Assim, só a próxima liberdade mexe. Exemplo: no pórtico, o canto anda na circunferência; com Espaço, o pórtico tomba inteiro sem deformar.
+- **Tab** (e também ← / →) percorre as referências do caminho: limites azul/vermelho e posições na horizontal/vertical. Na esfera de uma mola, também as circunferências (`sphereRings`), e a esfera desliza na escolhida.
+- **Corpos rígidos** (`Mech.rigids`): os 3 primeiros pontos ficam fora de uma reta (`rigidOf`), e `planar` liga a linha de planicidade (placas).
 - **No resumo:** o bloco "Estabilidade" mostra os graus de liberdade por parte.
 - **Pensado para a 3.x:** esse modelo é a base dos estudos de rigidez que virão.
 
@@ -162,7 +163,7 @@ O número depois do ponto sobe com uma mudança grande ou que muda o uso. Corre�
    - régua de bolinhas 1:1 na prancha.
 
 ### Mecanismo e rigidez (próximos passos)
-- No modo livre, escolher qual grau de liberdade seguir (Tab entre os "modos" do mecanismo).
+- No modo livre, escolher qual grau de liberdade seguir (uma tecla para alternar os "modos" do mecanismo; o Tab agora percorre as referências do caminho).
 - Mostrar na cena as rótulas que giram.
 - Desenhar a diagonal ou o cabo frouxo com flecha.
 - Conferir com a equipe a GC como rótula e a CC90.

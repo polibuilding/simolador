@@ -3,7 +3,7 @@ import type { Catalog } from "./catalog";
 import type { InventoryConfig } from "./inventory";
 import { frameRadAt } from "./boards";
 import {
-  AXES, addMember, boardsOf, rotDir, toDisp, type Member, type Model, type Vec3, add, componentOf, cross, directionFrom, dot, len, membersAt, norm, removeConnector,
+  AXES, RC90_BASE_ENGASTA, addMember, boardsOf, memberAlong, rotDir, toDisp, type Connector, type Member, type Model, type Vec3, add, componentOf, cross, directionFrom, dot, len, membersAt, norm, removeConnector,
   removeMember, removeNode, removePlate, samePos, scale, sub, transformNodes,
 } from "./model";
 import { inclineStep as inclineStepOf, segmentHitsPlate, validateMember, validateMovedModel, type Check } from "./rules";
@@ -174,6 +174,21 @@ export type NodeLocus =
   /** caminho do conjunto (1 grau de liberdade), em amostras da mão */
   | { kind: "path"; pts: Vec3[]; closed: boolean };
 
+/**
+ * RC90 na base (entre a GC e o pilar) quando o nó anda: o pilar fica a 90° do lado da GC (`dirs[1]`), ou seja,
+ * no plano vertical perpendicular a esse lado; no outro plano ele ainda tomba (L10). Devolve o vínculo de distância
+ * equivalente (`con` é o vínculo da própria mola), ou "locked" se a RC90 da base engasta.
+ */
+function rc90BaseLock(model: Model, c: Connector, nodeId: string, con: { c: Vec3; L: number }): { c: Vec3; L: number } | "locked" | null {
+  if (RC90_BASE_ENGASTA) return "locked";
+  const side = c.dirs[1];
+  if (!side) return null;
+  // a ponta fixa da mola (centro de `con`) e o nó ficam no mesmo plano perpendicular ao lado: dot(nó − ponta, lado) = 0
+  const q = add(con.c, scale(side, con.L));
+  const pos = model.nodes[nodeId].pos;
+  return { c: q, L: len(sub(pos, q)) };
+}
+
 export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): NodeMoveSet {
   const node = model.nodes[nodeId];
   if (!node) return { options: [], locked: "Nó não encontrado." };
@@ -216,26 +231,71 @@ export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): Nod
     const inside = p.corners.filter((c) => moving.has(c)).length;
     if (inside && inside < 4) return { options: [], locked: `A placa ${p.code} prende esse nó às partes fixas: tire a placa para mover só o nó.` };
   }
-  // rigidez das ligações
+  // posições possíveis: cada barra até uma parte fixa deixa o nó numa esfera em volta da ponta fixa
+  const cons = ties.map((m) => {
+    const c = model.nodes[m.a === nodeId ? m.b : m.a].pos;
+    return { c, L: len(sub(node.pos, c)) };
+  });
+  // rigidez das ligações: CC/CC90 numa barra que giraria travam o nó. A RC90 trava só o ângulo no plano dela (L10):
+  // a mola ainda gira no plano perpendicular. Vira mais um vínculo de distância (como no modelo cinemático).
   const tieDir = (m: Member, at: string) => directionFrom(model, m, at);
   const touchesDir = (c: { code: string; dirs: Vec3[] }, d: Vec3) =>
     c.code === "RC90" ? c.dirs.some((x) => samePos(x, d, 1e-3)) : c.dirs.some((x) => Math.abs(Math.abs(dot(x, d)) - 1) < 1e-3);
+  const isBarM = (m: Member) => cat.pieces[m.code]?.type === "bar";
   for (const m of ties) {
     const other = m.a === nodeId ? m.b : m.a;
     for (const c of Object.values(model.connectors)) {
       const here = c.node === nodeId && touchesDir(c, tieDir(m, nodeId));
       const there = c.node === other && touchesDir(c, tieDir(m, other));
-      if (here || there) {
-        return { options: [], locked: `A ${c.code} em ${fmtP(model.nodes[c.node].pos)} trava esse ângulo: tire a ligação para mover só o nó.` };
+      if (!here && !there) continue;
+      const lockedBy = { options: [], locked: `A ${c.code} em ${fmtP(model.nodes[c.node].pos)} trava esse ângulo: tire a ligação para mover só o nó.` };
+      if (c.code !== "RC90") return lockedBy;
+      const at = here ? nodeId : other;
+      const d = tieDir(m, at);
+      const od = c.dirs.find((x) => !samePos(x, d, 1e-3));
+      if (!od) continue;
+      if (c.base) {
+        // RC90 na base: o outro lado do canto é a chapa (direção fixa)
+        const lock = rc90BaseLock(model, c, nodeId, cons[ties.indexOf(m)]);
+        if (lock === "locked") return lockedBy;
+        if (lock) cons.push(lock);
+        continue;
+      }
+      const m2 = memberAlong(model, at, od, isBarM);
+      if (!m2) continue;
+      const far2 = m2.a === at ? m2.b : m2.a;
+      if (here && !moving.has(far2)) continue; // as duas molas giram em torno de pontas fixas: o ângulo não muda
+      if (there) {
+        // canto na ponta fixa: o nó fica à mesma distância da ponta da outra mola do canto
+        cons.push({ c: model.nodes[far2].pos, L: len(sub(node.pos, model.nodes[far2].pos)) });
+      } else {
+        // canto no nó, com a outra mola indo junto (sem girar): a mola que gira continua no mesmo ângulo com ela
+        const c1 = model.nodes[other].pos;
+        const L1 = len(sub(node.pos, c1));
+        const q = add(c1, scale(directionFrom(model, m2, at), L1));
+        cons.push({ c: q, L: len(sub(node.pos, q)) });
       }
     }
   }
-
-  // posições possíveis
-  const cons = ties.map((m) => {
-    const c = model.nodes[m.a === nodeId ? m.b : m.a].pos;
-    return { c, L: len(sub(node.pos, c)) };
-  });
+  // vínculos repetidos (a mesma esfera em volta do mesmo ponto) não contam duas vezes
+  for (let i = cons.length - 1; i > 0; i--) {
+    if (cons.slice(0, i).some((k) => samePos(k.c, cons[i].c, 1e-6) && Math.abs(k.L - cons[i].L) < 1e-6)) cons.splice(i, 1);
+  }
+  // nem os que o círculo dos dois primeiros já cumpre (ex.: duas RC90 no mesmo plano)
+  if (cons.length >= 3) {
+    const v = sub(cons[1].c, cons[0].c);
+    const d = len(v);
+    if (d > 1e-9) {
+      const u = scale(v, 1 / d);
+      const x = (cons[0].L ** 2 - cons[1].L ** 2 + d * d) / (2 * d);
+      const h = Math.sqrt(Math.max(0, cons[0].L ** 2 - x * x));
+      const p = add(cons[0].c, scale(u, x));
+      const e1 = norm(Math.abs(u[1]) < 0.9 ? cross(u, [0, 1, 0]) : cross(u, [1, 0, 0]));
+      const e2 = cross(u, e1);
+      const ring = Array.from({ length: 8 }, (_, k) => add(p, add(scale(e1, h * Math.cos(k)), scale(e2, h * Math.sin(k)))));
+      for (let i = cons.length - 1; i >= 2; i--) if (ring.every((q) => Math.abs(len(sub(q, cons[i].c)) - cons[i].L) < 1e-6)) cons.splice(i, 1);
+    }
+  }
   const support = node.kind === "support";
   const step = (inclineStepOf(cat) || 15) * (Math.PI / 180);
   const pts: Vec3[] = [];
@@ -466,6 +526,38 @@ export function connectReach(
 /** ponto do círculo do caminho no ângulo t */
 export function locusCirclePoint(loc: Extract<NodeLocus, { kind: "circle" }>, t: number): Vec3 {
   return add(loc.p, add(scale(loc.e1, loc.h * Math.cos(t)), scale(loc.e2, loc.h * Math.sin(t))));
+}
+
+export type LocusCircle = Extract<NodeLocus, { kind: "circle" }>;
+
+/**
+ * Circunferências de referência na esfera de uma mola (o Tab passa por elas; a esfera desliza só nelas):
+ * a da mesma altura (a mola mantém a inclinação), a vertical no mesmo rumo (mantém a direção em planta), a horizontal
+ * (mola deitada) e as verticais nos planos X–Z e Y–Z. As repetidas ficam de fora.
+ */
+export function sphereRings(loc: Extract<NodeLocus, { kind: "sphere" }>, start: Vec3): { label: string; ring: LocusCircle }[] {
+  const { c, r } = loc;
+  const out: { label: string; ring: LocusCircle }[] = [];
+  const addRing = (label: string, p: Vec3, h: number, e1: Vec3, e2: Vec3) => {
+    if (h < 1e-3) return;
+    const nrm = cross(e1, e2);
+    const same = out.some((o) => samePos(o.ring.p, p, 1e-4) && Math.abs(o.ring.h - h) < 1e-4 && Math.abs(Math.abs(dot(cross(o.ring.e1, o.ring.e2), nrm)) - 1) < 1e-4);
+    if (!same) out.push({ label, ring: { kind: "circle", p, h, e1, e2 } });
+  };
+  const d = sub(start, c);
+  addRing("Circunferência na mesma altura (a mola mantém a inclinação)", [c[0], start[1], c[2]], Math.sqrt(Math.max(0, r * r - d[1] * d[1])), [1, 0, 0], [0, 0, 1]);
+  const hz = Math.hypot(d[0], d[2]);
+  if (hz > 1e-6) addRing("Circunferência vertical no mesmo rumo (a mola mantém a direção em planta)", c, r, [d[0] / hz, 0, d[2] / hz], [0, 1, 0]);
+  addRing("Circunferência horizontal (mola deitada)", c, r, [1, 0, 0], [0, 0, 1]);
+  addRing("Circunferência vertical no plano X–Z", c, r, [1, 0, 0], [0, 1, 0]);
+  addRing("Circunferência vertical no plano Y–Z", c, r, [0, 0, 1], [0, 1, 0]);
+  return out;
+}
+
+/** Ponto da circunferência mais perto de `q`. */
+export function nearestOnRing(ring: LocusCircle, q: Vec3): Vec3 {
+  const w = sub(q, ring.p);
+  return locusCirclePoint(ring, Math.atan2(dot(w, ring.e2), dot(w, ring.e1)));
 }
 
 /** ponto da esfera do caminho: θ a partir de cima (0 = em cima, π = embaixo), φ em volta (no plano da chapa) */

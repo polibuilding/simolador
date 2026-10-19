@@ -4,9 +4,9 @@
 import type { Catalog } from "./catalog";
 import type { NodeMove, NodeMoveSet } from "./edit";
 import {
-  buildMech, dragTo, mechComponent, mobility, modelAt, newtonProject, positionsOf, stretchedTies, tracePath, weightsFrom, type Mech,
+  buildMech, dragTo, freezeShapes, mechComponent, mobility, modelAt, newtonProject, positionsOf, stretchedTies, tracePath, weightsFrom, type Mech,
 } from "./mechanism";
-import { dot, len, membersAt, sub, type Model, type Vec3 } from "./model";
+import { cross, dot, len, membersAt, sub, type Model, type Vec3 } from "./model";
 import { segmentHitsPlate, validateMovedModel } from "./rules";
 
 export type MoveRef = { kind: "node" | "member" | "plate"; id: string };
@@ -81,7 +81,7 @@ export function checkMoved(cat: Catalog, base: Model, next: Model, moved: Set<st
  * O que acontece ao pegar a peça `ref`: travada, caminho (1 grau de liberdade) ou livre.
  * `free`: só essas esferas podem mexer (um "conjunto" escolhido com o Tab); as outras ficam paradas como se fossem GC.
  */
-export function globalMoveOptions(cat: Catalog, model: Model, ref: MoveRef, free?: Set<string> | null): GlobalMove {
+export function globalMoveOptions(cat: Catalog, model: Model, ref: MoveRef, free?: Set<string> | null, frozen?: string[][] | null): GlobalMove {
   const nodes = handNodes(model, ref).filter((id) => model.nodes[id]);
   if (!nodes.length) return { mode: "locked", reason: "Peça não encontrada.", dof: 0 };
   const comp = mechComponent(cat, model, nodes);
@@ -89,7 +89,8 @@ export function globalMoveOptions(cat: Catalog, model: Model, ref: MoveRef, free
   if (!hasSupport && !nodes.some((id) => model.nodes[id].kind === "support")) {
     return { mode: "locked", reason: "Essa estrutura não está presa em nenhuma GC: segure e arraste para mover a estrutura inteira.", dof: 0 };
   }
-  const mech = buildMech(cat, model, comp);
+  // etapas anteriores: a forma delas fica travada
+  const mech = frozen?.length ? freezeShapes(model, buildMech(cat, model, comp), frozen) : buildMech(cat, model, comp);
   if (free) mech.ids.forEach((id, i) => !free.has(id) && (mech.fixed[i] = true));
   const x0 = positionsOf(model, mech);
   const hand = nodes.map((id) => mech.index.get(id)!).filter((i) => i !== undefined);
@@ -103,6 +104,7 @@ export function globalMoveOptions(cat: Catalog, model: Model, ref: MoveRef, free
       locks.rc90base && `${locks.rc90base} RC90 na base`,
       locks.cc && `${locks.cc} CC nas emendas`,
       locks.plates && `${locks.plates} ${locks.plates === 1 ? "placa" : "placas"}`,
+      locks.frozen && "a forma da etapa anterior",
     ].filter(Boolean).join(", ");
     return { mode: "locked", reason: `Travado: o conjunto não deixa essa peça mexer${what ? ` (${what})` : ""}. M leva a peça para outro lugar.`, dof: mob.dof };
   }
@@ -183,12 +185,14 @@ export function globalMoveOptions(cat: Catalog, model: Model, ref: MoveRef, free
   return { mode: "path", dof: mob.dof, handle, set, trails };
 }
 
-/* ---------- conjuntos: o que mexe junto (Tab amplia) ---------- */
+/* ---------- etapas: o que mexe junto (Espaço amplia) ---------- */
 
 export interface MoveScope {
   /** local = "mover só o nó" (esfera); set = só as esferas de `free`; all = tudo até as GC */
   kind: "local" | "set" | "all";
   free: Set<string> | null;
+  /** blocos com a forma travada: cada etapa anterior, com as vizinhas (ver `shapeGroup`) */
+  frozen: string[][] | null;
   label: string;
   /** rótulo curto (rodapé) */
   short: string;
@@ -198,14 +202,39 @@ export interface MoveScope {
   moving: number;
 }
 
+/**
+ * Bloco que trava a forma de uma etapa: as esferas que mexeram (`moving`) e as vizinhas. Se as vizinhas ficam numa
+ * reta (ex.: canto de pórtico, preso à GC e ao outro canto), o bloco ainda giraria em volta dela como uma dobradiça,
+ * que é justamente a liberdade da etapa: entra mais um anel de vizinhas até haver 3 pontos fora da reta.
+ */
+function shapeGroup(model: Model, adj: Map<string, string[]>, moving: string[]): string[] {
+  const inMoving = new Set(moving);
+  const E = new Set(moving);
+  for (const id of moving) for (const nb of adj.get(id) ?? []) E.add(nb);
+  const spread = () => {
+    const B = [...E].filter((id) => !inMoving.has(id)).map((id) => model.nodes[id].pos);
+    for (let i = 0; i < B.length; i++) for (let j = i + 1; j < B.length; j++) for (let k = j + 1; k < B.length; k++) {
+      if (len(cross(sub(B[j], B[i]), sub(B[k], B[i]))) > 1e-6) return true;
+    }
+    return false;
+  };
+  while (!spread()) {
+    const before = E.size;
+    for (const id of [...E]) if (!inMoving.has(id)) for (const nb of adj.get(id) ?? []) E.add(nb);
+    if (E.size === before) break;
+  }
+  return [...E];
+}
+
 const scopeMemo = new WeakMap<Model, Map<string, MoveScope[]>>();
 const moveMemo = new WeakMap<Model, Map<string, GlobalMove>>();
 
 /**
- * Conjuntos que podem mexer quando se pega a peça, do menor ao maior: só a peça (as vizinhas paradas), um anel de
- * vizinhas por vez, cada "pavimento" (tudo daquela altura para cima) e a estrutura toda até as GC. O que fica fora
- * do conjunto fica parado, como se estivesse preso. Só ficam os conjuntos em que a peça mexe e que mexem um grupo
- * diferente do anterior (a mesma liberdade não aparece duas vezes).
+ * Etapas da edição, do menor conjunto ao maior: só a peça (as vizinhas paradas), um anel de vizinhas por vez, cada
+ * "pavimento" (tudo daquela altura para cima) e a estrutura toda até as GC. O que fica fora do conjunto fica parado,
+ * como se estivesse preso. Edição por etapas: em cada etapa, a forma das anteriores fica travada (as esferas que
+ * mexeram e as vizinhas delas mantêm os ângulos entre as molas), e só a liberdade nova mexe. Só ficam as etapas em
+ * que a peça mexe e que mexem um grupo diferente do anterior (a mesma liberdade não aparece duas vezes).
  */
 export function moveScopes(cat: Catalog, model: Model, ref: MoveRef, local = false): MoveScope[] {
   const key = `${ref.kind}:${ref.id}:${local ? 1 : 0}`;
@@ -290,14 +319,23 @@ function computeScopes(cat: Catalog, model: Model, ref: MoveRef, local: boolean)
     const S = close(new Set([...movable.filter((id) => model.nodes[id].pos[1] >= h - 1e-6), ...nodes.filter((id) => !isSup(id))]));
     cands.push({ free: S, kind: "set", label: `o pavimento: tudo de Z = ${fmt(h)} M para cima (o de baixo parado)`, short: `pavimento Z ≥ ${fmt(h)} M` });
   }
+  // um anel ou pavimento que já pega tudo é a estrutura toda (com esse nome)
+  for (let i = cands.length - 1; i >= 0; i--) if (cands[i].free.size >= movable.length && !cands[i].hop0) cands.splice(i, 1);
   cands.push({ free: new Set(movable), kind: "all", label: "a estrutura toda, até as GC", short: "estrutura toda" });
   // do menor ao maior; o "tudo" fica por último
   const order = cands.map((c, i) => ({ c, i })).sort((a, b) => (a.c.kind === "all" ? 1 : 0) - (b.c.kind === "all" ? 1 : 0) || a.c.free.size - b.c.free.size || a.i - b.i);
   const seenFree = new Set<string>();
   const seenMoving = new Set<string>();
   const out: MoveScope[] = [];
+  // forma travada pelas etapas já aceitas: cada uma vira um bloco rígido com as vizinhas (`freeze`)
+  const frozen: string[][] = [];
+  const freeze = (ids: string[]) => {
+    const g = shapeGroup(model, adj, ids);
+    if (g.length >= 2) frozen.push(g);
+  };
   if (local) {
-    out.push({ kind: "local", free: null, label: "só a esfera (as molas dela giram em volta das vizinhas)", short: "só a esfera", hand: -1, moving: 1 });
+    out.push({ kind: "local", free: null, frozen: null, label: "só a esfera (as molas dela giram em volta das vizinhas)", short: "só a esfera", hand: -1, moving: 1 });
+    freeze(nodes);
   }
   for (const { c } of order) {
     const fk = [...c.free].sort().join(",");
@@ -305,8 +343,9 @@ function computeScopes(cat: Catalog, model: Model, ref: MoveRef, local: boolean)
     seenFree.add(fk);
     const fixed = mech0.fixed.map((f, i) => f || !c.free.has(mech0.ids[i]));
     if (!hand.some((i) => !fixed[i])) continue;
+    const mech = { ...(frozen.length ? freezeShapes(model, mech0, frozen) : mech0), fixed };
     // conta linear primeiro (rápida); a de verdade (movimentos finitos) só nos que sobram
-    const lin = mobility({ ...mech0, fixed }, x0, hand, { finite: false });
+    const lin = mobility(mech, x0, hand, { finite: false });
     if (!lin.hand) continue;
     const lk = `${(lin.moving ?? []).join(",")}`;
     if (seenMoving.has(`L|${lk}`) && c.kind !== "all") continue;
@@ -314,8 +353,8 @@ function computeScopes(cat: Catalog, model: Model, ref: MoveRef, local: boolean)
     // conjuntos pequenos: confere com movimentos finitos (o linear às vezes vê dobras que não existem); nos grandes,
     // a conta de verdade fica para quando o conjunto é escolhido (o rodapé diz se trava)
     const small = fixed.filter((f) => !f).length <= 24;
-    const mob = small ? mobility({ ...mech0, fixed }, x0, hand) : lin;
-    if (!mob.hand) continue;
+    const mob = small ? mobility(mech, x0, hand) : lin;
+    if (!mob.hand || !mob.moving?.length) continue;
     const mk = `${mob.hand}|${(mob.moving ?? []).join(",")}`;
     const prev = out[out.length - 1];
     // mesmo tanto de esferas e mesma liberdade que o anterior: na prática, o mesmo conjunto
@@ -333,18 +372,23 @@ function computeScopes(cat: Catalog, model: Model, ref: MoveRef, local: boolean)
       continue;
     }
     seenMoving.add(mk);
-    out.push({ kind: c.kind, free: c.kind === "all" ? null : c.free, label: c.label, short: c.short, hand: mob.hand, moving: (mob.moving ?? []).length });
+    out.push({
+      kind: c.kind, free: c.kind === "all" ? null : c.free, frozen: frozen.length ? [...frozen] : null,
+      label: c.label, short: c.short, hand: mob.hand, moving: (mob.moving ?? []).length,
+    });
+    freeze((mob.moving ?? []).map((i) => mech0.ids[i]));
   }
   return out;
 }
 
-/** Movimento da peça no conjunto `level` (guardado por modelo: o mesmo conjunto não recalcula o caminho). */
+/** Movimento da peça na etapa `scope` (guardado por modelo: a mesma etapa não recalcula o caminho). */
 export function globalMoveAt(cat: Catalog, model: Model, ref: MoveRef, scope: MoveScope | null): GlobalMove {
-  const key = `${ref.kind}:${ref.id}:${scope?.free ? [...scope.free].sort().join(",") : "*"}`;
+  const ids = (s?: Iterable<string> | null) => (s ? [...s].sort().join(",") : "*");
+  const key = `${ref.kind}:${ref.id}:${ids(scope?.free)}:${(scope?.frozen ?? []).map((g) => ids(g)).join("|")}`;
   let memo = moveMemo.get(model);
   if (!memo) moveMemo.set(model, (memo = new Map()));
   let g = memo.get(key);
-  if (!g) memo.set(key, (g = globalMoveOptions(cat, model, ref, scope?.free ?? null)));
+  if (!g) memo.set(key, (g = globalMoveOptions(cat, model, ref, scope?.free ?? null, scope?.frozen ?? null)));
   return g;
 }
 

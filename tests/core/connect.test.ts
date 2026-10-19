@@ -33,11 +33,11 @@ describe("ligar duas esferas (dois cliques)", () => {
     expect(validateMovedModel(catalog, r.model!, new Set(Object.keys(r.model!.nodes))).ok).toBe(true);
   });
 
-  it("travada: RC90 no pilar não deixa girar; perto demais da primeira não dá", () => {
+  it("travada: RC90 no pilar só deixa tombar de lado (L10), sem chegar perto; perto demais da primeira não dá", () => {
     const m = mk({ g1: [0, 0, 0], t1: [0, 6, 0], g2: [8, 0, 0], t2: [8, 6, 0], x: [14, 6, 0] }, [["B6", "g1", "t1"], ["B6", "g2", "t2"], ["B6", "t2", "x"]], {
       k: { id: "k", code: "RC90", node: "t2", dirs: [[0, -1, 0], [1, 0, 0]] },
     } as unknown as Model["connectors"]);
-    expect(connectReach(catalog, inv, m, "B6", "t1", "t2").error).toMatch(/não pode andar/);
+    expect(connectReach(catalog, inv, m, "B6", "t1", "t2").error).toMatch(/não deixam ela chegar/);
     // B12 entre topos a 4 M um do outro, com B4 no pilar curto: não alcança
     const m2 = mk({ g1: [0, 0, 0], t1: [0, 4, 0], g2: [2, 0, 0], t2: [2, 4, 0] }, [["B4", "g1", "t1"], ["B4", "g2", "t2"]]);
     expect(connectReach(catalog, inv, m2, "B12", "t1", "t2").error).toBeTruthy();
