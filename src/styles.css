@@ -858,8 +858,10 @@ dl { margin: 0 0 16px; }
 .sheets { background: #e9ecea; }
 .sheets-bar {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: nowrap;
-  min-height: 48px; padding: 6px 12px 6px 10px; background: var(--panel); border-bottom: 1px solid var(--rule);
+  flex-shrink: 0; min-height: 48px; padding: 6px 12px 6px 10px; background: var(--panel); border-bottom: 1px solid var(--rule);
 }
+.sheets-body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.sheets-list { flex: 1; min-height: 0; }
 .sb-left, .sb-mid, .sb-right { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .sb-mid { flex: 1; justify-content: center; gap: 6px; flex-wrap: wrap; }
 .sb-right { gap: 6px; }
@@ -910,6 +912,48 @@ dl { margin: 0 0 16px; }
 /* textos que se editam clicando neles (carimbo e títulos dos desenhos) */
 .sheet-paper .editable { cursor: text; }
 .sheet-paper .editable:hover > rect { fill: #2563eb; fill-opacity: 0.06; stroke: #2563eb; stroke-opacity: 0.45; stroke-width: 0.25; }
+/* inserir desenhos: cubo visto de cada lado */
+.sheets .sheets-bar .sb-insert button { height: 26px; padding: 0 7px; gap: 4px; border-radius: 7px; color: var(--graphite); font-size: 12.5px; }
+.sheets .sheets-bar .sb-insert button.on { background: var(--ink); color: #fff; }
+.sheets .sheets-bar .sb-insert:hover { background: transparent; }
+.sheets .ico.cube { width: 16px; height: 16px; }
+.sheets .caret { font-size: 9px; color: #a1a9a6; }
+.sheet-pop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 150px; padding: 4px;
+  display: flex; flex-direction: column; background: #fff; border: 1px solid var(--rule); border-radius: 12px; box-shadow: 0 10px 30px rgba(20, 30, 28, 0.10);
+}
+.sheets .sheet-pop button { justify-content: flex-start; height: 30px; color: var(--ink); }
+.sheet-pop-empty { margin: 6px 10px; font-size: 12px; color: var(--graphite); }
+.sheets-list.placing, .sheets-list.placing .sheet-paper [data-group], .sheets-list.placing .editable { cursor: crosshair; }
+.sheet-ghost {
+  position: fixed; z-index: 21; pointer-events: none; border: 1.5px dashed var(--focus); border-radius: 3px; background: rgba(37, 99, 235, 0.05);
+}
+.sheet-paper [data-group].selected > .grab { fill: #2563eb; fill-opacity: 0.04; stroke: #2563eb; stroke-opacity: 0.85; stroke-width: 0.35; stroke-dasharray: none; }
+.sheets .sheet-add { align-self: center; height: 34px; padding: 0 16px; border: 1px dashed var(--rule-strong); border-radius: 10px; background: transparent; color: var(--graphite); font: inherit; font-size: 13px; cursor: pointer; }
+.sheets .sheet-add:hover { background: var(--panel); color: var(--ink); border-color: var(--graphite); }
+.sheet figcaption > span:last-child { display: inline-flex; gap: 4px; }
+/* painel do desenho escolhido */
+.sheet-side {
+  position: absolute; right: 16px; top: 14px; z-index: 22; width: 250px; padding: 12px 14px 14px;
+  background: #fff; border: 1px solid var(--rule); border-radius: 12px; box-shadow: 0 10px 30px rgba(20, 30, 28, 0.10);
+  font-size: 13px; animation: slide-in-right 0.2s var(--ease-slide, ease) both;
+}
+@keyframes slide-in-right { from { opacity: 0; transform: translateX(10px); } }
+.sheet-side header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.sheet-side h3 { margin: 0; font-size: 13.5px; font-weight: 600; }
+.sheets .sheet-side .sheet-side-close { width: 26px; height: 26px; padding: 0; justify-content: center; font-size: 17px; color: #a1a9a6; }
+.ss-row { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 6px; padding: 3px 0; }
+.ss-row > span { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: #a1a9a6; }
+.ss-row input, .ss-row select { min-width: 0; height: 28px; border: 1px solid var(--rule); border-radius: 7px; padding: 0 7px; font: inherit; font-size: 13px; background: #fff; color: var(--ink); }
+.ss-row input:focus, .ss-row select:focus { outline: none; border-color: var(--ink); }
+.ss-show { margin: 8px 0 10px; padding-top: 8px; border-top: 1px solid var(--rule); display: grid; gap: 2px; }
+.ss-check { display: flex; align-items: center; gap: 7px; padding: 3px 0; cursor: pointer; }
+.ss-check input { margin: 0; accent-color: var(--ink); }
+.ss-check.global { font-weight: 600; padding-bottom: 5px; }
+.ss-check:not(.global) { padding-left: 18px; }
+.ss-check.locked { color: #a1a9a6; cursor: default; }
+.sheets .sheet-side .ss-remove { width: 100%; justify-content: center; border: 1px solid var(--rule); color: var(--bad); }
+.sheets .sheet-side .ss-remove:hover { background: #fdf0f0; border-color: #e5a3a5; }
 .sheet-edit {
   position: fixed; z-index: 25; margin: 0; padding: 0 4px; box-sizing: border-box;
   font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff;
