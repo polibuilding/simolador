@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
-import { buildSheets } from "../drawings/sheets";
+import { buildSheets, levelsOf, newViewCell, newViewFrame, type SheetInput, type ViewSpec } from "../drawings/sheets";
 import { sheetToSvg, sheetsToDxf, sheetsToPdf } from "../drawings/export";
-import type { SheetMeta, SheetPaper, SheetShow } from "../core/serialization";
-import { CUSTOM_MAX, CUSTOM_MIN } from "../drawings/prims";
+import type { SheetLayout, SheetMeta, SheetPaper, SheetShow, SheetView } from "../core/serialization";
+import { CUSTOM_MAX, CUSTOM_MIN, type Pt } from "../drawings/prims";
+import { addPage, addView, moveToPage, nextViewId, removePage, removeView, setViewScale, withLayout } from "../drawings/layout";
+import { InsertTools, ViewPanel } from "./SheetTools";
 import { useApp } from "./store";
 import { boardsOf } from "../core/model";
 import { boardName } from "../core/boards";
@@ -126,12 +128,89 @@ export function SheetsView() {
       alive = false;
     };
   }, []);
-  const built = useMemo(
-    () => buildSheets({ cat: catalog, model, inventory, name, meta, isoImage, logos }),
-    [model, inventory, name, meta, isoImage, logos],
-  );
+  const input: SheetInput = useMemo(() => ({ cat: catalog, model, inventory, name, meta }), [model, inventory, name, meta]);
+  const built = useMemo(() => buildSheets({ ...input, isoImage, logos }), [input, isoImage, logos]);
   const { sheets, scale: used } = built;
   const svgs = useMemo(() => sheets.map((sh) => sheetToSvg(sh, { interactive: true })), [sheets]);
+  const levels = useMemo(() => levelsOf(model, catalog), [model]);
+
+  // ---------- arranjo: inserir, tirar e mudar desenhos de prancha ----------
+  /** grava o arranjo do tamanho de folha atual (a partir daí ele deixa de ser automático) */
+  const saveLayout = (l: SheetLayout) => setSheet(withLayout(useApp.getState().sheet, built.paper, l));
+  const [armed, setArmed] = useState<ViewSpec | null>(null);
+  const [ghost, setGhost] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  useEffect(() => {
+    if (!note) return;
+    const id = setTimeout(() => setNote(null), 3500);
+    return () => clearTimeout(id);
+  }, [note]);
+  const arm = (s: ViewSpec | null) => (setArmed(s), setGhost(null), setSelected(null));
+  const selInfo = built.views.find((v) => v.view.id === selected) ?? null;
+  const armedName = armed
+    ? armed.kind === "plan"
+      ? `a planta ${(levels.find((l) => Math.abs(l.y - armed.level) < 0.5)?.name ?? "").toLowerCase().replace("pav. ", "")}`
+      : armed.kind === "cut"
+        ? `o ${(meta.cuts?.find((c) => c.id === armed.cut)?.name ?? "corte").toLowerCase()}`
+        : `a vista ${armed.kind}`
+    : "";
+
+  /** ponto da folha (mm de papel) sob o cursor, e o número da folha */
+  const paperPoint = (e: React.PointerEvent) => {
+    const el = (e.target as Element).closest(".sheet-paper");
+    const fig = el?.closest("figure");
+    const svg = el?.querySelector("svg");
+    if (!el || !fig || !svg) return null;
+    const r = svg.getBoundingClientRect();
+    const k = built.size.w / r.width;
+    return { sheet: Number((fig as HTMLElement).dataset.sheet), at: [(e.clientX - r.left) * k, (e.clientY - r.top) * k] as Pt, r, k };
+  };
+  const placeAt = (e: React.PointerEvent) => {
+    const p = paperPoint(e);
+    if (!armed || !p) return;
+    if (p.sheet === 0) return setNote("A capa não recebe desenhos: clique numa das outras pranchas.");
+    const cell = newViewCell(input, armed, used, p.at);
+    const v: SheetView = {
+      id: nextViewId(meta, [built.layout]), kind: armed.kind, page: p.sheet - 1, cell, n: used,
+      ...(armed.kind === "plan" ? { level: armed.level } : armed.kind === "cut" ? { cut: armed.cut } : {}),
+    };
+    saveLayout(addView(built.layout, v));
+    setArmed(null);
+    setGhost(null);
+    setSelected(v.id);
+  };
+  const removeSelected = () => {
+    if (!selInfo) return;
+    saveLayout(removeView(built.layout, selInfo.view.id));
+    setSelected(null);
+  };
+  // destaque do desenho escolhido
+  useEffect(() => {
+    document.querySelectorAll(".sheet-paper .selected").forEach((el) => el.classList.remove("selected"));
+    if (!selected) return;
+    const q = CSS.escape(selected);
+    document.querySelectorAll(`.sheet-paper [data-group="desenho:${q}"], .sheet-paper [data-group="titulo:${q}"]`).forEach((el) => el.classList.add("selected"));
+  }, [svgs, selected]);
+  // Esc cancela a inserção e fecha o painel do desenho (antes de fechar as pranchas); Delete tira o desenho escolhido
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if ((t instanceof HTMLInputElement && t.type !== "checkbox") || t.tagName === "SELECT" || t.tagName === "TEXTAREA") return;
+      if (document.querySelector(".sheet-pop")) return; // o menu aberto fecha primeiro
+      if (e.key === "Escape" && (armed || selected)) {
+        e.stopPropagation();
+        setArmed(null);
+        setGhost(null);
+        setSelected(null);
+      } else if ((e.key === "Delete" || e.key === "Backspace") && selInfo) {
+        e.preventDefault();
+        removeSelected();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  });
 
   // ---------- textos editáveis na própria prancha (título e subtítulo do carimbo e dos desenhos) ----------
   const [editing, setEditing] = useState<Editing | null>(null);
@@ -162,12 +241,17 @@ export function SheetsView() {
     if (e.value === valueOf(e.key)) return;
     if (e.key === "title") return setMeta({ line1: e.value });
     if (e.key === "sub") return setMeta({ line2: e.value });
-    // título/subtítulo de um desenho: vazio volta ao padrão
-    const id = e.key.slice(3);
-    const field = e.key.startsWith("vt:") ? "title" : "sub";
+    setViewText(e.key.slice(3), e.key.startsWith("vt:") ? "title" : "sub", e.value);
+  };
+  /** título/subtítulo de um desenho: vazio volta ao padrão */
+  const setViewText = (id: string, field: "title" | "sub", value: string) => {
     const cur = useApp.getState().sheet;
-    const o = { ...cur.views?.[id], [field]: e.value.trim() ? e.value : undefined };
-    setSheet({ ...cur, views: { ...cur.views, [id]: o } });
+    setSheet({ ...cur, views: { ...cur.views, [id]: { ...cur.views?.[id], [field]: value.trim() ? value : undefined } } });
+  };
+  /** o que o desenho mostra (`undefined`: volta a seguir a barra de cima) */
+  const setViewShow = (id: string, show: SheetShow | undefined) => {
+    const cur = useApp.getState().sheet;
+    setSheet({ ...cur, views: { ...cur.views, [id]: { ...cur.views?.[id], show } } });
   };
 
   // ---------- arrastar e clicar ----------
@@ -176,13 +260,18 @@ export function SheetsView() {
   const press = useRef<{ el: SVGGraphicsElement | null; edit: Element | null; tag: string; kind: "label" | "block"; x: number; y: number; k: number } | null>(null);
   const onDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
+    if (armed) return placeAt(e);
     const target = e.target as Element;
     const edit = target.closest("[data-edit]");
     const label = target.closest("[data-tag]") as SVGGraphicsElement | null;
     const block = label ? null : (target.closest("[data-group]") as SVGGraphicsElement | null);
     const el = label ?? block;
     const svg = (el ?? edit) && (target as SVGGraphicsElement).ownerSVGElement;
-    if (!svg) return;
+    if (!svg) {
+      // clique fora dos desenhos fecha o painel do desenho
+      if (!target.closest(".sheet-side")) setSelected(null);
+      return;
+    }
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     const vbW = svg.viewBox.baseVal.width || 420;
@@ -194,6 +283,13 @@ export function SheetsView() {
     el?.classList.add("dragging");
   };
   const onMove = (e: React.PointerEvent) => {
+    if (armed) {
+      // contorno do desenho que vai entrar, seguindo o cursor
+      const p = paperPoint(e);
+      if (!p || p.sheet === 0) return setGhost(null);
+      const c = newViewFrame(input, armed, used, p.at).body;
+      return setGhost({ x: p.r.left + c.x / p.k, y: p.r.top + c.y / p.k, w: c.w / p.k, h: c.h / p.k });
+    }
     const d = press.current;
     if (!d?.el) return;
     d.el.setAttribute("transform", `translate(${(e.clientX - d.x) * d.k} ${(e.clientY - d.y) * d.k})`);
@@ -207,6 +303,10 @@ export function SheetsView() {
     const dy = (e.clientY - d.y) * d.k;
     if (Math.hypot(dx, dy) < 0.3) {
       d.el?.removeAttribute("transform");
+      // clique num desenho ou no título dele: abre o painel do desenho
+      const g = d.kind === "block" ? d.tag.slice(d.tag.indexOf("|") + 1) : "";
+      const m = /^(desenho|titulo):(.+)$/.exec(g);
+      setSelected(m ? m[2] : null);
       if (d.edit) openEdit(d.edit);
       return;
     }
@@ -279,8 +379,25 @@ export function SheetsView() {
               );
             })}
           </div>
+          <InsertTools levels={levels} cuts={meta.cuts ?? []} armed={armed} onArm={arm} />
         </div>
         <div className="sb-right">
+          {built.manual && (
+            <button
+              className="ghost"
+              onClick={() => {
+                if (!window.confirm("Voltar ao arranjo automático? Os desenhos inseridos, tirados ou mudados de prancha nesta folha voltam ao padrão.")) return;
+                const cur = useApp.getState().sheet;
+                const layouts = { ...cur.layouts };
+                delete layouts[built.paper];
+                setSheet({ ...cur, layouts });
+                setSelected(null);
+              }}
+              title="Refaz as pranchas a partir da estrutura, como na primeira vez"
+            >
+              Arranjo automático
+            </button>
+          )}
           {moved > 0 && (
             <button
               className="ghost"
@@ -318,31 +435,74 @@ export function SheetsView() {
           </button>
         </div>
       </header>
+      <div className="sheets-body">
       {empty ? (
         <p className="sheets-empty">Monte a estrutura primeiro: as pranchas saem dela.</p>
       ) : (
-        <div className="sheets-list" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onScroll={() => editing && commitEdit(editing)}>
-          {svgs.map((svg, i) => (
-            <figure key={i} className="sheet">
-              <div className="sheet-paper" dangerouslySetInnerHTML={{ __html: svg.replace(/width="[\d.]+mm" height="[\d.]+mm"/, 'width="100%"') }} />
-              <figcaption>
-                <span>
-                  <b>{two(i + 1)}/{two(sheets.length)}</b> {sheets[i].title}
-                </span>
-                <button
-                  className="ghost"
-                  onClick={() => save(new Blob([sheetToSvg(sheets[i])], { type: "image/svg+xml" }), `${fileBase(name)}-${two(i + 1)}.svg`)}
-                  title="Baixar esta folha em SVG"
-                >
-                  SVG
-                </button>
-              </figcaption>
-            </figure>
-          ))}
+        <div
+          className={`sheets-list${armed ? " placing" : ""}`}
+          onPointerDown={onDown}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerLeave={() => setGhost(null)}
+          onScroll={() => editing && commitEdit(editing)}
+        >
+          {svgs.map((svg, i) => {
+            const empty = i > 0 && !built.views.some((v) => v.sheet === i);
+            return (
+              <figure key={i} className="sheet" data-sheet={i}>
+                <div className="sheet-paper" dangerouslySetInnerHTML={{ __html: svg.replace(/width="[\d.]+mm" height="[\d.]+mm"/, 'width="100%"') }} />
+                <figcaption>
+                  <span>
+                    <b>{two(i + 1)}/{two(sheets.length)}</b> {sheets[i].title}
+                  </span>
+                  <span>
+                    {empty && (
+                      <button className="ghost" onClick={() => saveLayout(removePage(built.layout, i - 1))} title="Tira esta prancha vazia">
+                        Excluir prancha
+                      </button>
+                    )}
+                    <button
+                      className="ghost"
+                      onClick={() => save(new Blob([sheetToSvg(sheets[i])], { type: "image/svg+xml" }), `${fileBase(name)}-${two(i + 1)}.svg`)}
+                      title="Baixar esta folha em SVG"
+                    >
+                      SVG
+                    </button>
+                  </span>
+                </figcaption>
+              </figure>
+            );
+          })}
+          <button className="sheet-add" onClick={() => saveLayout(addPage(built.layout))} title="Prancha em branco no fim, para inserir desenhos">
+            + Prancha em branco
+          </button>
         </div>
       )}
-      <p className="sheets-hint" role="status">
-        {busy ?? "Clique no título, no subtítulo ou no nome de um desenho para editar. Arraste desenhos, títulos e nomes das peças para mudar de lugar."}
+      {ghost && <div className="sheet-ghost" style={{ left: ghost.x, top: ghost.y, width: ghost.w, height: ghost.h }} />}
+      {selInfo && !armed && (
+        <ViewPanel
+          info={selInfo}
+          general={used}
+          pages={built.layout.pages}
+          scales={SCALES}
+          onText={(field, v) => setViewText(selInfo.view.id, field, v)}
+          onScale={(n) => saveLayout(setViewScale(built.layout, selInfo.view.id, n))}
+          onPage={(p) => saveLayout(moveToPage(built.layout, selInfo.view.id, p))}
+          onShow={(s) => setViewShow(selInfo.view.id, s)}
+          onRemove={removeSelected}
+          onClose={() => setSelected(null)}
+        />
+      )}
+      </div>
+      <p className={`sheets-hint${note ? " bad" : ""}`} role="status">
+        {busy ??
+          note ??
+          (armed
+            ? `Clique na prancha onde vai ${armedName} (escala ${fmt(used)}). Esc cancela.`
+            : selInfo
+              ? `${selInfo.entry}: arraste para mudar de lugar. Delete tira da prancha; Esc fecha.`
+              : "Clique num desenho para ajustar; clique num título para editar. Arraste desenhos, títulos e nomes das peças.")}
       </p>
       {editing && (
         <input

@@ -942,6 +942,11 @@ export type ViewSpec = { kind: "plan"; level: number } | { kind: "A" | "B" | "C"
 
 /** Quadro de um desenho novo com o centro em `at` (mm de papel), na escala 1:n. */
 export function newViewCell(input: SheetInput, spec: ViewSpec, n: number, at: Pt): Cell {
+  return newViewFrame(input, spec, n, at).cell;
+}
+
+/** Quadro de um desenho novo e a área que o desenho em si ocupa (sem as margens de cotas, eixos e título). */
+export function newViewFrame(input: SheetInput, spec: ViewSpec, n: number, at: Pt): { cell: Cell; body: Cell } {
   const { cat, model } = input;
   let b: ReturnType<typeof bounds>;
   if (spec.kind === "plan") b = bounds([], boardFrames(model, cat).flat());
@@ -954,5 +959,8 @@ export function newViewCell(input: SheetInput, spec: ViewSpec, n: number, at: Pt
   const w = (b.x1 - b.x0) / n;
   const h = (b.y1 - b.y0) / n;
   const m = 4; // folga em volta
-  return { x: at[0] - w / 2 - pad.left - m, y: at[1] - h / 2 - pad.top - m, w: w + pad.left + pad.right + 2 * m, h: h + pad.top + pad.bottom + 2 * m };
+  return {
+    cell: { x: at[0] - w / 2 - pad.left - m, y: at[1] - h / 2 - pad.top - m, w: w + pad.left + pad.right + 2 * m, h: h + pad.top + pad.bottom + 2 * m },
+    body: { x: at[0] - w / 2, y: at[1] - h / 2, w, h },
+  };
 }

@@ -3,6 +3,7 @@ import { catalog } from "../../src/core/catalog";
 import { cleanSheet, fromFile, type SheetMeta } from "../../src/core/serialization";
 import { buildSheets, newViewCell } from "../../src/drawings/sheets";
 import type { Prim } from "../../src/drawings/prims";
+import { addPage, moveToPage, nextCut, nextViewId, removePage, removeView, setViewScale } from "../../src/drawings/layout";
 
 // pórtico simples (examples/portico-simples.mola): 2 GC, 2 esferas e 3 B6
 const portico = fromFile({
@@ -119,6 +120,45 @@ describe("pranchas: folha e arranjo", () => {
     const top = local.sheets[1].prims.filter((p) => p.group === "desenho:PLANTA DE COBERTURA");
     expect(ground.some((p) => p.layer === "MOLA-COTA")).toBe(true);
     expect(top.some((p) => p.layer === "MOLA-COTA")).toBe(false);
+  });
+});
+
+describe("pranchas: mexer no arranjo", () => {
+  it("tirar um pavimento repetido, mudar uma vista de prancha e excluir a prancha que ficou vazia", () => {
+    const auto = build();
+    expect(auto.manual).toBe(false);
+    let l = removeView(auto.layout, "PLANTA DE COBERTURA");
+    l = moveToPage(l, "vista C", 0);
+    l = moveToPage(l, "vista D", 1);
+    const mid = build({ layouts: { A3: l } });
+    expect(mid.manual).toBe(true);
+    expect(mid.sheets.map((s) => s.title)).toEqual(["Capa", "PB PAV. TÉRREO · VISTA-C", "VISTA-A · VISTA-B · VISTA-D", "Prancha vazia"]);
+    l = removePage(l, 2);
+    expect(build({ layouts: { A3: l } }).sheets.length).toBe(3);
+    // prancha com desenho não sai
+    expect(removePage(l, 0)).toBe(l);
+  });
+
+  it("prancha nova, escala própria e ids sem repetir", () => {
+    const auto = build();
+    let l = addPage(auto.layout);
+    expect(l.pages).toBe(auto.layout.pages + 1);
+    const id = nextViewId({ ...base, layouts: { A4: { pages: 1, views: [{ id: "d3", kind: "A", page: 0, cell: { x: 0, y: 0, w: 1, h: 1 } }] } } });
+    expect(id).toBe("d4");
+    l = moveToPage(l, "vista A", l.pages); // "Nova prancha"
+    expect(l.pages).toBe(auto.layout.pages + 2);
+    l = setViewScale(l, "vista A", 10);
+    const b = build({ scale: 5, layouts: { A3: l } });
+    expect(b.views.find((v) => v.view.id === "vista A")?.n).toBe(10);
+    l = setViewScale(l, "vista A", undefined);
+    expect(build({ scale: 5, layouts: { A3: l } }).views.find((v) => v.view.id === "vista A")?.n).toBe(5);
+    expect(nextCut([{ id: "c2", name: "Corte 2", a: [0, 0], b: [1, 0] }])).toEqual({ id: "c3", name: "Corte 3" });
+  });
+
+  it("o arranjo mexido vale só para o tamanho de folha em que foi feito", () => {
+    const l = removeView(build().layout, "vista A");
+    expect(build({ layouts: { A3: l } }).views.some((v) => v.view.id === "vista A")).toBe(false);
+    expect(build({ paper: "A4", layouts: { A3: l } }).views.some((v) => v.view.id === "vista A")).toBe(true);
   });
 });
 
