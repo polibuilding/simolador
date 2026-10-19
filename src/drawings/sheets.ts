@@ -474,7 +474,35 @@ interface Ctx {
 /** Chave das etiquetas arrastadas de um desenho (a mesma das versões anteriores para plantas e vistas). */
 const labelKey = (v: SheetView) => (v.kind === "plan" ? `planta ${v.id}` : v.id);
 
-function planDrawing(ctx: Ctx, v: SheetView, n: number, sh: SheetShow): Prim[] {
+/** Linha de corte na planta: traço e ponto, pontas grossas e setas para o lado que se vê, com o número do corte. */
+function cutLine(cut: SheetCut, P: Placed): Prim[] {
+  const A = P.to([cut.a[0], -cut.a[1]]);
+  const B = P.to([cut.b[0], -cut.b[1]]);
+  const L = Math.hypot(B[0] - A[0], B[1] - A[1]);
+  if (L < 0.5) return [];
+  const u: Pt = [(B[0] - A[0]) / L, (B[1] - A[1]) / L]; // ao longo da linha, no papel
+  const w: Pt = [u[1], -u[0]]; // para onde se olha (no papel, z do mundo cresce para baixo)
+  const at = (p: Pt, k: number, dir: Pt): Pt => [p[0] + dir[0] * k, p[1] + dir[1] * k];
+  const a0 = at(A, -4, u);
+  const b0 = at(B, 4, u);
+  const label = /\d+/.exec(cut.name)?.[0] ?? cut.name;
+  const out: Prim[] = [
+    { t: "line", a: a0, b: b0, stroke: "#000", pen: PEN.thin, dash: "center", layer: "MOLA-EIXO" },
+    { t: "line", a: a0, b: at(a0, 5, u), stroke: "#000", pen: PEN.ground, layer: "MOLA-TEXTO" },
+    { t: "line", a: b0, b: at(b0, -5, u), stroke: "#000", pen: PEN.ground, layer: "MOLA-TEXTO" },
+  ];
+  for (const e of [a0, b0]) {
+    const tip = at(e, 5, w);
+    const side = (k: number): Pt => at(at(tip, -1.8, w), k, u);
+    out.push({ t: "line", a: e, b: tip, stroke: "#000", pen: PEN.part, layer: "MOLA-TEXTO" });
+    out.push({ t: "poly", pts: [tip, side(0.9), side(-0.9)], closed: true, fill: "#000", stroke: "#000", pen: PEN.thin, layer: "MOLA-TEXTO" });
+    const t = at(at(e, 2.4, w), e === a0 ? -2.6 : 2.6, u);
+    out.push(txt([t[0], t[1] + 1], label, 2.8, { bold: true, anchor: "middle" }));
+  }
+  return out;
+}
+
+function planDrawing(ctx: Ctx, v: SheetView, n: number, sh: SheetShow): { prims: Prim[]; P: Placed } {
   const { cat, model } = ctx.input;
   const W = world(cat);
   const cell = v.cell;
@@ -536,9 +564,10 @@ function planDrawing(ctx: Ctx, v: SheetView, n: number, sh: SheetShow): Prim[] {
     out.push(...viewMarker([mx, P.box.y0 - 13], "down", "C"));
     out.push(...viewMarker([P.box.x0 - 13, my], "right", "B"));
     out.push(...viewMarker([cell.x + cell.w - 4, my], "left", "D"));
+    for (const c of ctx.cuts) out.push(...cutLine(c, P));
   }
   if (sh.labels) out.push(...callouts(items, PLAN_LABELS, P, P.box.x1 + 12, P.box.y0, P.box.y1, labelKey(v), ctx.input.meta.labels));
-  return out;
+  return { prims: out, P };
 }
 
 /** Vista (A–D) ou corte: projeção de lado com níveis, eixos, cotas de altura e terreno. */
@@ -630,15 +659,18 @@ function entryOf(v: SheetView, title: string, sub: string) {
 const showOf = (meta: SheetMeta, id: string): SheetShow => meta.views?.[id]?.show ?? { ...SHOW_ALL, ...meta.show };
 
 /** Desenho completo de uma vista: o bloco do desenho e o do título (arrastáveis). */
-function viewDrawing(ctx: Ctx, v: SheetView, nGlobal: number): { prims: Prim[]; entry: string; n: number } | null {
+function viewDrawing(ctx: Ctx, v: SheetView, nGlobal: number): { prims: Prim[]; entry: string; n: number; P?: Placed } | null {
   const n = v.n ?? nGlobal;
   const sh = showOf(ctx.input.meta, v.id);
   const [title, sub] = titlesOf(ctx, v);
   const { cat, model } = ctx.input;
   let body: Prim[];
   let titleAt: Pt;
+  let placed: Placed | undefined;
   if (v.kind === "plan") {
-    body = planDrawing(ctx, v, n, sh);
+    const d = planDrawing(ctx, v, n, sh);
+    body = d.prims;
+    placed = d.P;
     titleAt = [v.cell.x + 2, v.cell.y + v.cell.h - 13];
   } else if (v.kind === "cut") {
     const cut = ctx.cuts.find((c) => c.id === v.cut);
@@ -655,6 +687,7 @@ function viewDrawing(ctx: Ctx, v: SheetView, nGlobal: number): { prims: Prim[]; 
     prims: [...tagged(body, `desenho:${v.id}`), ...tagged(viewTitle(titleAt, title, sub, n, v.id), `titulo:${v.id}`)],
     entry: entryOf(v, title, sub),
     n,
+    P: placed,
   };
 }
 
@@ -875,6 +908,8 @@ export interface ViewInfo {
   /** segue a barra de cima (global) */
   global: boolean;
   show: SheetShow;
+  /** planta: ponto da folha (mm de papel) → ponto do mundo [x, z] (mm), já com o desenho arrastado */
+  toWorld?: (p: Pt) => [number, number];
 }
 
 export interface BuiltSheets {
@@ -911,7 +946,16 @@ export function buildSheets(input: SheetInput): BuiltSheets {
       page.scales.push(d.n);
       const [title, sub] = titlesOf(ctx, v);
       const o = input.meta.views?.[v.id];
-      views.push({ view: v, sheet: p + 1, title, sub, entry: d.entry, n: d.n, global: !o?.show, show: showOf(input.meta, v.id) });
+      const P = d.P;
+      const off = input.meta.blocks?.[`${PAPER_NAME}|desenho:${v.id}`] ?? [0, 0];
+      // inverso de place(): papel → planta (h = x, v = −z)
+      const toWorld = P
+        ? (q: Pt): [number, number] => {
+            const c = P.to([0, 0]);
+            return [(q[0] - off[0] - c[0]) / P.s, (q[1] - off[1] - c[1]) / P.s];
+          }
+        : undefined;
+      views.push({ view: v, sheet: p + 1, title, sub, entry: d.entry, n: d.n, global: !o?.show, show: showOf(input.meta, v.id), toWorld });
     }
     page.title = page.entries.join(" · ") || "Prancha vazia";
     pages.push(page);

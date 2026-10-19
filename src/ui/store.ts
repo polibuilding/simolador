@@ -197,6 +197,9 @@ interface State {
 
 const STORAGE_KEY = "simolador:autosave";
 
+/** Do carimbo, só o que é preferência da equipe (título, folha, escala, o que mostrar); arranjo, cortes e posições são do projeto. */
+const sheetPrefs = ({ line1, line2, paper, custom, scale, show }: SheetMeta): SheetMeta => ({ line1, line2, paper, custom, scale, show });
+
 /** Esferas sobrepostas (modelos de antes da regra C4): seleciona a de cada par que está sobrando, para apagar com Delete. */
 function overlapReport(model: Model): Partial<Pick<State, "multi" | "hint">> {
   const pairs = overlappingNodes(catalog, model);
@@ -692,7 +695,7 @@ export const useApp = create<State>((set, get) => ({
   setSheetsOpen: (sheetsOpen) =>
     set(sheetsOpen ? { sheetsOpen, tool: { kind: "select" }, ghost: null, selection: null, multi: [], hoverId: null, hoverBoard: null } : { sheetsOpen, sheetBoards: null }),
   newProject: () =>
-    set((s) => ({ history: push(s.history, emptyModel()), selection: null, ghost: null, name: "Estrutura 01", tool: { kind: "select" } })),
+    set((s) => ({ history: push(s.history, emptyModel()), selection: null, ghost: null, name: "Estrutura 01", tool: { kind: "select" }, sheet: sheetPrefs(s.sheet) })),
 
   load: (raw) => {
     const f = fromFile(raw);
@@ -706,7 +709,7 @@ export const useApp = create<State>((set, get) => ({
       history: createHistory(f.model),
       inventory: f.inventory,
       name: f.name,
-      sheet: f.sheet ?? s.sheet,
+      sheet: f.sheet ?? sheetPrefs(s.sheet),
       selection: null,
       multi: [],
       hint: null,

@@ -928,6 +928,11 @@ dl { margin: 0 0 16px; }
 .sheet-ghost {
   position: fixed; z-index: 21; pointer-events: none; border: 1.5px dashed var(--focus); border-radius: 3px; background: rgba(37, 99, 235, 0.05);
 }
+.sheet-cut-band { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 21; pointer-events: none; overflow: visible; }
+.sheet-cut-band line { stroke: var(--focus); stroke-width: 1.5; stroke-dasharray: 8 3 2 3; }
+.sheet-cut-band circle { fill: var(--focus); }
+.sb-sep { width: 1px; height: 18px; background: var(--rule); margin: 0 3px; }
+.sheets .sheet-side .ss-remove.soft { margin-top: 6px; color: var(--graphite); }
 .sheet-paper [data-group].selected > .grab { fill: #2563eb; fill-opacity: 0.04; stroke: #2563eb; stroke-opacity: 0.85; stroke-width: 0.35; stroke-dasharray: none; }
 .sheets .sheet-add { align-self: center; height: 34px; padding: 0 16px; border: 1px dashed var(--rule-strong); border-radius: 10px; background: transparent; color: var(--graphite); font: inherit; font-size: 13px; cursor: pointer; }
 .sheets .sheet-add:hover { background: var(--panel); color: var(--ink); border-color: var(--graphite); }

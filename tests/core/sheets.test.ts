@@ -3,7 +3,7 @@ import { catalog } from "../../src/core/catalog";
 import { cleanSheet, fromFile, type SheetMeta } from "../../src/core/serialization";
 import { buildSheets, newViewCell } from "../../src/drawings/sheets";
 import type { Prim } from "../../src/drawings/prims";
-import { addPage, moveToPage, nextCut, nextViewId, removePage, removeView, setViewScale } from "../../src/drawings/layout";
+import { addPage, deleteCut, moveToPage, nextCut, nextViewId, removePage, removeView, setViewScale } from "../../src/drawings/layout";
 
 // pórtico simples (examples/portico-simples.mola): 2 GC, 2 esferas e 3 B6
 const portico = fromFile({
@@ -159,6 +159,55 @@ describe("pranchas: mexer no arranjo", () => {
     const l = removeView(build().layout, "vista A");
     expect(build({ layouts: { A3: l } }).views.some((v) => v.view.id === "vista A")).toBe(false);
     expect(build({ paper: "A4", layouts: { A3: l } }).views.some((v) => v.view.id === "vista A")).toBe(true);
+  });
+});
+
+describe("pranchas: cortes", () => {
+  // pórtico em x = 3..9 M, z = 3 M; corte ao longo de x, passando no meio da viga (olha para −z)
+  const M = catalog.settings.modulo_mm;
+  const along = { id: "c1", name: "Corte 1", a: [0, 3 * M] as [number, number], b: [12 * M, 3 * M] as [number, number] };
+  // corte ao longo de z, no meio da viga (x = 6 M): a viga atravessa o plano
+  const across = { id: "c2", name: "Corte 2", a: [6 * M, 0] as [number, number], b: [6 * M, 6 * M] as [number, number] };
+  const withCut = (cut: typeof along) => {
+    const auto = build({ cuts: [cut] });
+    const v = { id: "d1", kind: "cut" as const, cut: cut.id, page: auto.layout.pages, cell: { x: 50, y: 30, w: 200, h: 200 } };
+    return build({ cuts: [cut], layouts: { A3: { pages: auto.layout.pages + 1, views: [...auto.layout.views, v] } } });
+  };
+
+  it("linha de corte nas plantas, com o número; some com as indicações de vistas desligadas", () => {
+    const plans = (b: ReturnType<typeof build>) => b.sheets[1].prims.filter((p) => p.group === "desenho:PLANTA BAIXA PAV. TÉRREO");
+    const arrows = (ps: Prim[]) => ps.filter((p) => p.t === "poly" && p.pts.length === 3 && p.fill === "#000").length;
+    const on = plans(build({ cuts: [along] }));
+    expect(arrows(on)).toBe(2);
+    expect(on.some((p) => p.t === "line" && p.dash === "center" && p.stroke === "#000" && p.layer === "MOLA-EIXO" && Math.abs(p.a[1] - p.b[1]) < 1e-6 && Math.abs(p.a[0] - p.b[0]) > 30)).toBe(true);
+    const off = plans(build({ cuts: [along], show: { markers: false } }));
+    expect(arrows(off)).toBe(0);
+  });
+
+  it("desenho do corte: o que está atrás da linha; barra atravessada vira seção preta", () => {
+    const b = withCut(across);
+    const sh = b.sheets[b.sheets.length - 1];
+    expect(sh.title).toBe("CORTE 2");
+    const body = sh.prims.filter((p) => p.group === "desenho:d1");
+    // a viga cortada: um círculo preto com o diâmetro da barra
+    const r = catalog.settings.barra_diametro_mm / 2 / b.scale;
+    expect(body.some((p) => p.t === "circle" && p.fill === "#000" && Math.abs(p.r - r) < 1e-6)).toBe(true);
+    // o pilar de x = 3 M fica na frente da linha (some) e o de x = 9 M fica atrás (aparece)
+    const bars = body.filter((p) => p.layer === "MOLA-BARRA" && p.t === "poly");
+    expect(bars.length).toBe(1);
+  });
+
+  it("corte ao longo do pórtico: tudo na linha aparece", () => {
+    const b = withCut(along);
+    const body = b.sheets[b.sheets.length - 1].prims.filter((p) => p.group === "desenho:d1");
+    expect(body.filter((p) => p.layer === "MOLA-BARRA" && p.t === "poly").length).toBe(3);
+  });
+
+  it("apagar o corte tira a linha e os desenhos dele", () => {
+    const b = withCut(across);
+    const meta = deleteCut({ ...base, cuts: [across], layouts: { A3: b.layout } }, "c2");
+    expect(meta.cuts).toEqual([]);
+    expect(meta.layouts?.A3?.views.some((v) => v.kind === "cut")).toBe(false);
   });
 });
 

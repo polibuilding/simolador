@@ -57,12 +57,25 @@ function PlanList({ levels, onPick, onClose }: { levels: Level[]; onPick: (y: nu
   );
 }
 
+/** Linha de corte: traço e ponto com as setas para o lado que se vê. */
+export function CutIcon() {
+  return (
+    <svg className="ico" viewBox="0 0 16 16" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1.5 11h13" strokeDasharray="3 1.6 0.6 1.6" />
+      <path d="M3 11V5M13 11V5M1.6 6.6 3 5l1.4 1.6M11.6 6.6 13 5l1.4 1.6" />
+    </svg>
+  );
+}
+
 /** Grupo "Inserir" da barra de cima. */
-export function InsertTools({ levels, cuts, armed, onArm }: {
+export function InsertTools({ levels, cuts, armed, onArm, cutting, onCut }: {
   levels: Level[];
   cuts: { id: string; name: string }[];
   armed: ViewSpec | null;
   onArm: (s: ViewSpec | null) => void;
+  /** desenhando uma linha de corte */
+  cutting: boolean;
+  onCut: () => void;
 }) {
   const is = (k: ViewSpec["kind"], cut?: string) => armed?.kind === k && (k !== "cut" || (armed as { cut: string }).cut === cut);
   return (
@@ -81,6 +94,10 @@ export function InsertTools({ levels, cuts, armed, onArm }: {
           {c.name.replace(/^corte\s*/i, "C")}
         </button>
       ))}
+      <span className="sb-sep" />
+      <button className={cutting ? "on" : ""} onClick={onCut} title="Novo corte: clique no primeiro e no segundo ponto da linha de corte numa planta baixa">
+        <CutIcon /> Corte
+      </button>
     </div>
   );
 }
@@ -93,7 +110,7 @@ const SHOW_ROWS: [keyof SheetShow, string][] = [
 ];
 
 /** Painel lateral do desenho escolhido: título, escala, prancha, o que mostrar e tirar da prancha. */
-export function ViewPanel({ info, general, pages, scales, onText, onScale, onPage, onShow, onRemove, onClose }: {
+export function ViewPanel({ info, general, pages, scales, onText, onScale, onPage, onShow, onRemove, onDeleteCut, onClose }: {
   info: ViewInfo;
   general: number;
   pages: number;
@@ -103,6 +120,8 @@ export function ViewPanel({ info, general, pages, scales, onText, onScale, onPag
   onPage: (p: number) => void;
   onShow: (s: SheetShow | undefined) => void;
   onRemove: () => void;
+  /** corte: apaga o corte (a linha nas plantas e os desenhos dele) */
+  onDeleteCut?: () => void;
   onClose: () => void;
 }) {
   const [t, setT] = useState(info.title);
@@ -155,6 +174,9 @@ export function ViewPanel({ info, general, pages, scales, onText, onScale, onPag
         ))}
       </div>
       <button className="ss-remove" onClick={onRemove} title="Tira este desenho da prancha (Delete)">Tirar da prancha</button>
+      {onDeleteCut && (
+        <button className="ss-remove soft" onClick={onDeleteCut} title="Apaga a linha de corte das plantas e todos os desenhos deste corte">Apagar o corte</button>
+      )}
     </aside>
   );
 }

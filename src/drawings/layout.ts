@@ -32,6 +32,15 @@ export function nextCut(cuts: SheetCut[] = []): { id: string; name: string } {
   return { id: `c${max + 1}`, name: `Corte ${max + 1}` };
 }
 
+/** Apaga um corte: a linha nas plantas e os desenhos dele em todos os tamanhos de folha. */
+export function deleteCut(meta: SheetMeta, id: string): SheetMeta {
+  const layouts: SheetMeta["layouts"] = {};
+  for (const [k, l] of Object.entries(meta.layouts ?? {})) {
+    if (l) layouts[k as SheetPaper] = { ...l, views: l.views.filter((v) => v.cut !== id) };
+  }
+  return { ...meta, cuts: (meta.cuts ?? []).filter((c) => c.id !== id), layouts };
+}
+
 export function addView(l: SheetLayout, v: SheetView): SheetLayout {
   const out = cloneLayout(l);
   out.views.push(v);
