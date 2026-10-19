@@ -5,7 +5,7 @@ import { codeOf, moveGroup, nodeMoveNearest, nodeMoveOptions, removeMany, remove
 import { globalMoveAt, globalMoveOptions, moveScopes, type GlobalMove, type MoveRef, type MoveScope } from "../core/globalMove";
 import { createHistory, push, redo, undo, type History } from "../core/history";
 import { defaultInventory, type InventoryConfig } from "../core/inventory";
-import { boardsOf, emptyModel, membersAt, rotateNodes, rotYRad, toDisp, type Model, type Vec3 } from "../core/model";
+import { boardsOf, emptyModel, membersAt, rotateNodes, rotYRad, samePos, toDisp, type Model, type Vec3 } from "../core/model";
 import { overlappingNodes, type Check } from "../core/rules";
 import { fromFile, toFile, type SheetMeta } from "../core/serialization";
 import { applyCandidate, type Candidate } from "../core/snapping";
@@ -25,7 +25,7 @@ export type Tool =
   | { kind: "moveNode"; nodeId: string; viaDrag: boolean }
   /**
    * duplo clique: a peça anda e o resto da estrutura acompanha o que precisar (caminho, livre ou travado).
-   * `level`: qual conjunto pode mexer (Tab amplia: só a peça → vizinhas → pavimento → estrutura toda).
+   * `level`: qual etapa pode mexer (Espaço amplia: só a peça → vizinhas → pavimento → estrutura toda).
    */
   | { kind: "moveBody"; ref: MoveRef; viaDrag: boolean; level: number }
   /** colar (ou mover várias peças: `moving.base` = modelo sem elas). R gira, X/Z espelha, ↑/↓ muda a altura */
@@ -81,8 +81,8 @@ interface State {
   cyclePiece: (dir: 1 | -1, groups: string[][]) => void;
   /** Tab: qual dos pontos sobrepostos perto do cursor vale */
   snapCycle: number;
-  /** mover só o nó com Tab: os limites azul ↔ vermelho do caminho e qual está escolhido */
-  nodeLimits: { pts: Vec3[]; i: number } | null;
+  /** referências do Tab no caminho (pontos; na esfera de uma mola, também circunferências) e a escolhida */
+  nodeLimits: { pts: Vec3[]; i: number; rings?: ({ kind: "circle"; p: Vec3; h: number; e1: Vec3; e2: Vec3 } | null)[] } | null;
   /** barras inclinadas ligadas (botão na barra de ferramentas ou tecla I) */
   incline: boolean;
   /** modo das barras: só eixos, passos de 15° ou livre (qualquer direção 3D, com encaixes) */
@@ -367,7 +367,7 @@ export const useApp = create<State>((set, get) => ({
   startMoveNode: (viaDrag) => {
     const sel = get().selection;
     if (sel?.kind !== "node") return set({ hint: "Selecione uma esfera ou ligação de base para mover só o nó." });
-    set({ tool: { kind: "moveNode", nodeId: sel.id, viaDrag }, ghost: null, hint: "Leve a esfera pelo caminho: azul pode, vermelho não. ←/→ pulam para os limites; Tab amplia o que mexe junto; Esc cancela." });
+    set({ tool: { kind: "moveNode", nodeId: sel.id, viaDrag }, ghost: null, hint: "Leve a esfera pelo caminho: azul pode, vermelho não. Tab percorre as referências; Espaço amplia o que mexe junto; Esc cancela." });
   },
   startMoveBody: () => {
     const s = get();
@@ -388,11 +388,20 @@ export const useApp = create<State>((set, get) => ({
     if (t.kind !== "moveBody" && t.kind !== "moveNode") return;
     const ref: MoveRef = t.kind === "moveBody" ? t.ref : { kind: "node", id: t.nodeId };
     const level = t.kind === "moveBody" ? t.level : 0;
-    const scopes = scopesOf(s.history.present, ref);
+    // edição por etapas: o que já mexeu nesta etapa fica (um passo no Desfazer) e a forma dela trava na próxima
+    const g = s.ghost;
+    const p0 = s.history.present;
+    const keep = g?.kind === "group" && g.check.ok && [...g.ids].some((k) => p0.nodes[k] && g.model.nodes[k] && !samePos(g.model.nodes[k].pos, p0.nodes[k].pos, 1e-6));
+    const model = keep ? g.model : s.history.present;
+    const scopes = scopesOf(model, ref);
     if (scopes.length < 2) {
-      return set({ hint: scopes.length ? `Só há um conjunto que mexe aqui: ${scopes[0].label}.` : "Nada mais pode mexer junto com essa peça." });
+      if (keep) set({ history: push(s.history, model), ghost: null });
+      return set({ hint: scopes.length ? `Só há uma etapa aqui: ${scopes[0].label}.${keep ? " A posição ficou." : ""}` : "Nada mais pode mexer junto com essa peça." });
     }
-    enterScope(set, get, ref, (level + dir + scopes.length) % scopes.length, t.viaDrag);
+    if (keep) set({ history: push(s.history, model), ghost: null });
+    const to = level + dir;
+    const edge = to < 0 ? "Já está na primeira etapa. " : to >= scopes.length ? "Já está na última etapa. " : "";
+    enterScope(set, get, ref, Math.max(0, Math.min(scopes.length - 1, to)), t.viaDrag, `${edge}${keep ? "A posição da etapa anterior ficou (Ctrl+Z volta). " : ""}`);
   },
   startMoveStructure: (viaDrag) => {
     const s = get();
@@ -769,27 +778,27 @@ export function globalOf(model: Model, ref: MoveRef, level: number): GlobalMove 
   return globalMoveAt(catalog, model, ref, sc && sc.kind !== "local" ? sc : null);
 }
 
-/** "Conjunto 2 de 4: pavimento Z ≥ 6 M (Tab amplia)": o rodapé diz o que está mexendo. */
+/** "Etapa 2 de 3: pavimento Z ≥ 6 M (Espaço amplia)": o rodapé diz o que está mexendo. */
 export function scopeTag(model: Model, tool: Tool): string {
   if (tool.kind !== "moveBody" && tool.kind !== "moveNode") return "";
   const ref: MoveRef = tool.kind === "moveBody" ? tool.ref : { kind: "node", id: tool.nodeId };
   const scopes = scopesOf(model, ref);
   if (scopes.length < 2) return "";
   const i = tool.kind === "moveBody" ? tool.level : 0;
-  return ` Mexe: ${scopes[i]?.short ?? "?"} (${i + 1} de ${scopes.length}; Tab amplia, Shift+Tab reduz).`;
+  return ` Etapa ${i + 1} de ${scopes.length}: ${scopes[i]?.short ?? "?"} (Espaço amplia, Shift+Espaço volta).`;
 }
 
 type SetFn = (p: Partial<State>) => void;
-function enterScope(set: SetFn, get: () => State, ref: MoveRef, level: number, viaDrag = false) {
+function enterScope(set: SetFn, get: () => State, ref: MoveRef, level: number, viaDrag = false, lead = "") {
   const m = get().history.present;
   const scopes = scopesOf(m, ref);
   const sc = scopes[level];
   if (!sc) return;
   const n = scopes.length;
-  const head = n > 1 ? `Conjunto ${level + 1} de ${n}: ${sc.label}. ` : "";
-  const tail = n > 1 ? " Tab amplia, Shift+Tab reduz; Esc cancela." : " Esc cancela.";
+  const head = `${lead}${n > 1 ? `Etapa ${level + 1} de ${n}: ${sc.label}${sc.frozen ? " (a forma das etapas anteriores fica travada)" : ""}. ` : ""}`;
+  const tail = n > 1 ? " Espaço amplia, Shift+Espaço volta; Esc cancela." : " Esc cancela.";
   if (sc.kind === "local") {
-    set({ tool: { kind: "moveNode", nodeId: ref.id, viaDrag }, ghost: null, hint: `${head}Leve a esfera pelo caminho: azul pode, vermelho não. ←/→ pulam para os limites.${tail}` });
+    set({ tool: { kind: "moveNode", nodeId: ref.id, viaDrag }, ghost: null, hint: `${head}Leve a esfera pelo caminho: azul pode, vermelho não. Tab percorre as referências.${tail}` });
     return;
   }
   const g = globalMoveAt(catalog, m, ref, sc);
@@ -801,7 +810,7 @@ function enterScope(set: SetFn, get: () => State, ref: MoveRef, level: number, v
       g.mode === "locked"
         ? `${head}${g.reason}`
         : g.mode === "path"
-          ? `${head}Anda num caminho (1 grau de liberdade): azul pode, vermelho não. ←/→: limites e posições na horizontal/vertical.${tail}`
+          ? `${head}Anda num caminho (1 grau de liberdade): azul pode, vermelho não. Tab: limites e posições na horizontal/vertical.${tail}`
           : `${head}Livre (${g.hand} graus de liberdade): arraste; o resto do conjunto mexe só o que precisar.${tail}`,
   });
 }

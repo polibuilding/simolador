@@ -38,8 +38,8 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
     keys: [
       ["Arrastar", "segurar e arrastar uma peça move a estrutura inteira"],
       ["Duplo clique", "a peça anda e a estrutura acompanha o que as ligações deixam: caminho azul (1 grau de liberdade), livre (2 ou mais) ou travada · ligação: outro lugar"],
-      ["Tab (peça andando)", "amplia o que mexe junto: só a peça → vizinhas → pavimento (tudo daquela altura para cima) → estrutura toda (Shift+Tab reduz); o resto fica parado"],
-      ["← / → (peça andando)", "no caminho azul: limites e posições na horizontal/vertical"],
+      ["Espaço (peça andando)", "próxima etapa: a posição desta fica e a forma dela trava; mexe só a próxima liberdade (só a peça → vizinhas → pavimento → estrutura toda). Shift+Espaço volta"],
+      ["Tab (peça andando)", "referências do caminho: limites azul/vermelho, posições na horizontal/vertical e, na esfera de uma mola, as circunferências (Shift+Tab volta; ← / → também)"],
       ["Delete", "mola com enrijecedor: o primeiro tira o enrijecedor, o segundo apaga a mola"],
       ["M", "mover a peça ou a seleção"],
       ["N", "mover só o nó (esfera selecionada)"],

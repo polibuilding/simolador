@@ -114,14 +114,15 @@ function useShortcuts() {
         st.startMoveSelection();
       } else if (!mod && k === "m" && st.selection) {
         st.startMove(false);
-      } else if (e.key === "Tab" && !mod && (st.tool.kind === "moveNode" || st.tool.kind === "moveBody")) {
-        // mexendo uma peça: Tab amplia o conjunto que mexe junto (só a peça → vizinhas → pavimento → tudo); Shift+Tab reduz
+      } else if (e.key === " " && !mod && (st.tool.kind === "moveNode" || st.tool.kind === "moveBody")) {
+        // mexendo uma peça: Espaço passa para a próxima etapa (a forma desta fica travada); Shift+Espaço volta
         e.preventDefault();
         st.cycleScope(e.shiftKey ? -1 : 1);
-      } else if ((e.key === "ArrowRight" || e.key === "ArrowLeft") && !mod && (st.tool.kind === "moveNode" || st.tool.kind === "moveBody")) {
-        // → / ←: pulam entre os limites azul ↔ vermelho e as posições na horizontal/vertical do caminho
+      } else if ((e.key === "Tab" || e.key === "ArrowRight" || e.key === "ArrowLeft") && !mod && (st.tool.kind === "moveNode" || st.tool.kind === "moveBody")) {
+        // Tab (ou → / ←): percorre as referências do caminho: limites azul ↔ vermelho, posições na horizontal/vertical
+        // e, na esfera de uma mola, as circunferências; Shift+Tab volta
         e.preventDefault();
-        const back = e.key === "ArrowLeft";
+        const back = e.key === "ArrowLeft" || (e.key === "Tab" && e.shiftKey);
         const next = st.snapCycle + (back ? -1 : 1);
         useApp.setState({ snapCycle: next || (back ? -1 : 1) });
       } else if (e.key === "Tab" && !mod && (st.tool.kind === "moveGroup" || (st.tool.kind === "place" && st.tool.code === "GC"))) {

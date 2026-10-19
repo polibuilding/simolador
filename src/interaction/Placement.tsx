@@ -8,7 +8,10 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 import { catalog } from "../core/catalog";
-import { alignStops, connectReach, locusCirclePoint, locusSpherePoint, locusStatus, moveGroup, nodeMoveOptions, sphereMeridianLimits, type LocusStatus, type NodeMove, type NodeMoveSet } from "../core/edit";
+import {
+  alignStops, connectReach, locusCirclePoint, locusSpherePoint, locusStatus, moveGroup, nearestOnRing, nodeMoveOptions, sphereMeridianLimits, sphereRings,
+  type LocusCircle, type LocusStatus, type NodeMove, type NodeMoveSet,
+} from "../core/edit";
 import { type GlobalMove } from "../core/globalMove";
 import { reachAction, reachPoint, supportReach, type ReachGuide } from "../core/reach";
 import { pasteClip, transformClip, type Clip, type PasteResult } from "../core/clipboard";
@@ -173,11 +176,20 @@ export function locusStatusFor(model: Model, key: string, set: NodeMoveSet): Loc
   return locusCache.r;
 }
 
+/** Referência do Tab: um ponto do caminho ou, na esfera de uma mola, uma circunferência (a esfera desliza nela). */
+type TabStop = { pos: Vec3; label: string; ring?: LocusCircle };
+
 /**
- * Paradas do Tab num caminho: os limites azul ↔ vermelho e as posições (azuis) em que a peça pega ou as molas que
- * chegam nela ficam na horizontal ou na vertical. Em ordem ao longo do caminho.
+ * Referências do Tab num caminho: os limites azul ↔ vermelho e as posições (azuis) em que a peça pega ou as molas que
+ * chegam nela ficam na horizontal ou na vertical, em ordem ao longo do caminho. Na esfera de uma mola, antes vêm as
+ * circunferências (mesma altura, mesmo rumo, horizontal, verticais).
  */
-function tabStops(model: Model, tool: Tool, set: NodeMoveSet, key: string, toward: Vec3): { pos: Vec3; label: string }[] {
+function tabStops(model: Model, tool: Tool, set: NodeMoveSet, key: string, toward: Vec3, start: Vec3): TabStop[] {
+  const rings: TabStop[] = set.locus?.kind === "sphere" ? sphereRings(set.locus, start).map((x) => ({ pos: nearestOnRing(x.ring, start), label: x.label, ring: x.ring })) : [];
+  return [...rings, ...pathStops(model, tool, set, key, toward)];
+}
+
+function pathStops(model: Model, tool: Tool, set: NodeMoveSet, key: string, toward: Vec3): TabStop[] {
   const loc = set.locus;
   if (!loc || !set.evalAt) return [];
   const tracked =
@@ -501,7 +513,7 @@ export function Placement() {
     // A esfera sob o cursor vira a partida e fica até outra esfera ser apontada; perto de um ponto amarelo,
     // o fantasma mostra o triângulo inteiro (R: só a barra).
     let triTab: { x: number; y: number; anchor: string | null } | null = null;
-    let nodeTab: { x: number; y: number; nodeId: string; pts: Vec3[]; labels: string[]; start: number } | null = null;
+    let nodeTab: { x: number; y: number; nodeId: string; pts: Vec3[]; labels: string[]; rings: (LocusCircle | null)[]; start: number } | null = null;
     const triangleStep = (ev: PointerEvent, rect: DOMRect, model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"]): boolean => {
       const st = useApp.getState();
       const dpx = (p: Vec3) => {
@@ -788,8 +800,14 @@ export function Placement() {
           const q = toScreen(w, rect);
           return q.z > 1 ? Infinity : Math.hypot(q.x - ev.clientX, q.y - ev.clientY);
         };
-        // ←/→: pulam entre os limites azul ↔ vermelho do caminho (mexer o cursor mais de TAB_PX volta ao normal)
-        if (nodeTab && (!st.snapCycle || nodeTab.nodeId !== pathKey || Math.hypot(ev.clientX - nodeTab.x, ev.clientY - nodeTab.y) > TAB_PX)) {
+        // Tab (ou → / ←): percorre as referências do caminho. Num ponto, mexer o cursor mais de TAB_PX volta ao normal;
+        // numa circunferência, a esfera desliza nela seguindo o cursor (até o próximo Tab ou Esc)
+        const tabIndex = (tab: NonNullable<typeof nodeTab>, c: number) => {
+          const n = tab.pts.length;
+          return (((tab.start + (c > 0 ? c - 1 : c)) % n) + n) % n;
+        };
+        const onRing = !!nodeTab && nodeTab.pts.length > 0 && !!nodeTab.rings[tabIndex(nodeTab, st.snapCycle)];
+        if (nodeTab && (!st.snapCycle || nodeTab.nodeId !== pathKey || (!onRing && Math.hypot(ev.clientX - nodeTab.x, ev.clientY - nodeTab.y) > TAB_PX))) {
           nodeTab = null;
           useApp.setState({ ...(st.snapCycle ? { snapCycle: 0 } : {}), nodeLimits: null });
         }
@@ -806,11 +824,14 @@ export function Placement() {
               const hit = ray.intersectSphere(new THREE.Sphere(C, loc.r * M), new THREE.Vector3());
               if (hit) toward = toModule(hit);
             }
-            const stops = tabStops(present, tool, set, pathKey, toward);
+            const stops = tabStops(present, tool, set, pathKey, toward, start);
             const pts = stops.map((x) => x.pos);
+            // começa pela referência mais perto do cursor (circunferência: o ponto dela mais perto)
+            const ringPx = (r: LocusCircle) => Math.min(...Array.from({ length: 72 }, (_, k) => dpx(locusCirclePoint(r, (k * Math.PI) / 36))));
+            const px = stops.map((x) => (x.ring ? ringPx(x.ring) : dpx(x.pos)));
             let first = 0;
-            pts.forEach((p, i) => { if (dpx(p) < dpx(pts[first])) first = i; });
-            nodeTab = { x: ev.clientX, y: ev.clientY, nodeId: pathKey, pts, labels: stops.map((x) => x.label), start: first };
+            px.forEach((d, i) => { if (d < px[first]) first = i; });
+            nodeTab = { x: ev.clientX, y: ev.clientY, nodeId: pathKey, pts, labels: stops.map((x) => x.label), rings: stops.map((x) => x.ring ?? null), start: first };
           }
           const n = nodeTab.pts.length;
           if (!n) {
@@ -818,12 +839,22 @@ export function Placement() {
             useApp.setState({ snapCycle: 0, nodeLimits: null });
             return st.setGhost(null, "Esse caminho não tem limites nem posições na horizontal/vertical.");
           }
-          const c = useApp.getState().snapCycle;
-          const i = (((nodeTab.start + (c > 0 ? c - 1 : c)) % n) + n) % n;
-          pick = nodeTab.pts[i];
+          const i = tabIndex(nodeTab, useApp.getState().snapCycle);
+          const ring = nodeTab.rings[i];
+          if (ring) {
+            // a esfera desliza na circunferência: o ponto dela mais perto do cursor (na tela)
+            let bd = Infinity;
+            for (let k = 0; k < 360; k++) {
+              const q = locusCirclePoint(ring, (k * Math.PI) / 180);
+              const d = dpx(q);
+              if (d < bd) (bd = d), (pick = q);
+            }
+            // encaixa nas posições redondas que caem na circunferência
+            for (const o of set.options) if (o.check.ok && dpx(o.pos) < 14 && len(sub(nearestOnRing(ring, o.pos), o.pos)) < 1e-3) pick = o.pos;
+          } else pick = nodeTab.pts[i];
           const cur = useApp.getState().nodeLimits;
-          if (!cur || cur.i !== i || cur.pts !== nodeTab.pts) useApp.setState({ nodeLimits: { pts: nodeTab.pts, i } });
-          tabInfo = ` ${nodeTab.labels[i]} (${i + 1} de ${n}): → próximo, ← volta.`;
+          if (!cur || cur.i !== i || cur.pts !== nodeTab.pts) useApp.setState({ nodeLimits: { pts: nodeTab.pts, i, rings: nodeTab.rings } });
+          tabInfo = ` ${nodeTab.labels[i]} (${i + 1} de ${n}): Tab próximo, Shift+Tab volta.`;
         }
         // 1) posições "redondas" (eixos, passos de 15°) perto do cursor: encaixa nelas
         let best = 14;
@@ -863,7 +894,7 @@ export function Placement() {
         const f = (p: Vec3) => `(${toDisp(p).map((v) => +v.toFixed(2)).join("; ")})`;
         const moved = len(sub(o.pos, start)).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
         const tag = scopeTag(present, tool);
-        const tabHint = (tabInfo || " ←/→: limites e posições na horizontal/vertical.") + tag;
+        const tabHint = (tabInfo || " Tab: referências do caminho.") + tag;
         const what = body
           ? `Clique para deixar aqui (a peça anda ${moved} M; mexem ${o.ids.size} ${o.ids.size === 1 ? "esfera" : "esferas"}).${o.check.warnings[0] ? ` ${o.check.warnings[0]}` : ""}`
           : `Clique para deixar o nó em ${f(o.pos)} (anda ${moved} M).`;
@@ -871,7 +902,7 @@ export function Placement() {
           { kind: "group", model: o.model, ids: o.ids, check: o.check },
           o.check.ok
             ? `${what}${tabHint}`
-            : `${o.check.errors[0]}${tabInfo || " ←/→ pulam para os limites do trecho azul."}${tag}`,
+            : `${o.check.errors[0]}${tabInfo || " Tab pula para os limites do trecho azul."}${tag}`,
         );
       }
 

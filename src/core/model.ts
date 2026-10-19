@@ -87,6 +87,12 @@ export const EPS = 1e-6;
 /** Tolerância para comparar direções unitárias (posições inclinadas são arredondadas a 1e-4). */
 export const DIR_TOL = 1e-4;
 export const UP: Vec3 = [0, 1, 0];
+
+/**
+ * RC90 na base: true = uma RC90 sozinha engasta o pilar na GC; false = trava só o tombamento no plano dela (L10),
+ * e duas em lados perpendiculares engastam.
+ */
+export const RC90_BASE_ENGASTA = true;
 export const AXES: Vec3[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
 
 export const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];

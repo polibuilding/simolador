@@ -498,12 +498,21 @@ function NodeLocusView() {
   if (!loc || !status) return null;
   // pontos-limite (para onde o Tab pula): os do círculo sempre; os da esfera, quando o Tab está em uso
   const limits = tabbed?.pts ?? (loc.kind === "circle" || loc.kind === "path" ? status.limits : []);
-  const limitDots = limits.map((p, i) => (
-    <mesh key={`l${i}`} position={w(p)} raycast={() => null} renderOrder={6}>
-      <sphereGeometry args={[tabbed && tabbed.i === i ? 4.6 : 3, 16, 12]} />
-      <meshBasicMaterial color={COLORS.select} transparent opacity={tabbed && tabbed.i !== i ? 0.55 : 0.95} depthTest={false} />
-    </mesh>
-  ));
+  const limitDots = limits.map((p, i) =>
+    tabbed?.rings?.[i] ? null : (
+      <mesh key={`l${i}`} position={w(p)} raycast={() => null} renderOrder={6}>
+        <sphereGeometry args={[tabbed && tabbed.i === i ? 4.6 : 3, 16, 12]} />
+        <meshBasicMaterial color={COLORS.select} transparent opacity={tabbed && tabbed.i !== i ? 0.55 : 0.95} depthTest={false} />
+      </mesh>
+    ),
+  );
+  // circunferência escolhida pelo Tab (na esfera de uma mola): a esfera desliza nela
+  const ring = tabbed?.rings?.[tabbed.i];
+  if (ring) {
+    limitDots.push(
+      <Line key="ring" points={Array.from({ length: 121 }, (_, k) => w(locusCirclePoint(ring, (k * Math.PI) / 60)))} color={COLORS.select} lineWidth={2.4} transparent opacity={0.95} depthTest={false} />,
+    );
+  }
   if (loc.kind === "sphere" && sphere) {
     return (
       <group raycast={() => null}>

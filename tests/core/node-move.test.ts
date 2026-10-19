@@ -45,11 +45,13 @@ describe("mover só o nó", () => {
       expect(Math.abs(len(sub(o.pos, [9, 6, 3])) - 6)).toBeLessThan(1e-3);
     }
   });
-  it("RC90 no canto trava o nó", () => {
+  it("RC90 no canto trava só o ângulo no plano dela (L10): o nó anda num círculo, não mais na esfera", () => {
     let m = pilarComBalanco();
     m = addConnector(m, { code: "RC90", node: id(m, [3, 6, 3]), dirs: [[0, -1, 0], [1, 0, 0]] }).model;
-    // a RC90 está entre o pilar (vínculo) e o balanço: o ângulo do pilar no nó mudaria
-    expect(nodeMoveOptions(catalog, m, id(m, [3, 6, 3])).locked).toMatch(/RC90/);
+    // a RC90 está entre o pilar (vínculo) e o balanço: o pilar só tomba no plano perpendicular ao da RC90
+    const set = nodeMoveOptions(catalog, m, id(m, [3, 6, 3]));
+    expect(set.locked).toBeUndefined();
+    expect(set.locus?.kind).toBe("circle");
   });
   it("GC com pilar vertical não anda sozinha; esfera solta do resto pede Mover estrutura", () => {
     const m = pilarComBalanco();
