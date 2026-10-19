@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
 import { buildSheets } from "../drawings/sheets";
 import { sheetToSvg, sheetsToDxf, sheetsToPdf } from "../drawings/export";
-import type { SheetMeta } from "../core/serialization";
+import type { SheetMeta, SheetPaper, SheetShow } from "../core/serialization";
+import { CUSTOM_MAX, CUSTOM_MIN } from "../drawings/prims";
 import { useApp } from "./store";
 import { boardsOf } from "../core/model";
 import { boardName } from "../core/boards";
@@ -11,7 +12,41 @@ import { renderIso, type IsoImage } from "../render/snapshot";
 import { loadLogos, type Logo } from "./logos";
 import { Icon } from "./Toolbar";
 
-const SCALES = [1, 2, 2.5, 5, 10];
+const SCALES = [1, 2, 2.5, 5, 10, 20];
+/** visualizações ligadas e desligadas na barra de cima (e no painel de cada desenho) */
+const SHOW_KEYS: [keyof SheetShow, string, string][] = [
+  ["dims", "Cotas", "Cotas"],
+  ["axes", "Eixos", "Eixos e níveis"],
+  ["labels", "Peças", "Indicações de peças (PILAR, LIGAÇÃO…)"],
+  ["markers", "Vistas", "Indicações de vistas (A–D) e de cortes"],
+];
+
+/** Largura × altura da folha personalizada: grava ao sair do campo ou com Enter. */
+function CustomSize({ w, h, onChange }: { w: number; h: number; onChange: (w: number, h: number) => void }) {
+  const [vw, setVw] = useState(String(w));
+  const [vh, setVh] = useState(String(h));
+  useEffect(() => (setVw(String(w)), setVh(String(h))), [w, h]);
+  const commit = () => {
+    const nw = Number(vw.replace(",", "."));
+    const nh = Number(vh.replace(",", "."));
+    if (Number.isFinite(nw) && Number.isFinite(nh) && nw > 0 && nh > 0) onChange(nw, nh);
+    else (setVw(String(w)), setVh(String(h)));
+  };
+  const props = {
+    onBlur: commit,
+    onKeyDown: (e: React.KeyboardEvent) => e.key === "Enter" && commit(),
+    inputMode: "numeric" as const,
+    title: `Entre ${CUSTOM_MIN} e ${CUSTOM_MAX} mm`,
+  };
+  return (
+    <span className="sb-size">
+      <input value={vw} onChange={(e) => setVw(e.target.value)} aria-label="Largura da folha (mm)" {...props} />
+      ×
+      <input value={vh} onChange={(e) => setVh(e.target.value)} aria-label="Altura da folha (mm)" {...props} />
+      mm
+    </span>
+  );
+}
 const fmt = (n: number) => `1/${String(n).replace(".", ",")}`;
 const two = (n: number) => String(n).padStart(2, "0");
 
@@ -205,13 +240,16 @@ export function SheetsView() {
               ))}
             </select>
           </label>
-          <label className="sb-field">
+          <div className="sb-field">
             <span>Folha</span>
-            <select value={paper} onChange={(e) => setMeta({ paper: e.target.value as "A3" | "A4" })}>
+            <select value={paper} onChange={(e) => setMeta({ paper: e.target.value as SheetPaper })} aria-label="Tamanho da folha">
+              <option value="A2">A2</option>
               <option value="A3">A3</option>
               <option value="A4">A4</option>
+              <option value="custom">Personalizada</option>
             </select>
-          </label>
+            {paper === "custom" && <CustomSize w={built.size.w} h={built.size.h} onChange={(w, h) => setMeta({ custom: { w, h } })} />}
+          </div>
           <label className="sb-field">
             <span>Capa</span>
             <select value={cover} onChange={(e) => setCover(e.target.value as "foto" | "desenho")}>
@@ -230,10 +268,17 @@ export function SheetsView() {
               ))}
             </div>
           )}
-          <label className="sb-check">
-            <input type="checkbox" checked={meta.show?.dims !== false} onChange={(e) => setMeta({ show: { ...meta.show, dims: e.target.checked } })} />
-            Cotas
-          </label>
+          <div className="sb-field sb-toggles" role="group" aria-label="Mostrar nos desenhos (todas as pranchas)">
+            <span>Mostrar</span>
+            {SHOW_KEYS.map(([k, label, tip]) => {
+              const on = meta.show?.[k] !== false;
+              return (
+                <button key={k} className={on ? "on" : ""} aria-pressed={on} title={`${tip}: liga e desliga em todas as pranchas (menos nos desenhos com ajuste próprio)`} onClick={() => setMeta({ show: { ...meta.show, [k]: !on } })}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className="sb-right">
           {moved > 0 && (
