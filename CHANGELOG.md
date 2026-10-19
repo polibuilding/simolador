@@ -14,10 +14,19 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
-## 1.24 (em preparação, ainda não publicada) — Edição por etapas e RC90 só no plano dela
+## 1.24 (em preparação, ainda não publicada) — Edição por etapas, RC90 só no plano dela e pranchas editáveis
 - **Edição por etapas** (duplo clique numa peça): a primeira etapa continua sendo a liberdade local (numa esfera, o "mover só o nó"). **Espaço passa para a próxima etapa** (antes era o Tab): a posição da etapa atual fica (um passo no Desfazer) e a **forma dela trava**, e só a próxima liberdade mexe. Exemplo: no pórtico simples, a esfera anda na circunferência; com Espaço, o pórtico inteiro tomba em volta das GC sem se deformar. **Shift+Espaço** volta uma etapa. O rodapé mostra "Etapa 2 de 3".
 - **Tab percorre as referências do caminho**: limites azul/vermelho e posições na horizontal/vertical (o que as setas ← / → faziam, e elas continuam valendo). Na **esfera de uma mola**, o Tab passa também pelas **circunferências**: a da mesma altura (a mola mantém a inclinação), a vertical no mesmo rumo, a horizontal e as verticais nos planos X–Z e Y–Z. Escolhida uma, a esfera desliza só nela, seguindo o cursor.
 - **RC90 trava só o ângulo no plano dela**: no plano perpendicular a mola ainda gira. No "mover só o nó", a RC90 não trava mais o nó de vez: o canto de um pórtico com RC90 anda no círculo dele, e um pilar com balanço preso por RC90 tomba de lado, com o balanço a 90°.
+- **Pranchas com a cara nova**: a tela das pranchas ganhou a mesma barra leve da montagem, com as dicas no rodapé.
+- **Carimbo novo**: logos · **título** (maior, em negrito) e **subtítulo** · **desenhos** da folha ("PB 1º PAVIMENTO", "VISTA-A", "CORTE 1") · **kits** usados · "**ESCALA: 1/5**" (ou "INDICADA", quando a folha tem mais de uma escala) · número da folha **02/05**, sem o "P_". Título e subtítulo se editam **clicando neles na própria prancha** e mudam em todas as folhas (os campos "linha 1" e "linha 2" saíram da barra de cima).
+- **Escala gráfica** na direita da folha, em pé e sem moldura.
+- **Folha A2 e personalizada** (largura × altura em mm), além de A3 e A4.
+- **Mostrar**: cotas, eixos, indicações de peças e indicações de vistas ligam e desligam em todas as pranchas de uma vez.
+- **Inserir desenhos**: ícones do cubo visto de cada lado (planta de um pavimento, vistas A–D e os cortes). Clica no ícone e depois na prancha: o desenho entra ali, na escala do momento (um contorno mostra o tamanho antes). Desenho inserido guarda a escala dele; os do arranjo automático seguem a escala geral. Prancha em branco no fim da lista; prancha vazia pode ser excluída; "Arranjo automático" volta ao padrão.
+- **Clique num desenho** abre o painel dele: título e subtítulo ("pavimento tipo"), escala, prancha, "Global" e as indicações só dele (desmarcando "Global", o desenho não muda quando se mexe na barra de cima) e "Tirar da prancha" (ou Delete). Ex.: numa torre, tirar os pavimentos repetidos.
+- **Cortes**: botão "Corte" e dois cliques numa planta baixa marcam a linha; o "Corte 1" vem pronto para colocar na prancha. Aparece o que está na linha ou atrás dela, e a mola atravessada vira a seção cortada. A linha de corte, com setas e número, aparece nas plantas.
+- O arranjo das pranchas, os cortes e os ajustes de cada desenho ficam no arquivo `.mola`.
 
 ## 1.23.1 — Correção: clique que não colocava a peça · 14/10/2026
 - Depois de **ligar uma mola clicando nas duas esferas**, o programa guardava a esfera que estava sob o cursor e, nos comandos seguintes (outra peça, GC, caminho azul), o clique só trocava a esfera de partida da ligação, sem colocar nada, até recarregar a página. Agora isso vale só enquanto a própria ligação está em uso.

@@ -149,7 +149,7 @@ Exemplo de entrada em `catalog.json` (gerado de `data/parametros.xlsx` por `npm 
   - no centro, a cena 3D com o cubo de vistas (segue a projeção: paralela ou perspectiva), a dica da ferramenta em texto pequeno e a barra de baixo (Encaixe, Barras, Vista);
   - à direita, o resumo / a peça selecionada, por cima da cena: » no canto de cima recolhe; recolhido, fica só a « transparente no canto de cima da cena (abre pelas setas, ou pelo duplo clique numa peça até o Esc; selecionar com um clique não o abre: o nome dela aparece bem de leve no canto de baixo, à direita, antes da versão);
   - a versão, bem de leve, no canto inferior direito.
-- **Modo Prancha** em aba própria: folhas A3 com capa, plantas e vistas, carimbo editável, em preto e branco de desenho técnico.
+- **Modo Prancha** em aba própria: folhas A2, A3, A4 ou personalizada, com capa, plantas, vistas e cortes, carimbo editável na própria folha, em preto e branco de desenho técnico. Desde 1.24, a tela segue a mesma linguagem leve da montagem: barra de cima com Escala, Folha, Capa, Mostrar (cotas, eixos, peças, vistas) e Inserir (planta, A–D, cortes, Corte); painel lateral do desenho escolhido; dicas no rodapé.
 - **Feedback de encaixe**: fantasma verde ou vermelho, nós livres destacados ao aproximar a peça.
 
 ## 6b. Especificação das pranchas (do exemplo Desafio Poli-USP 2022)
@@ -186,14 +186,17 @@ Referência: `siMOLAdor/sheets/Projeto_Desafio Poli USP_P01–P03.pdf` (AutoCAD 
 
 **Penas** (mm no papel): 0,1 (hachuras, eixos), 0,2 (contornos das peças), 0,3 (GC), 0,5 (chapa e terreno), 0,6 (carimbo).
 
-**Carimbo** (rodapé em toda a largura):
-- logo próprio da equipe (`assets/logo/`), não o da Mola (P07);
-- campos editáveis (P06): linha 1 ("MOLA STRUCTURAL MODEL") e linha 2 (nome do projeto, ex.: "DESAFIO POLI-USP 2026");
-- escala da folha e "MEDIDAS EM MILÍMETRO (mm)";
-- escala gráfica, gerada a partir da escala real da folha;
-- "DESENHO:" com o nome da estrutura;
-- número da folha "P_0n/0N", em destaque;
-- "FORMATO A3" fora do quadro.
+**Carimbo** (rodapé em toda a largura; desde 1.24, regras F1–F4 em `regras-de-encaixe.md`):
+- logos (Mola e equipe, `public/logos/`), campo fixo;
+- título (maior, em negrito) e subtítulo, iguais em todas as folhas e editáveis clicando neles na prancha (antes "linha 1" e "linha 2", P06);
+- desenhos da folha em nomes curtos ("PB 1º PAVIMENTO", "VISTA-A", "CORTE 1"), agrupados para caber;
+- kits usados;
+- "ESCALA: 1/X" (ou "INDICADA" com mais de uma escala na folha; "SEM ESCALA" na capa) e "MEDIDAS EM MILÍMETRO (mm)";
+- número da folha "0n/0N", em destaque, e o formato no nome do quadro.
+
+A **escala gráfica** saiu do carimbo: fica na direita da folha, vertical e sem moldura, uma por escala da folha.
+
+**Arranjo** (desde 1.24, F7–F10): nasce automático (como acima) e pode ser mexido: inserir plantas, vistas e cortes clicando na folha, tirar desenhos (ex.: pavimentos repetidos de uma torre), mudar de prancha, dar escala própria. O arranjo mexido fica no `.mola` por tamanho de folha (`SheetMeta.layouts`), junto com os cortes (`cuts`) e os ajustes de cada desenho (`views`: título, subtítulo, o que mostrar). Código: `src/drawings/sheets.ts` (desenhos e carimbo), `layout.ts` (mudanças no arranjo), `src/ui/SheetsView.tsx` e `SheetTools.tsx` (tela).
 
 **O que isso muda no programa**:
 1. **Pavimentos viram conceito do modelo**: níveis nomeados a cada 6M (ou definidos pelo usuário). A planta de um pavimento é um corte horizontal: mostra o que está no nível e o que está abaixo, atenuado.
@@ -215,6 +218,7 @@ Referência: `siMOLAdor/sheets/Projeto_Desafio Poli USP_P01–P03.pdf` (AutoCAD 
 | 3b. Edição avançada ✅ | barras inclinadas sob demanda (Shift ou botão; passos de 15° nos planos ortogonais e fechamento entre esferas), com folga entre esferas (C4, C5); placas, diagonais e ligações em planos inclinados; guias azuis/amarelos e coordenadas da GC; cubo de vistas; CC/CC90 nos 4 lados; seleção por retângulo (janela e cruzamento); botão esquerdo seleciona, direito gira | triângulo de B6 sobre o pórtico; isométrica pelo cubo; trecho da Estrutura 01 selecionado e apagado |
 | 3c. Produtividade e pranchas ✅ | copiar/colar, mover várias peças, espelhar, repetir; cotas entre eixos, totais e níveis; etiquetas arrastáveis; logos no carimbo | dois pavimentos empilhados com Ctrl+C/V; pranchas da Estrutura 01 com cotas |
 | 3d. Várias chapas ✅ | chapas lado a lado com distância padrão ou livre; estruturas ligadas entre chapas; exportar/importar por chapa; pranchas por chapa | duas chapas a 6 módulos com viga ligando os pilares |
+| 3e. Pranchas editáveis (1.24) | carimbo novo editável na folha; A2 e folha personalizada; Mostrar global e por desenho; inserir, tirar e mudar desenhos de prancha; cortes marcados na planta | torre sem os pavimentos repetidos e com um corte, em PDF |
 | 4. Geometria livre | geodésicas e barras fora dos planos ortogonais (E19); mover várias peças juntas | geodésica do manual do Kit 2 |
 | 5. App local + Kits 3/4 | empacotar com Tauri (Q01); cabos, arcos | — |
 
@@ -245,6 +249,7 @@ Em aberto:
   - **Edição por etapas** (1.24, E2f): Espaço passa para a próxima etapa (Shift+Espaço volta), guardando a posição; cada etapa aceita vira um bloco rígido (as esferas que mexeram e as vizinhas, mais um anel se as vizinhas ficam numa reta; `shapeGroup` em `globalMove.ts`, `freezeShapes` em `mechanism.ts`) nas etapas seguintes. **Tab** (E2g) percorre as referências do caminho, incluindo as circunferências da esfera de uma mola (`sphereRings` em `edit.ts`).
   - **GC perto da estrutura** (1.23, `reach.ts`): círculos na chapa onde uma mola nova (até uma esfera baixa) ou pendurada (desce girando) chega até a GC respeitando G12.
   - Próximos: escolher qual grau de liberdade seguir no modo livre (Tab entre "modos" do mecanismo); mostrar as rótulas que giram; diagonal/cabo frouxo desenhado com flecha; levar o estudo para a 3.x (rigidez das molas, enrijecedor, cargas).
+- **Pranchas editáveis** (1.24, F1–F12): carimbo novo, folhas A2/A3/A4/personalizada, Mostrar global e por desenho, inserir desenhos e cortes. **A conferir com a equipe**: tamanho do quadro das logos (hoje 36 mm na A3, como antes); o arranjo mexido não acompanha pavimentos novos (hoje: botão "Arranjo automático"). **Próximos**: isométrica e textos livres inseríveis; corte com profundidade limitada (hoje vai até o fim da estrutura); seção de placas e diagonais cortadas; o desenho que passa da folha avisa; desfazer (Ctrl+Z) nas mudanças das pranchas.
 - **Biblioteca** (ao lado da engrenagem; 1.20): por enquanto "em breve" e os exemplos que vêm com o programa (abrem com um clique). Depois: biblioteca online de modelos enviados pelos usuários (precisa de um servidor e de contas: definir onde hospedar).
 - **Simolar** (botão ao lado de Pranchas): por enquanto "em breve"; é a porta da linha 3.x (deformação, estaticidade, estabilidade).
 - **Kit 3 (1.18: cabo simples e enrijecedor)**: Kit 3 no estoque; cabo em dois cliques (esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera, com as ligações e clipes automáticos), pedaço em bolinhas, plano de corte dos rolos no resumo e na capa; enrijecedor clicando na mola B6/B12. **Medidas estimadas pelas fotos** (`kit-mola-pecas.md`): confirmar com o kit em mãos. Próximas montagens de cabo, mapeadas abaixo.
