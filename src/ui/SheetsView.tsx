@@ -4,7 +4,7 @@ import { buildSheets, levelsOf, newViewCell, newViewFrame, type SheetInput, type
 import { sheetToSvg, sheetsToDxf, sheetsToPdf } from "../drawings/export";
 import type { SheetLayout, SheetMeta, SheetPaper, SheetShow, SheetView } from "../core/serialization";
 import { CUSTOM_MAX, CUSTOM_MIN, type Pt } from "../drawings/prims";
-import { addPage, addView, moveToPage, nextViewId, removePage, removeView, setViewScale, withLayout } from "../drawings/layout";
+import { addPage, addView, deleteCut, moveToPage, nextCut, nextViewId, removePage, removeView, setViewScale, withLayout } from "../drawings/layout";
 import { InsertTools, ViewPanel } from "./SheetTools";
 import { useApp } from "./store";
 import { boardsOf } from "../core/model";
@@ -146,7 +146,48 @@ export function SheetsView() {
     const id = setTimeout(() => setNote(null), 3500);
     return () => clearTimeout(id);
   }, [note]);
-  const arm = (s: ViewSpec | null) => (setArmed(s), setGhost(null), setSelected(null));
+  const arm = (s: ViewSpec | null) => (setArmed(s), setGhost(null), setSelected(null), setCutting(null));
+
+  // ---------- cortes: dois cliques numa planta baixa ----------
+  const [cutting, setCutting] = useState<{ a?: [number, number]; screen?: [number, number] } | null>(null);
+  const [mouse, setMouse] = useState<[number, number] | null>(null);
+  const startCut = () => (setArmed(null), setGhost(null), setSelected(null), setMouse(null), setCutting(cutting ? null : {}));
+  /** ponto do mundo [x, z] (mm) sob o cursor, se ele estiver numa planta */
+  const planHit = (e: React.PointerEvent): [number, number] | null => {
+    const g = (e.target as Element).closest('[data-group^="desenho:"]');
+    const id = g?.getAttribute("data-group")?.slice("desenho:".length);
+    const info = built.views.find((v) => v.view.id === id && v.toWorld);
+    const p = paperPoint(e);
+    return info?.toWorld && p ? info.toWorld(p.at) : null;
+  };
+  /** encaixa em meio módulo; o segundo ponto puxa para a horizontal ou a vertical do primeiro */
+  const snapCut = (w: [number, number], a?: [number, number]): [number, number] => {
+    const M = catalog.settings.modulo_mm / 2;
+    const q: [number, number] = [Math.round(w[0] / M) * M, Math.round(w[1] / M) * M];
+    if (a) {
+      const dx = Math.abs(q[0] - a[0]);
+      const dz = Math.abs(q[1] - a[1]);
+      if (dz < dx * 0.14) q[1] = a[1];
+      else if (dx < dz * 0.14) q[0] = a[0];
+    }
+    return q;
+  };
+  const cutClick = (e: React.PointerEvent) => {
+    if (!cutting) return;
+    const w = planHit(e);
+    if (!w) return setNote("Clique numa planta baixa para marcar a linha de corte.");
+    if (!cutting.a) return setCutting({ a: snapCut(w), screen: [e.clientX, e.clientY] });
+    const a = cutting.a;
+    const b = snapCut(w, a);
+    if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 1) return setNote("Os dois pontos do corte precisam ser diferentes.");
+    const cur = useApp.getState().sheet;
+    const { id, name } = nextCut(cur.cuts);
+    setSheet({ ...cur, cuts: [...(cur.cuts ?? []), { id, name, a, b }] });
+    setCutting(null);
+    setMouse(null);
+    // o corte pronto vai direto para a mão: o próximo clique numa prancha coloca o desenho dele
+    setArmed({ kind: "cut", cut: id });
+  };
   const selInfo = built.views.find((v) => v.view.id === selected) ?? null;
   const armedName = armed
     ? armed.kind === "plan"
@@ -198,11 +239,13 @@ export function SheetsView() {
       const t = e.target as HTMLElement;
       if ((t instanceof HTMLInputElement && t.type !== "checkbox") || t.tagName === "SELECT" || t.tagName === "TEXTAREA") return;
       if (document.querySelector(".sheet-pop")) return; // o menu aberto fecha primeiro
-      if (e.key === "Escape" && (armed || selected)) {
+      if (e.key === "Escape" && (armed || selected || cutting)) {
         e.stopPropagation();
         setArmed(null);
         setGhost(null);
         setSelected(null);
+        setCutting(null);
+        setMouse(null);
       } else if ((e.key === "Delete" || e.key === "Backspace") && selInfo) {
         e.preventDefault();
         removeSelected();
@@ -261,6 +304,7 @@ export function SheetsView() {
   const onDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
     if (armed) return placeAt(e);
+    if (cutting) return cutClick(e);
     const target = e.target as Element;
     const edit = target.closest("[data-edit]");
     const label = target.closest("[data-tag]") as SVGGraphicsElement | null;
@@ -283,6 +327,7 @@ export function SheetsView() {
     el?.classList.add("dragging");
   };
   const onMove = (e: React.PointerEvent) => {
+    if (cutting) return setMouse([e.clientX, e.clientY]);
     if (armed) {
       // contorno do desenho que vai entrar, seguindo o cursor
       const p = paperPoint(e);
@@ -379,7 +424,7 @@ export function SheetsView() {
               );
             })}
           </div>
-          <InsertTools levels={levels} cuts={meta.cuts ?? []} armed={armed} onArm={arm} />
+          <InsertTools levels={levels} cuts={meta.cuts ?? []} armed={armed} onArm={arm} cutting={!!cutting} onCut={startCut} />
         </div>
         <div className="sb-right">
           {built.manual && (
@@ -440,12 +485,16 @@ export function SheetsView() {
         <p className="sheets-empty">Monte a estrutura primeiro: as pranchas saem dela.</p>
       ) : (
         <div
-          className={`sheets-list${armed ? " placing" : ""}`}
+          className={`sheets-list${armed || cutting ? " placing" : ""}`}
           onPointerDown={onDown}
           onPointerMove={onMove}
           onPointerUp={onUp}
-          onPointerLeave={() => setGhost(null)}
-          onScroll={() => editing && commitEdit(editing)}
+          onPointerLeave={() => (setGhost(null), setMouse(null))}
+          onScroll={() => {
+            if (editing) commitEdit(editing);
+            // a linha elástica do corte perde a referência na tela
+            if (cutting?.screen) setCutting({ a: cutting.a });
+          }}
         >
           {svgs.map((svg, i) => {
             const empty = i > 0 && !built.views.some((v) => v.sheet === i);
@@ -480,6 +529,12 @@ export function SheetsView() {
         </div>
       )}
       {ghost && <div className="sheet-ghost" style={{ left: ghost.x, top: ghost.y, width: ghost.w, height: ghost.h }} />}
+      {cutting?.screen && mouse && (
+        <svg className="sheet-cut-band" aria-hidden>
+          <line x1={cutting.screen[0]} y1={cutting.screen[1]} x2={mouse[0]} y2={mouse[1]} />
+          <circle cx={cutting.screen[0]} cy={cutting.screen[1]} r="3.5" />
+        </svg>
+      )}
       {selInfo && !armed && (
         <ViewPanel
           info={selInfo}
@@ -491,6 +546,14 @@ export function SheetsView() {
           onPage={(p) => saveLayout(moveToPage(built.layout, selInfo.view.id, p))}
           onShow={(s) => setViewShow(selInfo.view.id, s)}
           onRemove={removeSelected}
+          onDeleteCut={
+            selInfo.view.kind === "cut"
+              ? () => {
+                  setSheet(deleteCut(useApp.getState().sheet, selInfo.view.cut!));
+                  setSelected(null);
+                }
+              : undefined
+          }
           onClose={() => setSelected(null)}
         />
       )}
@@ -498,7 +561,11 @@ export function SheetsView() {
       <p className={`sheets-hint${note ? " bad" : ""}`} role="status">
         {busy ??
           note ??
-          (armed
+          (cutting
+            ? cutting.a
+              ? "Clique no segundo ponto da linha de corte. O corte olha para a esquerda de quem vai do 1º ao 2º ponto."
+              : "Clique no primeiro ponto da linha de corte, numa planta baixa. Esc cancela."
+            : armed
             ? `Clique na prancha onde vai ${armedName} (escala ${fmt(used)}). Esc cancela.`
             : selInfo
               ? `${selInfo.entry}: arraste para mudar de lugar. Delete tira da prancha; Esc fecha.`
