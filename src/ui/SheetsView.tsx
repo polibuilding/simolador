@@ -2,14 +2,23 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
 import { buildSheets } from "../drawings/sheets";
 import { sheetToSvg, sheetsToDxf, sheetsToPdf } from "../drawings/export";
+import type { SheetMeta } from "../core/serialization";
 import { useApp } from "./store";
 import { boardsOf } from "../core/model";
 import { boardName } from "../core/boards";
 import { filterByBoards } from "../core/boards";
 import { renderIso, type IsoImage } from "../render/snapshot";
 import { loadLogos, type Logo } from "./logos";
+import { Icon } from "./Toolbar";
 
 const SCALES = [1, 2, 2.5, 5, 10];
+const fmt = (n: number) => `1/${String(n).replace(".", ",")}`;
+const two = (n: number) => String(n).padStart(2, "0");
+
+const Ico = {
+  back: <path d="M9.5 3.5 5 8l4.5 4.5" />,
+  download: <path d="M8 2v8M4.75 6.75 8 10l3.25-3.25M2.5 11v2.5h11V11" />,
+};
 
 function save(blob: Blob, name: string) {
   const a = document.createElement("a");
@@ -19,6 +28,18 @@ function save(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 const fileBase = (name: string) => name.replace(/[^\p{L}\p{N} _-]/gu, "").trim().replace(/\s+/g, "-") || "estrutura";
+
+/** Texto da prancha sendo editado no lugar (posição na tela, em px). */
+interface Editing {
+  key: string;
+  value: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  font: number;
+  bold: boolean;
+}
 
 /** Pranchas: capa, plantas por pavimento e vistas A–D, no padrão do Desafio 2022. */
 export function SheetsView() {
@@ -37,12 +58,13 @@ export function SheetsView() {
   const name = useApp((s) => s.name);
   const meta = useApp((s) => s.sheet);
   const { setSheet, setSheetsOpen } = useApp.getState();
-  const [scale, setScale] = useState<"auto" | number>("auto");
+  /** muda só uma parte do carimbo (sempre a partir do estado atual) */
+  const setMeta = (patch: Partial<SheetMeta>) => setSheet({ ...useApp.getState().sheet, ...patch });
+  const scale = meta.scale ?? "auto";
   const [busy, setBusy] = useState<string | null>(null);
 
   // capa: foto 3D renderizada (padrão) ou o desenho em linhas
   const [cover, setCover] = useState<"foto" | "desenho">("foto");
-  const [dims, setDims] = useState(true);
   const paper = meta.paper ?? "A3";
   const [iso, setIso] = useState<IsoImage | null>(null);
   useEffect(() => {
@@ -69,112 +91,172 @@ export function SheetsView() {
       alive = false;
     };
   }, []);
-  const { sheets, scale: used } = useMemo(
-    () => buildSheets({ cat: catalog, model, inventory, name, meta, scale, isoImage, logos, dims, paper }),
-    [model, inventory, name, meta, scale, isoImage, logos, dims, paper],
+  const built = useMemo(
+    () => buildSheets({ cat: catalog, model, inventory, name, meta, isoImage, logos }),
+    [model, inventory, name, meta, isoImage, logos],
   );
+  const { sheets, scale: used } = built;
   const svgs = useMemo(() => sheets.map((sh) => sheetToSvg(sh, { interactive: true })), [sheets]);
 
-  // arrastar etiquetas: durante o arraste só o texto anda; ao soltar, a posição vai para o carimbo/arquivo e a folha é redesenhada
-  const drag = useRef<{ el: SVGGraphicsElement; tag: string; kind: "label" | "block"; x: number; y: number; k: number } | null>(null);
+  // ---------- textos editáveis na própria prancha (título e subtítulo do carimbo e dos desenhos) ----------
+  const [editing, setEditing] = useState<Editing | null>(null);
+  // Enter e Esc fecham a edição; o blur que vem depois (o campo some) não grava de novo
+  const editDone = useRef(false);
+  const valueOf = (key: string) => {
+    if (key === "title") return meta.line1;
+    if (key === "sub") return meta.line2;
+    const v = built.views.find((x) => x.view.id === key.slice(3));
+    return key.startsWith("vt:") ? (v?.title ?? "") : (v?.sub ?? "");
+  };
+  const openEdit = (g: Element) => {
+    const key = g.getAttribute("data-edit")!;
+    const text = g.querySelector("text");
+    const hit = g.querySelector("rect");
+    const svg = (g as SVGGraphicsElement).ownerSVGElement;
+    if (!text || !hit || !svg) return;
+    const r = hit.getBoundingClientRect();
+    const k = svg.getBoundingClientRect().width / (svg.viewBox.baseVal.width || 420); // px por mm
+    const font = Math.max(12, Number(text.getAttribute("font-size")) * k);
+    editDone.current = false;
+    setEditing({ key, value: valueOf(key), x: r.left, y: r.top, w: Math.max(r.width, 180), h: Math.max(r.height, font * 1.4), font, bold: text.getAttribute("font-weight") === "700" });
+  };
+  const commitEdit = (e: Editing) => {
+    if (editDone.current) return;
+    editDone.current = true;
+    setEditing(null);
+    if (e.value === valueOf(e.key)) return;
+    if (e.key === "title") return setMeta({ line1: e.value });
+    if (e.key === "sub") return setMeta({ line2: e.value });
+    // título/subtítulo de um desenho: vazio volta ao padrão
+    const id = e.key.slice(3);
+    const field = e.key.startsWith("vt:") ? "title" : "sub";
+    const cur = useApp.getState().sheet;
+    const o = { ...cur.views?.[id], [field]: e.value.trim() ? e.value : undefined };
+    setSheet({ ...cur, views: { ...cur.views, [id]: o } });
+  };
+
+  // ---------- arrastar e clicar ----------
+  // arrastar: durante o arraste só o bloco anda; ao soltar, a posição vai para o carimbo/arquivo e a folha é redesenhada.
+  // clicar sem arrastar num texto editável abre a edição dele.
+  const press = useRef<{ el: SVGGraphicsElement | null; edit: Element | null; tag: string; kind: "label" | "block"; x: number; y: number; k: number } | null>(null);
   const onDown = (e: React.PointerEvent) => {
+    if (e.button !== 0) return;
     const target = e.target as Element;
+    const edit = target.closest("[data-edit]");
     const label = target.closest("[data-tag]") as SVGGraphicsElement | null;
     const block = label ? null : (target.closest("[data-group]") as SVGGraphicsElement | null);
     const el = label ?? block;
-    const svg = el?.ownerSVGElement;
-    if (!el || !svg) return;
+    const svg = (el ?? edit) && (target as SVGGraphicsElement).ownerSVGElement;
+    if (!svg) return;
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     const vbW = svg.viewBox.baseVal.width || 420;
-    drag.current = {
-      el, kind: label ? "label" : "block",
-      tag: label ? label.getAttribute("data-tag")! : `${paper}|${block!.getAttribute("data-group")}`,
+    press.current = {
+      el, edit, kind: label ? "label" : "block",
+      tag: label ? label.getAttribute("data-tag")! : block ? `${built.paper}|${block.getAttribute("data-group")}` : "",
       x: e.clientX, y: e.clientY, k: vbW / svg.getBoundingClientRect().width,
     };
-    el.classList.add("dragging");
+    el?.classList.add("dragging");
   };
   const onMove = (e: React.PointerEvent) => {
-    const d = drag.current;
-    if (!d) return;
+    const d = press.current;
+    if (!d?.el) return;
     d.el.setAttribute("transform", `translate(${(e.clientX - d.x) * d.k} ${(e.clientY - d.y) * d.k})`);
   };
   const onUp = (e: React.PointerEvent) => {
-    const d = drag.current;
-    drag.current = null;
+    const d = press.current;
+    press.current = null;
     if (!d) return;
-    d.el.classList.remove("dragging");
+    d.el?.classList.remove("dragging");
     const dx = (e.clientX - d.x) * d.k;
     const dy = (e.clientY - d.y) * d.k;
-    if (Math.hypot(dx, dy) < 0.3) return d.el.removeAttribute("transform");
-    const map = d.kind === "label" ? meta.labels : meta.blocks;
+    if (Math.hypot(dx, dy) < 0.3) {
+      d.el?.removeAttribute("transform");
+      if (d.edit) openEdit(d.edit);
+      return;
+    }
+    if (!d.el) return;
+    const cur = useApp.getState().sheet;
+    const map = d.kind === "label" ? cur.labels : cur.blocks;
     const prev = map?.[d.tag] ?? [0, 0];
     const next = { ...map, [d.tag]: [prev[0] + dx, prev[1] + dy] as [number, number] };
-    setSheet(d.kind === "label" ? { ...meta, labels: next } : { ...meta, blocks: next });
+    setSheet(d.kind === "label" ? { ...cur, labels: next } : { ...cur, blocks: next });
   };
-  const moved = Object.keys(meta.labels ?? {}).length + Object.keys(meta.blocks ?? {}).filter((k) => k.startsWith(`${paper}|`)).length;
+  const moved = Object.keys(meta.labels ?? {}).length + Object.keys(meta.blocks ?? {}).filter((k) => k.startsWith(`${built.paper}|`)).length;
   const empty = Object.keys(model.nodes).length === 0;
 
   return (
     <div className="sheets" role="dialog" aria-label="Pranchas">
       <header className="sheets-bar">
-        <h2>Pranchas</h2>
-        <label>
-          Escala
-          <select value={String(scale)} onChange={(e) => setScale(e.target.value === "auto" ? "auto" : Number(e.target.value))}>
-            <option value="auto">Automática ({`1/${String(used).replace(".", ",")}`})</option>
-            {SCALES.map((n) => (
-              <option key={n} value={n}>{`1/${String(n).replace(".", ",")}`}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Carimbo, linha 1
-          <input value={meta.line1} onChange={(e) => setSheet({ ...meta, line1: e.target.value })} />
-        </label>
-        <label>
-          Linha 2
-          <input value={meta.line2} onChange={(e) => setSheet({ ...meta, line2: e.target.value })} />
-        </label>
-        <label>
-          Folha
-          <select value={paper} onChange={(e) => setSheet({ ...meta, paper: e.target.value as "A3" | "A4" })}>
-            <option value="A3">A3 (420 × 297)</option>
-            <option value="A4">A4 (297 × 210)</option>
-          </select>
-        </label>
-        <label>
-          Capa
-          <select value={cover} onChange={(e) => setCover(e.target.value as "foto" | "desenho")}>
-            <option value="foto">Isométrica renderizada</option>
-            <option value="desenho">Isométrica em linhas</option>
-          </select>
-        </label>
-        {allBoards.length > 1 && (
-          <div className="sheet-boards" role="group" aria-label="Chapas nas pranchas">
-            <span>Chapas</span>
-            <button className={!sheetBoards ? "on" : ""} onClick={() => useApp.getState().setSheetBoards(null)}>Todas</button>
-            {allBoards.map((b) => (
-              <button key={b.id} className={!sheetBoards || sheetBoards.includes(b.id) ? "on" : ""} onClick={() => toggleBoard(b.id)} title={boardName(b)}>
-                {b.name ? boardName(b) : b.id.slice(1)}
-              </button>
-            ))}
-          </div>
-        )}
-        <label className="check">
-          <input type="checkbox" checked={dims} onChange={(e) => setDims(e.target.checked)} />
-          Cotas
-        </label>
-        {moved > 0 && (
-          <button
-            className="sheets-reset"
-            onClick={() => setSheet({ ...meta, labels: {}, blocks: Object.fromEntries(Object.entries(meta.blocks ?? {}).filter(([k]) => !k.startsWith(`${paper}|`))) })}
-            title="Volta etiquetas, desenhos, títulos e tabela para a posição automática"
-          >
-            Posições no automático
+        <div className="sb-left">
+          <button className="ghost" onClick={() => setSheetsOpen(false)} title="Voltar à montagem (Esc)">
+            <Icon d={Ico.back} /> Montagem
           </button>
-        )}
-        <div className="sheets-actions">
+          <span className="tb-sep" />
+          <span className="sb-title">Pranchas</span>
+        </div>
+        <div className="sb-mid">
+          <label className="sb-field">
+            <span>Escala</span>
+            <select value={String(scale)} onChange={(e) => setMeta({ scale: e.target.value === "auto" ? "auto" : Number(e.target.value) })}>
+              <option value="auto">Automática ({fmt(used)})</option>
+              {SCALES.map((n) => (
+                <option key={n} value={n}>{fmt(n)}</option>
+              ))}
+            </select>
+          </label>
+          <label className="sb-field">
+            <span>Folha</span>
+            <select value={paper} onChange={(e) => setMeta({ paper: e.target.value as "A3" | "A4" })}>
+              <option value="A3">A3</option>
+              <option value="A4">A4</option>
+            </select>
+          </label>
+          <label className="sb-field">
+            <span>Capa</span>
+            <select value={cover} onChange={(e) => setCover(e.target.value as "foto" | "desenho")}>
+              <option value="foto">Renderizada</option>
+              <option value="desenho">Em linhas</option>
+            </select>
+          </label>
+          {allBoards.length > 1 && (
+            <div className="sb-field sheet-boards" role="group" aria-label="Chapas nas pranchas">
+              <span>Chapas</span>
+              <button className={!sheetBoards ? "on" : ""} onClick={() => useApp.getState().setSheetBoards(null)}>Todas</button>
+              {allBoards.map((b) => (
+                <button key={b.id} className={!sheetBoards || sheetBoards.includes(b.id) ? "on" : ""} onClick={() => toggleBoard(b.id)} title={boardName(b)}>
+                  {b.name ? boardName(b) : b.id.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
+          <label className="sb-check">
+            <input type="checkbox" checked={meta.show?.dims !== false} onChange={(e) => setMeta({ show: { ...meta.show, dims: e.target.checked } })} />
+            Cotas
+          </label>
+        </div>
+        <div className="sb-right">
+          {moved > 0 && (
+            <button
+              className="ghost"
+              onClick={() => setMeta({ labels: {}, blocks: Object.fromEntries(Object.entries(meta.blocks ?? {}).filter(([k]) => !k.startsWith(`${built.paper}|`))) })}
+              title="Volta etiquetas, desenhos, títulos e tabela para a posição automática"
+            >
+              Posições no automático
+            </button>
+          )}
+          <button
+            className="ghost"
+            disabled={empty}
+            onClick={() => {
+              // DXF não leva imagem: a capa vai com a isométrica em linhas
+              const vector = buildSheets({ cat: catalog, model, inventory, name, meta }).sheets;
+              save(new Blob([sheetsToDxf(vector)], { type: "application/dxf" }), `${fileBase(name)}-pranchas.dxf`);
+            }}
+            title="Todas as folhas lado a lado, em mm de papel, com camadas MOLA-*"
+          >
+            DXF
+          </button>
           <button
             className="primary"
             disabled={empty || !!busy}
@@ -187,44 +269,55 @@ export function SheetsView() {
               }
             }}
           >
-            Baixar PDF
+            <Icon d={Ico.download} /> PDF
           </button>
-          <button
-            disabled={empty}
-            onClick={() => {
-              // DXF não leva imagem: a capa vai com a isométrica em linhas
-              const vector = buildSheets({ cat: catalog, model, inventory, name, meta, scale, dims, paper }).sheets;
-              save(new Blob([sheetsToDxf(vector)], { type: "application/dxf" }), `${fileBase(name)}-pranchas.dxf`);
-            }}
-            title="Todas as folhas lado a lado, em mm de papel, com camadas MOLA-*"
-          >
-            Baixar DXF
-          </button>
-          <button onClick={() => setSheetsOpen(false)}>Voltar à montagem</button>
         </div>
       </header>
-      {busy && <p className="sheets-busy" role="status">{busy}</p>}
       {empty ? (
         <p className="sheets-empty">Monte a estrutura primeiro: as pranchas saem dela.</p>
       ) : (
-        <p className="sheets-tip">Arraste os desenhos, os títulos, a tabela da capa e os nomes das peças (PILAR, VIGA…) para mudar o lugar deles.</p>
-      )}
-      {!empty && (
-        <div className="sheets-list" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
+        <div className="sheets-list" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onScroll={() => editing && commitEdit(editing)}>
           {svgs.map((svg, i) => (
             <figure key={i} className="sheet">
               <div className="sheet-paper" dangerouslySetInnerHTML={{ __html: svg.replace(/width="[\d.]+mm" height="[\d.]+mm"/, 'width="100%"') }} />
               <figcaption>
-                P_{String(i + 1).padStart(2, "0")}: {sheets[i].title}
+                <span>
+                  <b>{two(i + 1)}/{two(sheets.length)}</b> {sheets[i].title}
+                </span>
                 <button
-                  onClick={() => save(new Blob([sheetToSvg(sheets[i])], { type: "image/svg+xml" }), `${fileBase(name)}-P${String(i + 1).padStart(2, "0")}.svg`)}
+                  className="ghost"
+                  onClick={() => save(new Blob([sheetToSvg(sheets[i])], { type: "image/svg+xml" }), `${fileBase(name)}-${two(i + 1)}.svg`)}
+                  title="Baixar esta folha em SVG"
                 >
-                  SVG desta folha
+                  SVG
                 </button>
               </figcaption>
             </figure>
           ))}
         </div>
+      )}
+      <p className="sheets-hint" role="status">
+        {busy ?? "Clique no título, no subtítulo ou no nome de um desenho para editar. Arraste desenhos, títulos e nomes das peças para mudar de lugar."}
+      </p>
+      {editing && (
+        <input
+          className="sheet-edit"
+          autoFocus
+          value={editing.value}
+          style={{ left: editing.x, top: editing.y, width: editing.w, height: editing.h, fontSize: editing.font, fontWeight: editing.bold ? 700 : 400 }}
+          onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+          onFocus={(e) => e.currentTarget.select()}
+          onBlur={() => commitEdit(editing)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commitEdit(editing);
+            if (e.key === "Escape") {
+              editDone.current = true;
+              setEditing(null);
+            }
+          }}
+          aria-label="Editar texto da prancha"
+          spellCheck={false}
+        />
       )}
     </div>
   );

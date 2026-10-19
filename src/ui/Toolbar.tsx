@@ -21,7 +21,7 @@ function download(name: string, text: string) {
  * Fecha um menu flutuante com Esc ou com um clique fora dele (inclusive no botão que o abriu,
  * que fica fora: o próprio botão volta a abrir/fechar).
  */
-function useDismiss(onClose: () => void) {
+export function useDismiss(onClose: () => void) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const down = (e: PointerEvent) => {

@@ -1,44 +1,55 @@
-// Conjunto de pranchas (A3 ou A4) no padrão do Desafio Poli-USP 2022 (docs/plano-simolador.md, seção 6b):
-// P_01 capa (isométrica + lista de peças) · P_02… plantas por pavimento (2×2 por folha) · vistas A e B · vistas C e D.
+// Conjunto de pranchas no padrão do Desafio Poli-USP 2022 (docs/plano-simolador.md, seção 6b):
+// capa (isométrica + lista de peças) · plantas por pavimento · vistas A–D · cortes.
+// O arranjo nasce automático (plantas 2×2 por folha, vistas 2 por folha) e o usuário pode mexer nele: inserir, tirar
+// e mudar desenhos de prancha. O arranjo mexido fica no carimbo do projeto (SheetMeta.layouts), por tamanho de folha.
 import type { Catalog } from "../core/catalog";
 import type { InventoryConfig } from "../core/inventory";
 import { ropePlan } from "../core/rope";
-import { usage } from "../core/inventory";
-import { boardsOf, type Model } from "../core/model";
+import { minKits, usage } from "../core/inventory";
+import { boardsOf, type Model, type Vec3 } from "../core/model";
 import { boardCorners, fromBoardLocal } from "../core/boards";
-import type { SheetMeta } from "../core/serialization";
-import { GRAY, PAPER, PEN, movePrim, type PaperName, type Prim, type Pt, type Sheet } from "./prims";
-import { bounds, itemsFor, projector, world, type Item, type ViewId } from "./views";
+import type { SheetCut, SheetLayout, SheetMeta, SheetShow, SheetView } from "../core/serialization";
+import { CUSTOM_MAX, CUSTOM_MIN, GRAY, PAPER, PEN, movePrim, type PaperName, type Prim, type Pt, type Sheet } from "./prims";
+import { bounds, cutProjector, itemsFor, projector, world, type Item, type Projector, type ViewId } from "./views";
 
 export interface SheetInput {
   cat: Catalog;
   model: Model;
   inventory: InventoryConfig;
   name: string;
+  /** carimbo: título, folha, escala, o que mostrar, arranjo e cortes */
   meta: SheetMeta;
-  scale?: number | "auto"; // n de 1:n
   date?: Date;
   /** foto isométrica renderizada para a capa; sem ela, a capa usa o desenho em linhas */
   isoImage?: { url: string; aspect: number } | null;
-  /** tamanho da folha (padrão: A3) */
-  paper?: PaperName;
-  /** cotas (entre eixos, totais, alturas e cota dos níveis); padrão: ligadas */
-  dims?: boolean;
   /** logos do carimbo (Mola e equipe), lado a lado no canto inferior esquerdo; sem elas, o hexágono */
   logos?: { url: string; aspect: number }[];
 }
 
+/** Tudo ligado: o padrão da barra de cima. */
+export const SHOW_ALL: SheetShow = { markers: true, labels: true, axes: true, dims: true };
+
 const SCALES = [1, 2, 2.5, 5, 10, 20];
 const MARGIN = 10;
 const TB_H = 16; // altura do carimbo
+const BAR_W = 12; // faixa da escala gráfica, na direita da folha
 // folha atual (definida no começo de buildSheets)
 let PAPER_NAME: PaperName = "A3";
-let PG = PAPER.A3;
-let AREA = { x0: MARGIN, y0: MARGIN, x1: PG.w - MARGIN, y1: PG.h - MARGIN - TB_H - 4 };
-function setPaper(name: PaperName) {
-  PAPER_NAME = name;
-  PG = PAPER[name];
-  AREA = { x0: MARGIN, y0: MARGIN, x1: PG.w - MARGIN, y1: PG.h - MARGIN - TB_H - 4 };
+let PG = { ...PAPER.A3 };
+let AREA = { x0: MARGIN, y0: MARGIN, x1: PG.w - MARGIN - BAR_W, y1: PG.h - MARGIN - TB_H - 4 };
+
+/** Tamanho da folha escolhida (a personalizada fica entre CUSTOM_MIN e CUSTOM_MAX). */
+export function paperSize(meta: Pick<SheetMeta, "paper" | "custom">): { name: PaperName; w: number; h: number } {
+  const name = meta.paper ?? "A3";
+  if (name !== "custom") return { name, ...PAPER[name] };
+  const clamp = (v: number) => Math.min(CUSTOM_MAX, Math.max(CUSTOM_MIN, Math.round(v)));
+  return { name, w: clamp(meta.custom?.w ?? 420), h: clamp(meta.custom?.h ?? 297) };
+}
+function setPaper(meta: SheetMeta) {
+  const p = paperSize(meta);
+  PAPER_NAME = p.name;
+  PG = { w: p.w, h: p.h };
+  AREA = { x0: MARGIN, y0: MARGIN, x1: PG.w - MARGIN - BAR_W, y1: PG.h - MARGIN - TB_H - 4 };
 }
 /** marca as primitivas como um bloco arrastável */
 const tagged = (prims: Prim[], group: string): Prim[] => prims.map((p) => (p.group ? p : { ...p, group }));
@@ -57,12 +68,18 @@ const LABEL: Partial<Record<Item["kind"], string>> = {
 const PLAN_LABELS: Item["kind"][] = ["base", "rc90", "cable", "rope", "plate-h", "plate-v", "cc"];
 const ELEV_LABELS: Item["kind"][] = ["cable", "rope", "bar-v", "node", "rc90", "cc", "base", "plate-v"];
 
-const fmtScale = (n: number) => `1/${String(n).replace(".", ",")}`;
+export const fmtScale = (n: number) => `1/${String(n).replace(".", ",")}`;
 const letters = (i: number) => (i < 26 ? String.fromCharCode(65 + i) : `A${String.fromCharCode(65 + i - 26)}`);
 
 // ---------------- níveis e eixos ----------------
 
-export function levelsOf(model: Model, cat: Catalog) {
+export interface Level {
+  y: number;
+  name: string;
+  planTitle: [string, string];
+}
+
+export function levelsOf(model: Model, cat: Catalog): Level[] {
   const W = world(cat);
   const r = (y: number) => Math.round(y * 100) / 100;
   const Y = (id: string) => r(W.pos(model.nodes[id].pos)[1]);
@@ -86,10 +103,6 @@ export function levelsOf(model: Model, cat: Catalog) {
 /** Contorno de cada chapa em planta (mm, h = x, v = −z). */
 function boardFrames(model: Model, cat: Catalog): Pt[][] {
   const W = world(cat);
-  const PW = cat.settings.chapa_modulos_x * W.M;
-  const PD = cat.settings.chapa_modulos_y * W.M;
-  void PW;
-  void PD;
   return boardsOf(model).map((b) => boardCorners(cat, b).map(([x, z]) => [x * W.M, -z * W.M] as Pt));
 }
 
@@ -101,7 +114,9 @@ function axesOf(model: Model, cat: Catalog) {
   return { xs: xs.map((x, i) => ({ x, label: letters(i) })), zs: zs.map((z, i) => ({ z, label: String(i + 1) })) };
 }
 
-// ---------------- encaixe de uma vista numa célula ----------------
+// ---------------- encaixe de uma vista num quadro ----------------
+
+type Cell = SheetView["cell"];
 
 interface Placed {
   to: (q: [number, number]) => Pt;
@@ -109,8 +124,8 @@ interface Placed {
   box: { x0: number; x1: number; y0: number; y1: number }; // limites em papel
 }
 
-/** Centraliza os limites (mm reais) dentro da célula (mm papel). */
-function place(b: ReturnType<typeof bounds>, cell: { x: number; y: number; w: number; h: number }, n: number): Placed {
+/** Centraliza os limites (mm reais) dentro do quadro (mm papel). */
+function place(b: ReturnType<typeof bounds>, cell: Cell, n: number): Placed {
   const s = 1 / n;
   const cx = cell.x + cell.w / 2;
   const cy = cell.y + cell.h / 2;
@@ -211,10 +226,11 @@ function callouts(
   return out;
 }
 
-function viewTitle(at: Pt, title: string, sub: string, n: number): Prim[] {
+/** Título do desenho: nome, subtítulo (os dois se editam clicando na tela) e escala. */
+function viewTitle(at: Pt, title: string, sub: string, n: number, id: string): Prim[] {
   return [
-    txt(at, title, 4.4, { bold: true }),
-    txt([at[0], at[1] + 5.2], sub, 3.3),
+    txt(at, title, 4.4, { bold: true, edit: `vt:${id}` }),
+    txt([at[0], at[1] + 5.2], sub, 3.3, { edit: `vs:${id}` }),
     txt([at[0], at[1] + 9.4], `ESCALA: ${fmtScale(n)}`, 2.3),
   ];
 }
@@ -238,18 +254,71 @@ function viewMarker(c: Pt, dir: "up" | "down" | "left" | "right", letter: string
   ];
 }
 
+// ---------------- textos que precisam caber num quadro ----------------
+
+/** Largura aproximada (mm) de um texto em Arial, em maiúsculas. */
+const textW = (s: string, size: number, bold = false) => s.length * size * (bold ? 0.66 : 0.6);
+
+/** Quebra os itens em linhas de no máximo `maxW` mm, separados por " · ". */
+function wrap(entries: string[], maxW: number, size: number, sep = "  ·  "): string[] {
+  const lines: string[] = [];
+  let cur = "";
+  for (const e of entries) {
+    const cand = cur ? cur + sep + e : e;
+    if (!cur || textW(cand, size) <= maxW) cur = cand;
+    else (lines.push(cur), (cur = e));
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+/** Linhas e tamanho de letra para os itens caberem em `maxW` × `maxH` (diminui a letra até `min`). */
+function fitBlock(entries: string[], maxW: number, maxH: number, size0: number, min = 1.5) {
+  let size = size0;
+  for (;;) {
+    const lines = wrap(entries, maxW, size);
+    if ((lines.length * size * 1.35 <= maxH && lines.every((l) => textW(l, size) <= maxW)) || size * 0.9 < min) {
+      const max = Math.max(1, Math.floor(maxH / (size * 1.35)));
+      return { size, lines: lines.length > max ? [...lines.slice(0, max - 1), `${lines[max - 1]} …`] : lines };
+    }
+    size *= 0.9;
+  }
+}
+
+/** Texto numa linha: diminui a letra até caber em `maxW`. */
+const fitSize = (s: string, maxW: number, size: number, bold = false, min = 1.6) =>
+  Math.max(min, Math.min(size, (maxW / Math.max(1, textW(s, size, bold))) * size));
+
 // ---------------- carimbo ----------------
 
-function titleBlock(input: SheetInput, n: number, number: number, total: number, title: string): Prim[] {
+interface PageInfo {
+  number: number;
+  total: number;
+  /** nomes curtos dos desenhos da prancha ("PB 1º PAVIMENTO", "VISTA-A"…) */
+  entries: string[];
+  /** escalas dos desenhos da prancha (vazio: sem escala, como a capa) */
+  scales: number[];
+}
+
+/** Kits usados: os do estoque; no modo sem limite, o menor conjunto que cobre as peças. */
+function kitLines(input: SheetInput): string[] {
+  const { cat, inventory, model } = input;
+  const kits = inventory.unlimited ? minKits(cat, usage(model, cat)).kits : inventory.kits;
+  const short = (k: string) => (cat.kits[k]?.name ?? `Kit ${k}`).replace(/^mola structural\s*/i, "").toUpperCase();
+  return Object.entries(kits).filter(([, c]) => c > 0).map(([k, c]) => `${c > 1 ? `${c}× ` : ""}${short(k)}`);
+}
+
+function titleBlock(input: SheetInput, pg: PageInfo): Prim[] {
   const y0 = PG.h - MARGIN - TB_H;
   const y1 = PG.h - MARGIN;
   const ym = (y0 + y1) / 2;
   const kc = (PG.w - 2 * MARGIN) / (PAPER.A3.w - 2 * MARGIN);
-  const cols = [MARGIN, ...[46, 118, 176, 252, 330].map((x) => MARGIN + (x - MARGIN) * kc), PG.w - MARGIN];
+  // quadros (medidas da A3, proporcionais nas outras folhas): logos · título · desenhos · kits · escala · folha
+  const cols = [MARGIN, ...[46, 160, 268, 318, 362].map((x) => MARGIN + (x - MARGIN) * kc), PG.w - MARGIN];
   const out: Prim[] = [
-    { t: "poly", pts: [[MARGIN, y0], [PG.w - MARGIN, y0], [PG.w - MARGIN, y1], [MARGIN, y1]], closed: true, fill: null, stroke: "#000", pen: PEN.frame, layer: "MOLA-CARIMBO" },
+    { t: "poly", pts: [[MARGIN, y0], [PG.w - MARGIN, y0], [PG.w - MARGIN, y1], [MARGIN, y1]], closed: true, fill: null, stroke: "#000", pen: PEN.base, layer: "MOLA-CARIMBO" },
   ];
-  for (const x of cols.slice(1, -1)) out.push({ t: "line", a: [x, y0], b: [x, y1], stroke: "#000", pen: PEN.part, layer: "MOLA-CARIMBO" });
+  for (const x of cols.slice(1, -1)) out.push({ t: "line", a: [x, y0], b: [x, y1], stroke: "#000", pen: PEN.thin, layer: "MOLA-CARIMBO" });
   // logos (public/logos: Mola e equipe, lado a lado); sem arquivos, a marca provisória (hexágono)
   const logos = (input.logos ?? []).slice(0, 2);
   if (logos.length) {
@@ -270,31 +339,31 @@ function titleBlock(input: SheetInput, n: number, number: number, total: number,
     out.push({ t: "line", a: hex[1], b: hex[4], stroke: "#000", pen: PEN.part, layer: "MOLA-CARIMBO" });
     out.push({ t: "line", a: hex[2], b: hex[5], stroke: "#000", pen: PEN.part, layer: "MOLA-CARIMBO" });
   }
-  const T = (p: Pt, s: string, size: number, bold = false, anchor: "start" | "middle" | "end" = "start") =>
-    txt(p, s, size, { bold, anchor, layer: "MOLA-CARIMBO" });
-  out.push(T([cols[1] + 4, ym - 1.8], input.meta.line1, 2.1));
-  out.push(T([cols[1] + 4, ym + 3.6], input.meta.line2, 2.1));
-  out.push(T([cols[2] + 4, ym - 1.8], `ESCALA: ${fmtScale(n)}`, 2.1));
-  out.push(T([cols[2] + 4, ym + 3.6], "MEDIDAS EM MILÍMETRO (mm)", 2.1));
-  // escala gráfica (gerada pela escala real da folha)
-  const real = niceLength(50 * n * kc);
-  const len = real / n;
-  const gx = cols[3] + (cols[4] - cols[3] - len) / 2;
-  const gy = ym + 1.5;
-  for (let i = 0; i < 4; i++) {
-    const a = gx + (len * i) / 4;
-    out.push({
-      t: "poly", pts: [[a, gy - 0.9], [a + len / 4, gy - 0.9], [a + len / 4, gy], [a, gy]], closed: true,
-      fill: i % 2 ? "#fff" : "#000", stroke: "#000", pen: PEN.thin, layer: "MOLA-CARIMBO",
-    });
-  }
-  for (const i of [0, 2, 4]) out.push(T([gx + (len * i) / 4, gy - 2.4], String((real * i) / 4).replace(".", ","), 1.8, false, "middle"));
-  out.push(T([gx + len + 1.5, gy - 0.1], "mm", 1.8));
-  out.push(T([cols[4] + 4, ym - 3], "DESENHO:", 1.9));
-  out.push(T([cols[4] + 8, ym + 3.8], input.name.toUpperCase(), 3.4, true));
-  out.push(T([cols[5] + 10, ym + 1], title.toUpperCase(), 2.4));
-  out.push(T([cols[6] - 4, ym + 2.6], `P_${String(number).padStart(2, "0")}/${String(total).padStart(2, "0")}`, 6.5, true, "end"));
-  out.push(T([MARGIN, PG.h - 4], `FORMATO ${PAPER_NAME}`, 1.8));
+  const T = (p: Pt, s: string, size: number, o: Partial<Extract<Prim, { t: "text" }>> = {}) => txt(p, s, size, { layer: "MOLA-CARIMBO", ...o });
+  const field = (i: number, s: string) => T([cols[i] + 1.6, y0 + 2.6], s, 1.5, { fill: "#6b6b6b" });
+  const inner = (i: number) => cols[i + 1] - cols[i] - 3.2;
+  // título (maior, em negrito) e subtítulo: os mesmos em todas as pranchas; editam-se clicando neles
+  const { line1, line2 } = input.meta;
+  out.push(T([cols[1] + 3, ym + 0.4], line1, fitSize(line1, inner(1) - 1.6, 4.2, true), { bold: true, edit: "title" }));
+  out.push(T([cols[1] + 3, ym + 5], line2, fitSize(line2, inner(1) - 1.6, 2.4), { edit: "sub" }));
+  // desenhos da prancha, agrupados para caber no quadro
+  out.push(field(2, "DESENHOS"));
+  const dw = fitBlock(pg.entries.length ? pg.entries : ["—"], inner(2), TB_H - 5.2, 2.2);
+  dw.lines.forEach((l, i) => out.push(T([cols[2] + 1.6, y0 + 5.6 + dw.size * (0.75 + 1.35 * i)], l, dw.size, { bold: true })));
+  // kits usados
+  out.push(field(3, "KITS"));
+  const kits = kitLines(input);
+  const kw = fitBlock(kits.length ? kits : ["—"], inner(3), TB_H - 5.2, 2.2);
+  kw.lines.forEach((l, i) => out.push(T([cols[3] + 1.6, y0 + 5.6 + kw.size * (0.75 + 1.35 * i)], l, kw.size, { bold: true })));
+  // escala numérica: uma só, ou "INDICADA" quando a prancha tem mais de uma
+  const sc = [...new Set(pg.scales)];
+  const scTxt = sc.length === 0 ? "SEM ESCALA" : sc.length > 1 ? "ESCALA: INDICADA" : `ESCALA: ${fmtScale(sc[0])}`;
+  out.push(T([cols[4] + 1.6, ym + 1], scTxt, fitSize(scTxt, inner(4), 2.6, true), { bold: true }));
+  out.push(T([cols[4] + 1.6, y1 - 2], "MEDIDAS EM MILÍMETRO (mm)", fitSize("MEDIDAS EM MILÍMETRO (mm)", inner(4), 1.5), { fill: "#6b6b6b" }));
+  // número da folha
+  out.push(field(5, `FOLHA ${PAPER_NAME === "custom" ? `${PG.w} × ${PG.h}` : PAPER_NAME}`));
+  const num = `${String(pg.number).padStart(2, "0")}/${String(pg.total).padStart(2, "0")}`;
+  out.push(T([cols[6] - 2.4, ym + 4.2], num, fitSize(num, inner(5), 6.5, true), { bold: true, anchor: "end" }));
   return out;
 }
 
@@ -303,25 +372,56 @@ function niceLength(target: number) {
   return steps.reduce((best, s) => (Math.abs(s - target) < Math.abs(best - target) ? s : best), steps[0]);
 }
 
-// ---------------- folhas ----------------
-
-function planCells() {
-  // A3: quatro plantas por folha; A4: uma por folha (para manter a escala)
-  if (PAPER_NAME === "A4") return [{ x: AREA.x0, y: AREA.y0, w: AREA.x1 - AREA.x0, h: AREA.y1 - AREA.y0 }];
-  const w = (AREA.x1 - AREA.x0) / 2;
-  const h = (AREA.y1 - AREA.y0) / 2;
-  return [0, 1, 2, 3].map((i) => ({ x: AREA.x0 + (i % 2) * w, y: AREA.y0 + Math.floor(i / 2) * h, w, h }));
+/** Escala gráfica vertical na direita da folha, uma por escala da prancha, sem moldura. */
+function scaleBars(scales: number[]): Prim[] {
+  const out: Prim[] = [];
+  let x = PG.w - MARGIN - 1.2;
+  for (const n of [...new Set(scales)].sort((a, b) => a - b)) {
+    const real = niceLength(50 * n);
+    const len = real / n;
+    const yb = AREA.y1;
+    const yt = yb - len;
+    for (let i = 0; i < 4; i++) {
+      const a = yb - (len * (i + 1)) / 4;
+      out.push({
+        t: "poly", pts: [[x, a], [x + 1.2, a], [x + 1.2, a + len / 4], [x, a + len / 4]], closed: true,
+        fill: i % 2 ? "#fff" : "#000", stroke: "#000", pen: PEN.thin, layer: "MOLA-CARIMBO",
+      });
+    }
+    for (const i of [0, 2, 4]) out.push(txt([x - 0.9, yb - (len * i) / 4 + 0.6], String((real * i) / 4).replace(".", ","), 1.7, { anchor: "end", layer: "MOLA-CARIMBO" }));
+    out.push(txt([x + 1.2, yt - 3.6], fmtScale(n), 1.8, { bold: true, anchor: "end", layer: "MOLA-CARIMBO" }));
+    out.push(txt([x + 1.2, yt - 1.5], "mm", 1.6, { anchor: "end", fill: "#6b6b6b", layer: "MOLA-CARIMBO" }));
+    x -= 11;
+  }
+  return out;
 }
-function elevCells() {
-  // A3: duas vistas por folha; A4: uma por folha
-  const k = PAPER_NAME === "A4" ? 1 : 2;
-  const w = (AREA.x1 - AREA.x0) / k;
-  return Array.from({ length: k }, (_, i) => ({ x: AREA.x0 + i * w, y: AREA.y0, w, h: AREA.y1 - AREA.y0 }));
+
+// ---------------- quadros do arranjo automático ----------------
+
+function grid() {
+  return { cols: AREA.x1 - AREA.x0 >= 300 ? 2 : 1, rows: AREA.y1 - AREA.y0 >= 200 ? 2 : 1 };
+}
+function planCells(): Cell[] {
+  // folhas grandes: quatro plantas (2×2); A4: uma por folha (para manter a escala)
+  const { cols, rows } = grid();
+  const w = (AREA.x1 - AREA.x0) / cols;
+  const h = (AREA.y1 - AREA.y0) / rows;
+  return Array.from({ length: cols * rows }, (_, i) => ({ x: AREA.x0 + (i % cols) * w, y: AREA.y0 + Math.floor(i / cols) * h, w, h }));
+}
+function elevCells(): Cell[] {
+  // folhas grandes: duas vistas lado a lado; A4: uma por folha
+  const { cols } = grid();
+  const w = (AREA.x1 - AREA.x0) / cols;
+  return Array.from({ length: cols }, (_, i) => ({ x: AREA.x0 + i * w, y: AREA.y0, w, h: AREA.y1 - AREA.y0 }));
 }
 
-// espaço reservado dentro de cada célula (mm de papel)
+// espaço reservado dentro de cada quadro (mm de papel)
 const PLAN_PAD = { left: 14, right: 44, top: 14, bottom: 22 };
 const ELEV_PAD = { left: 34, right: 52, top: 22, bottom: 34 };
+
+function inner(cell: Cell, pad: typeof PLAN_PAD) {
+  return { x: cell.x + pad.left, y: cell.y + pad.top, w: cell.w - pad.left - pad.right, h: cell.h - pad.top - pad.bottom };
+}
 
 function planItems(cat: Catalog, model: Model, levelY: number, isGround: boolean, levels: number[] = []): Item[] {
   const all = itemsFor(cat, model, projector("plan"));
@@ -347,11 +447,9 @@ function planItems(cat: Catalog, model: Model, levelY: number, isGround: boolean
 const withGround = (b: ReturnType<typeof bounds>) => ({ ...b, y0: Math.min(b.y0, 0) });
 
 function computeScale(input: SheetInput): number {
-  const fixed = input.scale ?? input.cat.settings.prancha_escala;
+  const fixed = input.meta.scale ?? input.cat.settings.prancha_escala;
   if (typeof fixed === "number" && fixed > 0) return fixed;
   const { cat, model } = input;
-  const W = world(cat);
-  void W;
   const plan = bounds(itemsFor(cat, model, projector("plan")), boardFrames(model, cat).flat());
   const pc = planCells()[0];
   const ec = elevCells()[0];
@@ -365,14 +463,24 @@ function computeScale(input: SheetInput): number {
   return SCALES[SCALES.length - 1];
 }
 
-function inner(cell: { x: number; y: number; w: number; h: number }, pad: typeof PLAN_PAD) {
-  return { x: cell.x + pad.left, y: cell.y + pad.top, w: cell.w - pad.left - pad.right, h: cell.h - pad.top - pad.bottom };
+// ---------------- desenhos ----------------
+
+interface Ctx {
+  input: SheetInput;
+  levels: Level[];
+  cuts: SheetCut[];
 }
 
-function planDrawing(input: SheetInput, n: number, lv: ReturnType<typeof levelsOf>[number], isGround: boolean, cell: ReturnType<typeof planCells>[number]): Prim[] {
-  const { cat, model } = input;
+/** Chave das etiquetas arrastadas de um desenho (a mesma das versões anteriores para plantas e vistas). */
+const labelKey = (v: SheetView) => (v.kind === "plan" ? `planta ${v.id}` : v.id);
+
+function planDrawing(ctx: Ctx, v: SheetView, n: number, sh: SheetShow): Prim[] {
+  const { cat, model } = ctx.input;
   const W = world(cat);
-  const items = planItems(cat, model, lv.y, isGround, levelsOf(model, cat).map((l) => l.y));
+  const cell = v.cell;
+  const levelY = v.level ?? 0;
+  const isGround = ctx.levels.length > 0 && Math.abs(ctx.levels[0].y - levelY) < 0.5;
+  const items = planItems(cat, model, levelY, isGround, ctx.levels.map((l) => l.y));
   const frames = boardFrames(model, cat);
   const b = bounds([], frames.flat());
   const P = place(b, inner(cell, PLAN_PAD), n);
@@ -391,81 +499,85 @@ function planDrawing(input: SheetInput, n: number, lv: ReturnType<typeof levelsO
   }
   // eixos
   const { xs, zs } = axesOf(model, cat);
-  const top = P.box.y0 - 7;
-  const bottom = P.box.y1 + 3;
-  const left = P.box.x0 - 7;
-  const right = P.box.x1 + 3;
-  for (const a of xs) {
-    const x = P.to([a.x, 0])[0];
-    out.push(axisLine([x, top + 2.4], [x, bottom]), ...bubble([x, top], a.label));
-  }
-  for (const a of zs) {
-    const y = P.to([0, -a.z])[1];
-    out.push(axisLine([left + 2.4, y], [right, y]), ...bubble([left, y], a.label));
+  if (sh.axes) {
+    const top = P.box.y0 - 7;
+    const bottom = P.box.y1 + 3;
+    const left = P.box.x0 - 7;
+    const right = P.box.x1 + 3;
+    for (const a of xs) {
+      const x = P.to([a.x, 0])[0];
+      out.push(axisLine([x, top + 2.4], [x, bottom]), ...bubble([x, top], a.label));
+    }
+    for (const a of zs) {
+      const y = P.to([0, -a.z])[1];
+      out.push(axisLine([left + 2.4, y], [right, y]), ...bubble([left, y], a.label));
+    }
   }
   out.push(...paint(items, P));
   // cotas entre eixos (em cima e à esquerda, junto das bolinhas) e totais (embaixo e à direita)
-  if (input.dims !== false && xs.length > 1) {
+  if (sh.dims && xs.length > 1) {
     const px = xs.map((a) => P.to([a.x, 0]));
     const vals = xs.slice(1).map((a, i) => a.x - xs[i].x);
     out.push(...dimChainH(px, P.box.y0 - 3.2, vals));
     // total só quando há mais de um vão (com um só, repetiria o número); texto acima da linha, longe do marcador A
     if (vals.length > 1) out.push(...dimChainH([px[0], px[px.length - 1]], P.box.y1 + 5.5, [xs[xs.length - 1].x - xs[0].x]));
   }
-  if (input.dims !== false && zs.length > 1) {
+  if (sh.dims && zs.length > 1) {
     const py = zs.map((a) => P.to([0, -a.z])[1]);
     const vals = zs.slice(1).map((a, i) => a.z - zs[i].z);
     out.push(...dimChainV(py, P.box.x0 - 3.2, vals));
     if (vals.length > 1) out.push(...dimChainV([py[0], py[py.length - 1]], P.box.x1 + 4, [zs[zs.length - 1].z - zs[0].z], true));
   }
-  // marcadores de vista
-  const mx = (P.box.x0 + P.box.x1) / 2;
-  const my = (P.box.y0 + P.box.y1) / 2;
-  out.push(...viewMarker([mx, P.box.y1 + 11], "up", "A"));
-  out.push(...viewMarker([mx, P.box.y0 - 13], "down", "C"));
-  out.push(...viewMarker([P.box.x0 - 13, my], "right", "B"));
-  out.push(...viewMarker([cell.x + cell.w - 4, my], "left", "D"));
-  out.push(...callouts(items, PLAN_LABELS, P, P.box.x1 + 12, P.box.y0, P.box.y1, `planta ${lv.planTitle.join(" ")}`, input.meta.labels));
-  const key = lv.planTitle.join(" ");
-  const title = viewTitle([cell.x + 2, cell.y + cell.h - 13], lv.planTitle[0], lv.planTitle[1], n);
-  return [...tagged(out, `desenho:${key}`), ...tagged(title, `titulo:${key}`)];
+  // marcadores de vista e linhas de corte
+  if (sh.markers) {
+    const mx = (P.box.x0 + P.box.x1) / 2;
+    const my = (P.box.y0 + P.box.y1) / 2;
+    out.push(...viewMarker([mx, P.box.y1 + 11], "up", "A"));
+    out.push(...viewMarker([mx, P.box.y0 - 13], "down", "C"));
+    out.push(...viewMarker([P.box.x0 - 13, my], "right", "B"));
+    out.push(...viewMarker([cell.x + cell.w - 4, my], "left", "D"));
+  }
+  if (sh.labels) out.push(...callouts(items, PLAN_LABELS, P, P.box.x1 + 12, P.box.y0, P.box.y1, labelKey(v), ctx.input.meta.labels));
+  return out;
 }
 
-function elevationDrawing(input: SheetInput, n: number, view: ViewId, cell: ReturnType<typeof elevCells>[number]): Prim[] {
-  const { cat, model } = input;
-  const pr = projector(view);
-  const items = itemsFor(cat, model, pr);
+/** Vista (A–D) ou corte: projeção de lado com níveis, eixos, cotas de altura e terreno. */
+function elevationDrawing(ctx: Ctx, v: SheetView, n: number, sh: SheetShow, pr: Projector, model: Model, axes: { h: number; label: string }[], extra: Item[] = []): Prim[] {
+  const { cat } = ctx.input;
+  const cell = v.cell;
+  const items = [...itemsFor(cat, model, pr), ...extra];
   const b = withGround(bounds(items));
   const P = place(b, inner(cell, ELEV_PAD), n);
   const out: Prim[] = [];
   const x0 = P.box.x0 - 10;
   const x1 = P.box.x1 + 6;
   // níveis
-  const levels = levelsOf(model, cat);
-  for (const lv of levels) {
+  for (const lv of ctx.levels) {
     const y = P.to([0, lv.y])[1];
-    out.push(axisLine([x0 - 2, y], [x1, y]));
-    out.push(txt([cell.x + 3, y + 0.8], lv.name, 2.3));
-    if (input.dims !== false) out.push(txt([cell.x + 3, y + 3.6], `+${mmText(lv.y)}`, 1.9, { layer: "MOLA-COTA" }));
+    if (sh.axes) {
+      out.push(axisLine([x0 - 2, y], [x1, y]));
+      out.push(txt([cell.x + 3, y + 0.8], lv.name, 2.3));
+    }
+    if (sh.dims) out.push(txt([cell.x + 3, y + (sh.axes ? 3.6 : 0.8)], `+${mmText(lv.y)}`, 1.9, { layer: "MOLA-COTA" }));
   }
   // cotas de altura: do topo da chapa a cada nível (à direita da estrutura)
-  if (input.dims !== false) {
-    const hs = [0, ...levels.map((l) => l.y)].filter((v, i, a) => i === 0 || v > a[i - 1] + 0.01);
+  if (sh.dims) {
+    const hs = [0, ...ctx.levels.map((l) => l.y)].filter((h, i, a) => i === 0 || h > a[i - 1] + 0.01);
     const ys = hs.map((h) => P.to([0, h])[1]).reverse();
     const vals = hs.slice(1).map((h, i) => h - hs[i]).reverse();
     out.push(...dimChainV(ys, P.box.x1 + 8, vals, true));
   }
   // eixos
-  const { xs, zs } = axesOf(model, cat);
-  const axes = view === "A" || view === "C" ? xs.map((a) => ({ h: pr.p([a.x, 0, 0])[0], label: a.label })) : zs.map((a) => ({ h: pr.p([0, 0, a.z])[0], label: a.label }));
-  const top = P.box.y0 - 12;
-  for (const a of axes) {
-    const x = P.to([a.h, 0])[0];
-    out.push(axisLine([x, top + 2.4], [x, P.box.y1 + 8]), ...bubble([x, top], a.label));
+  if (sh.axes) {
+    const top = P.box.y0 - 12;
+    for (const a of axes) {
+      const x = P.to([a.h, 0])[0];
+      out.push(axisLine([x, top + 2.4], [x, P.box.y1 + 8]), ...bubble([x, top], a.label));
+    }
   }
   // cotas entre eixos (entre as bolinhas e a estrutura) e total (abaixo da chapa)
-  const sorted = [...axes].sort((p, q) => P.to([p.h, 0])[0] - P.to([q.h, 0])[0]);
-  if (input.dims !== false && sorted.length > 1) {
+  const sorted = [...axes].sort((p, q) => p.h - q.h);
+  if (sh.dims && sorted.length > 1) {
     const px = sorted.map((a) => P.to([a.h, 0]));
     const vals = sorted.slice(1).map((a, i) => Math.abs(a.h - sorted[i].h));
     out.push(...dimChainH(px, P.box.y0 - 7, vals));
@@ -475,10 +587,120 @@ function elevationDrawing(input: SheetInput, n: number, view: ViewId, cell: Retu
   // terreno (topo da chapa)
   const gy = P.to([0, 0])[1];
   out.push({ t: "line", a: [x0, gy], b: [x1 + 4, gy], stroke: "#000", pen: PEN.ground, layer: "MOLA-BASE" });
-  out.push(...callouts(items, ELEV_LABELS, P, P.box.x1 + 20, P.box.y0, P.box.y1, `vista ${view}`, input.meta.labels));
-  const title = viewTitle([cell.x + ELEV_PAD.left, cell.y + cell.h - 24], `VISTA - ${view}`, input.name.toUpperCase(), n);
-  return [...tagged(out, `desenho:vista ${view}`), ...tagged(title, `titulo:vista ${view}`)];
+  if (sh.labels) out.push(...callouts(items, ELEV_LABELS, P, P.box.x1 + 20, P.box.y0, P.box.y1, labelKey(v), ctx.input.meta.labels));
+  return out;
 }
+
+function sideAxes(ctx: Ctx, pr: Projector, h: Vec3) {
+  const { xs, zs } = axesOf(ctx.input.model, ctx.input.cat);
+  if (Math.abs(h[0]) > 0.999) return xs.map((a) => ({ h: pr.p([a.x, 0, 0])[0], label: a.label }));
+  if (Math.abs(h[2]) > 0.999) return zs.map((a) => ({ h: pr.p([0, 0, a.z])[0], label: a.label }));
+  return [];
+}
+
+const SIDE_H: Record<"A" | "B" | "C" | "D", Vec3> = { A: [1, 0, 0], B: [0, 0, 1], C: [-1, 0, 0], D: [0, 0, -1] };
+
+/** Título e subtítulo padrão de um desenho. */
+function defaultTitle(ctx: Ctx, v: SheetView): [string, string] {
+  const name = ctx.input.name.toUpperCase();
+  if (v.kind === "plan") {
+    const lv = ctx.levels.find((l) => Math.abs(l.y - (v.level ?? 0)) < 0.5);
+    return lv ? [...lv.planTitle] : ["PLANTA BAIXA", `NÍVEL +${mmText(v.level ?? 0)}`];
+  }
+  if (v.kind === "cut") return [(ctx.cuts.find((c) => c.id === v.cut)?.name ?? "CORTE").toUpperCase(), name];
+  return [`VISTA - ${v.kind}`, name];
+}
+
+/** Título e subtítulo de um desenho, com o que o usuário escreveu por cima do padrão. */
+function titlesOf(ctx: Ctx, v: SheetView): [string, string] {
+  const [t, s] = defaultTitle(ctx, v);
+  const o = ctx.input.meta.views?.[v.id];
+  return [o?.title?.trim() ? o.title : t, o?.sub?.trim() ? o.sub : s];
+}
+
+/** Nome curto para o carimbo: "PB 1º PAVIMENTO", "VISTA-A", "CORTE 1". */
+function entryOf(v: SheetView, title: string, sub: string) {
+  const t = title.toUpperCase().trim();
+  if (v.kind === "plan") return `${t.replace(/^PLANTA( BAIXA| DE)?(?=\s|$)/, "PB")} ${sub.toUpperCase()}`.trim();
+  if (v.kind === "cut") return t;
+  return t.replace(/\s*-\s*/, "-");
+}
+
+/** O que um desenho mostra: o da barra de cima ou, sem "global", o dele. */
+const showOf = (meta: SheetMeta, id: string): SheetShow => meta.views?.[id]?.show ?? { ...SHOW_ALL, ...meta.show };
+
+/** Desenho completo de uma vista: o bloco do desenho e o do título (arrastáveis). */
+function viewDrawing(ctx: Ctx, v: SheetView, nGlobal: number): { prims: Prim[]; entry: string; n: number } | null {
+  const n = v.n ?? nGlobal;
+  const sh = showOf(ctx.input.meta, v.id);
+  const [title, sub] = titlesOf(ctx, v);
+  const { cat, model } = ctx.input;
+  let body: Prim[];
+  let titleAt: Pt;
+  if (v.kind === "plan") {
+    body = planDrawing(ctx, v, n, sh);
+    titleAt = [v.cell.x + 2, v.cell.y + v.cell.h - 13];
+  } else if (v.kind === "cut") {
+    const cut = ctx.cuts.find((c) => c.id === v.cut);
+    if (!cut) return null;
+    const cm = cutModel(cat, model, cut);
+    body = elevationDrawing(ctx, v, n, sh, cm.pr, cm.model, sideAxes(ctx, cm.pr, cm.h), cm.sections);
+    titleAt = [v.cell.x + ELEV_PAD.left, v.cell.y + v.cell.h - 24];
+  } else {
+    const pr = projector(v.kind);
+    body = elevationDrawing(ctx, v, n, sh, pr, model, sideAxes(ctx, pr, SIDE_H[v.kind]));
+    titleAt = [v.cell.x + ELEV_PAD.left, v.cell.y + v.cell.h - 24];
+  }
+  return {
+    prims: [...tagged(body, `desenho:${v.id}`), ...tagged(viewTitle(titleAt, title, sub, n, v.id), `titulo:${v.id}`)],
+    entry: entryOf(v, title, sub),
+    n,
+  };
+}
+
+// ---------------- cortes ----------------
+
+/**
+ * Modelo visto num corte: fica o que está na linha de corte ou atrás dela (do lado para onde se olha).
+ * Barras atravessadas pela linha aparecem como a seção cortada (círculo preto).
+ */
+function cutModel(cat: Catalog, model: Model, cut: SheetCut) {
+  const W = world(cat);
+  const h: Vec3 = [cut.b[0] - cut.a[0], 0, cut.b[1] - cut.a[1]];
+  const pr = cutProjector(h);
+  const d = pr.depthAxis;
+  const d0 = cut.a[0] * d[0] + cut.a[1] * d[2];
+  const off = (w: Vec3) => w[0] * d[0] + w[2] * d[2] - d0; // > 0: entre a linha e quem olha (sai do corte)
+  const keepN = new Set(Object.values(model.nodes).filter((nd) => off(W.pos(nd.pos)) <= W.R + 0.5).map((nd) => nd.id));
+  const out: Model = { ...model, nodes: {}, members: {}, plates: {}, connectors: {} };
+  for (const id of keepN) out.nodes[id] = model.nodes[id];
+  const sections: Item[] = [];
+  const barD = cat.settings.barra_diametro_mm;
+  for (const m of Object.values(model.members)) {
+    if (keepN.has(m.a) && keepN.has(m.b)) {
+      out.members[m.id] = m;
+      continue;
+    }
+    if (cat.pieces[m.code]?.type !== "bar") continue;
+    const a = W.pos(model.nodes[m.a].pos);
+    const b = W.pos(model.nodes[m.b].pos);
+    const oa = off(a);
+    const ob = off(b);
+    if (oa * ob >= 0) continue;
+    const t = oa / (oa - ob);
+    const q: Vec3 = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+    const [qh, qv, qd] = pr.p(q);
+    sections.push({
+      depth: qd + 1, order: 6, kind: "bar-h", anchor: [qh, qv],
+      draw: (to, k) => [{ t: "circle", c: to([qh, qv]), r: (barD / 2) * k, fill: "#000", stroke: "#000", pen: PEN.part, layer: "MOLA-BARRA" }],
+    });
+  }
+  for (const p of Object.values(model.plates)) if (p.corners.every((c) => keepN.has(c))) out.plates[p.id] = p;
+  for (const c of Object.values(model.connectors)) if (keepN.has(c.node)) out.connectors[c.id] = c;
+  return { model: out, pr, h, sections };
+}
+
+// ---------------- capa ----------------
 
 function coverDrawing(input: SheetInput, n: number): Prim[] {
   const { cat, model, inventory } = input;
@@ -488,22 +710,16 @@ function coverDrawing(input: SheetInput, n: number): Prim[] {
   const pr = projector("iso");
   const items = itemsFor(cat, model, pr);
   // chapa
-  const PW = cat.settings.chapa_modulos_x * W.M;
-  const PD = cat.settings.chapa_modulos_y * W.M;
-  void PW;
-  void PD;
   const plates = boardsOf(model).map((bd) => {
-    const x = bd.x * W.M;
-    const z = bd.z * W.M;
     // grade da chapa nos eixos dela (chapa girada: a grade gira junto)
     const loc = (i: number, j: number) => {
       const [wx, wz] = fromBoardLocal(bd, i, j);
       return pr.p([wx * W.M, 0, wz * W.M]);
     };
-    return { x, z, loc, pts: boardCorners(cat, bd).map(([cx, cz]) => pr.p([cx * W.M, 0, cz * W.M])).map(([h, v]) => [h, v] as Pt) };
+    return { loc, pts: boardCorners(cat, bd).map(([cx, cz]) => pr.p([cx * W.M, 0, cz * W.M])).map(([h, v]) => [h, v] as Pt) };
   });
   const b = bounds(items, plates.flatMap((p) => p.pts));
-  const fs = PAPER_NAME === "A4" ? 0.8 : 1; // letras um pouco menores na A4
+  const fs = PG.w < 330 ? 0.8 : 1; // letras um pouco menores na A4
   const isoW = (AREA.x1 - AREA.x0) * 0.58;
   const cell = { x: AREA.x0 + 4, y: AREA.y0 + 26 * fs, w: isoW, h: AREA.y1 - AREA.y0 - 34 * fs };
   const iso: Prim[] = [];
@@ -541,7 +757,7 @@ function coverDrawing(input: SheetInput, n: number): Prim[] {
 
   // painel à direita: dados e lista de peças (tabela grande)
   const px = AREA.x0 + isoW + 14;
-  const pr1 = PG.w - MARGIN;
+  const pr1 = AREA.x1;
   const dados: Prim[] = [];
   let y = AREA.y0 + 12 * fs;
   const H = (arr: Prim[], s: string) => {
@@ -592,13 +808,13 @@ function coverDrawing(input: SheetInput, n: number): Prim[] {
     const stock = Object.entries(inventory.kits).reduce((s2, [k, cnt]) => s2 + (cat.kits[k]?.pieces[code] ?? 0) * cnt, 0);
     // cabo: conta os pedaços; o nome traz o total em cm e bolinhas
     const rope = code === "CABLE";
-    const n = rope ? plan.cuts.length : used[code];
-    total += n;
+    const qty = rope ? plan.cuts.length : used[code];
+    total += qty;
     if (i % 2) tab.push(rect(yy, rowH, "#f3f3f3"));
     tab.push(txt([colCode, mid(yy)], code, 3.2 * fs, { bold: true }));
     const cm = (mm: number) => (mm / 10).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
     tab.push(txt([colName, mid(yy)], rope ? `Cabo: ${cm(plan.mm)} cm | ${plan.balls} bolinhas` : p?.name.replace(` ${code}`, "") ?? code, 3 * fs));
-    tab.push(txt([colUsed, mid(yy) + 0.3], String(n), 4 * fs, { anchor: "end", bold: true }));
+    tab.push(txt([colUsed, mid(yy) + 0.3], String(qty), 4 * fs, { anchor: "end", bold: true }));
     tab.push(txt([colStock, mid(yy)], inventory.unlimited ? "∞" : rope ? `${stock} rolo${stock === 1 ? "" : "s"}` : String(stock), 3 * fs, { anchor: "end", fill: "#555" }));
     yy += rowH;
   });
@@ -628,26 +844,80 @@ function coverDrawing(input: SheetInput, n: number): Prim[] {
   return out;
 }
 
-/** Monta todas as folhas. */
-export function buildSheets(input: SheetInput): { sheets: Sheet[]; scale: number } {
-  setPaper(input.paper ?? "A3");
-  const n = computeScale(input);
-  const levels = levelsOf(input.model, input.cat);
-  const pages: { title: string; prims: Prim[] }[] = [];
-  pages.push({ title: "Capa", prims: coverDrawing(input, n) });
-  const cells = planCells();
-  for (let i = 0; i < Math.max(1, levels.length); i += cells.length) {
-    const prims = levels.slice(i, i + cells.length).flatMap((lv, k) => planDrawing(input, n, lv, i + k === 0, cells[k]));
-    pages.push({ title: "Plantas", prims });
-  }
+// ---------------- arranjo ----------------
+
+/** Arranjo automático: plantas por pavimento (2×2 por folha) e vistas A–D (2 por folha), como no Desafio 2022. */
+function autoLayout(ctx: Ctx): SheetLayout {
+  const views: SheetView[] = [];
+  let page = 0;
+  const pc = planCells();
+  ctx.levels.forEach((lv, i) => {
+    views.push({ id: lv.planTitle.join(" "), kind: "plan", level: lv.y, page: page + Math.floor(i / pc.length), cell: pc[i % pc.length] });
+  });
+  page += Math.ceil(ctx.levels.length / pc.length);
   const ec = elevCells();
-  const views: ViewId[] = ["A", "B", "C", "D"];
-  for (let i = 0; i < views.length; i += ec.length) {
-    const vs = views.slice(i, i + ec.length);
-    pages.push({ title: vs.length > 1 ? `Vistas ${vs.join(" e ")}` : `Vista ${vs[0]}`, prims: vs.flatMap((v, k) => elevationDrawing(input, n, v, ec[k])) });
+  (["A", "B", "C", "D"] as const).forEach((k, i) => {
+    views.push({ id: `vista ${k}`, kind: k, page: page + Math.floor(i / ec.length), cell: ec[i % ec.length] });
+  });
+  page += Math.ceil(4 / ec.length);
+  return { pages: page, views };
+}
+
+/** Desenho na tela: o que o painel lateral precisa saber dele. */
+export interface ViewInfo {
+  view: SheetView;
+  /** folha (0 = capa) */
+  sheet: number;
+  title: string;
+  sub: string;
+  entry: string;
+  n: number;
+  /** segue a barra de cima (global) */
+  global: boolean;
+  show: SheetShow;
+}
+
+export interface BuiltSheets {
+  sheets: Sheet[];
+  /** escala geral (n de 1:n) */
+  scale: number;
+  /** arranjo em uso (o mexido pelo usuário ou o automático) */
+  layout: SheetLayout;
+  /** o arranjo foi mexido pelo usuário */
+  manual: boolean;
+  views: ViewInfo[];
+  paper: PaperName;
+  size: { w: number; h: number };
+}
+
+/** Monta todas as folhas. */
+export function buildSheets(input: SheetInput): BuiltSheets {
+  setPaper(input.meta);
+  const n = computeScale(input);
+  const ctx: Ctx = { input, levels: levelsOf(input.model, input.cat), cuts: input.meta.cuts ?? [] };
+  const saved = input.meta.layouts?.[PAPER_NAME];
+  const layout = saved ?? autoLayout(ctx);
+  const pages: { title: string; prims: Prim[]; entries: string[]; scales: number[] }[] = [];
+  pages.push({ title: "Capa", prims: coverDrawing(input, n), entries: ["ISOMÉTRICA", "LISTA DE PEÇAS"], scales: [] });
+  const views: ViewInfo[] = [];
+  for (let p = 0; p < layout.pages; p++) {
+    const page = { title: "", prims: [] as Prim[], entries: [] as string[], scales: [] as number[] };
+    for (const v of layout.views) {
+      if (Math.min(v.page, layout.pages - 1) !== p) continue;
+      const d = viewDrawing(ctx, v, n);
+      if (!d) continue;
+      page.prims.push(...d.prims);
+      page.entries.push(d.entry);
+      page.scales.push(d.n);
+      const [title, sub] = titlesOf(ctx, v);
+      const o = input.meta.views?.[v.id];
+      views.push({ view: v, sheet: p + 1, title, sub, entry: d.entry, n: d.n, global: !o?.show, show: showOf(input.meta, v.id) });
+    }
+    page.title = page.entries.join(" · ") || "Prancha vazia";
+    pages.push(page);
   }
   const total = pages.length;
-  // blocos arrastados na tela (por folha A3/A4)
+  // blocos arrastados na tela (por tamanho de folha)
   const moved = input.meta.blocks ?? {};
   const sheets = pages.map((p, i) => ({
     number: i + 1,
@@ -660,8 +930,29 @@ export function buildSheets(input: SheetInput): { sheets: Sheet[]; scale: number
         const off = q.group ? moved[`${PAPER_NAME}|${q.group}`] : undefined;
         return off ? movePrim(q, off[0], off[1]) : q;
       }),
-      ...titleBlock(input, n, i + 1, total, p.title),
+      ...(p.scales.length ? scaleBars(p.scales) : []),
+      ...titleBlock(input, { number: i + 1, total, entries: p.entries, scales: p.scales }),
     ],
   }));
-  return { sheets, scale: n };
+  return { sheets, scale: n, layout, manual: !!saved, views, paper: PAPER_NAME, size: { ...PG } };
+}
+
+/** O que inserir: planta de um pavimento, vista A–D ou corte. */
+export type ViewSpec = { kind: "plan"; level: number } | { kind: "A" | "B" | "C" | "D" } | { kind: "cut"; cut: string };
+
+/** Quadro de um desenho novo com o centro em `at` (mm de papel), na escala 1:n. */
+export function newViewCell(input: SheetInput, spec: ViewSpec, n: number, at: Pt): Cell {
+  const { cat, model } = input;
+  let b: ReturnType<typeof bounds>;
+  if (spec.kind === "plan") b = bounds([], boardFrames(model, cat).flat());
+  else if (spec.kind === "cut") {
+    const cut = (input.meta.cuts ?? []).find((c) => c.id === spec.cut);
+    const cm = cut ? cutModel(cat, model, cut) : null;
+    b = withGround(bounds(cm ? [...itemsFor(cat, cm.model, cm.pr), ...cm.sections] : []));
+  } else b = withGround(bounds(itemsFor(cat, model, projector(spec.kind))));
+  const pad = spec.kind === "plan" ? PLAN_PAD : ELEV_PAD;
+  const w = (b.x1 - b.x0) / n;
+  const h = (b.y1 - b.y0) / n;
+  const m = 4; // folga em volta
+  return { x: at[0] - w / 2 - pad.left - m, y: at[1] - h / 2 - pad.top - m, w: w + pad.left + pad.right + 2 * m, h: h + pad.top + pad.bottom + 2 * m };
 }

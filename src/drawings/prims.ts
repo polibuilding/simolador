@@ -21,13 +21,21 @@ export type Prim =
   | ({ t: "line"; a: Pt; b: Pt } & Style)
   | ({ t: "poly"; pts: Pt[]; closed: boolean } & Style)
   | ({ t: "circle"; c: Pt; r: number } & Style)
-  /** `tag`: etiqueta arrastável na tela (chave da posição salva) */
-  | ({ t: "text"; p: Pt; s: string; size: number; bold?: boolean; anchor?: "start" | "middle" | "end"; rot?: number; tag?: string } & Style)
+  /** `tag`: etiqueta arrastável na tela (chave da posição salva); `edit`: texto que se edita clicando nele na tela */
+  | ({ t: "text"; p: Pt; s: string; size: number; bold?: boolean; anchor?: "start" | "middle" | "end"; rot?: number; tag?: string; edit?: string } & Style)
   /** imagem (foto renderizada da capa); o DXF ignora */
   | ({ t: "image"; x: number; y: number; w: number; h: number; href: string } & Style);
 
-export type PaperName = "A3" | "A4";
-export const PAPER: Record<PaperName, { w: number; h: number }> = { A3: { w: 420, h: 297 }, A4: { w: 297, h: 210 } };
+/** "custom": tamanho escolhido pelo usuário */
+export type PaperName = "A2" | "A3" | "A4" | "custom";
+export const PAPER: Record<Exclude<PaperName, "custom">, { w: number; h: number }> = {
+  A2: { w: 594, h: 420 },
+  A3: { w: 420, h: 297 },
+  A4: { w: 297, h: 210 },
+};
+/** limites da folha personalizada (mm) */
+export const CUSTOM_MIN = 150;
+export const CUSTOM_MAX = 1500;
 /** compatibilidade: tamanho padrão */
 export const A3 = PAPER.A3;
 

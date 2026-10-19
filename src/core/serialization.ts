@@ -5,15 +5,142 @@ import type { Board, Connector, Member, Model, MolaNode, Plate, Vec3 } from "./m
 export const FORMAT = "simolador";
 export const VERSION = 3;
 
+/** O que aparece nos desenhos das pranchas. */
+export interface SheetShow {
+  /** indicações de vistas (triângulos A–D e linhas de corte) */
+  markers: boolean;
+  /** indicações de peças (PILAR, LIGAÇÃO…) */
+  labels: boolean;
+  /** eixos e níveis */
+  axes: boolean;
+  /** cotas */
+  dims: boolean;
+}
+
+/** Desenho numa prancha. `cell` é o quadro dele (mm de papel); o desenho fica no centro. */
+export interface SheetView {
+  id: string;
+  kind: "plan" | "A" | "B" | "C" | "D" | "cut";
+  /** planta: altura do pavimento (mm, acima da chapa) */
+  level?: number;
+  /** corte: id do corte */
+  cut?: string;
+  /** prancha (0 = a primeira depois da capa) */
+  page: number;
+  cell: { x: number; y: number; w: number; h: number };
+  /** escala própria (desenho inserido à mão); sem ela, segue a escala geral */
+  n?: number;
+}
+
+/** Arranjo das pranchas de um tamanho de folha, quando o usuário mexe nele (sem ele, o arranjo é automático). */
+export interface SheetLayout {
+  /** número de pranchas de desenho (sem a capa) */
+  pages: number;
+  views: SheetView[];
+}
+
+/** Ajustes de um desenho: título, subtítulo e o que mostrar (sem `show`, segue a barra de cima). */
+export interface SheetViewOpts {
+  title?: string;
+  sub?: string;
+  show?: SheetShow;
+}
+
+/** Linha de corte desenhada numa planta (mm do mundo: x e z, de `a` para `b`). */
+export interface SheetCut {
+  id: string;
+  name: string;
+  a: [number, number];
+  b: [number, number];
+}
+
+export type SheetPaper = "A2" | "A3" | "A4" | "custom";
+
 export interface SheetMeta {
-  line1: string; // ex.: MOLA STRUCTURAL MODEL
-  line2: string; // ex.: DESAFIO POLI-USP 2026
+  line1: string; // título das pranchas, ex.: MOLA STRUCTURAL MODEL
+  line2: string; // subtítulo, ex.: DESAFIO POLI-USP 2026
   /** etiquetas das pranchas arrastadas na tela: deslocamento (mm de papel) por chave */
   labels?: Record<string, [number, number]>;
   /** blocos das pranchas (desenhos, títulos, tabela) arrastados: deslocamento por "A3|bloco" */
   blocks?: Record<string, [number, number]>;
   /** tamanho da folha das pranchas */
-  paper?: "A3" | "A4";
+  paper?: SheetPaper;
+  /** folha personalizada (mm) */
+  custom?: { w: number; h: number };
+  /** escala geral (n de 1:n) ou automática */
+  scale?: "auto" | number;
+  /** o que aparece nos desenhos (barra de cima) */
+  show?: Partial<SheetShow>;
+  /** ajustes por desenho */
+  views?: Record<string, SheetViewOpts>;
+  /** arranjo mexido pelo usuário, por tamanho de folha */
+  layouts?: Partial<Record<SheetPaper, SheetLayout>>;
+  /** cortes */
+  cuts?: SheetCut[];
+}
+
+const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+const isPt = (v: unknown): v is [number, number] => Array.isArray(v) && v.length === 2 && v.every(isNum);
+const PAPERS: SheetPaper[] = ["A2", "A3", "A4", "custom"];
+const VIEW_KINDS: SheetView["kind"][] = ["plan", "A", "B", "C", "D", "cut"];
+
+function cleanShow(v: unknown): SheetShow | undefined {
+  const o = v as Partial<SheetShow> | null;
+  if (!o || typeof o !== "object") return undefined;
+  return { markers: o.markers !== false, labels: o.labels !== false, axes: o.axes !== false, dims: o.dims !== false };
+}
+
+/** Confere o carimbo vindo de um arquivo: o que não tem o formato certo fica de fora (as pranchas voltam ao automático). */
+export function cleanSheet(raw: unknown): SheetMeta | undefined {
+  const s = raw as Partial<SheetMeta> | null;
+  if (!s || typeof s !== "object") return undefined;
+  const out: SheetMeta = { line1: typeof s.line1 === "string" ? s.line1 : "", line2: typeof s.line2 === "string" ? s.line2 : "" };
+  const offs = (m: unknown) => {
+    if (!m || typeof m !== "object") return undefined;
+    const r = Object.fromEntries(Object.entries(m).filter(([, v]) => isPt(v))) as Record<string, [number, number]>;
+    return Object.keys(r).length ? r : undefined;
+  };
+  const labels = offs(s.labels);
+  const blocks = offs(s.blocks);
+  if (labels) out.labels = labels;
+  if (blocks) out.blocks = blocks;
+  if (s.paper && PAPERS.includes(s.paper)) out.paper = s.paper;
+  if (s.custom && isNum(s.custom.w) && isNum(s.custom.h)) out.custom = { w: s.custom.w, h: s.custom.h };
+  if (s.scale === "auto" || (isNum(s.scale) && s.scale > 0)) out.scale = s.scale;
+  if (s.show && typeof s.show === "object") out.show = cleanShow(s.show);
+  if (s.views && typeof s.views === "object") {
+    const views: Record<string, SheetViewOpts> = {};
+    for (const [id, v] of Object.entries(s.views)) {
+      if (!v || typeof v !== "object") continue;
+      const o: SheetViewOpts = {};
+      if (typeof v.title === "string") o.title = v.title;
+      if (typeof v.sub === "string") o.sub = v.sub;
+      const sh = cleanShow(v.show);
+      if (sh) o.show = sh;
+      views[id] = o;
+    }
+    out.views = views;
+  }
+  if (s.layouts && typeof s.layouts === "object") {
+    const layouts: SheetMeta["layouts"] = {};
+    for (const p of PAPERS) {
+      const l = s.layouts[p];
+      if (!l || !isNum(l.pages) || !Array.isArray(l.views)) continue;
+      const views = l.views.filter(
+        (v): v is SheetView =>
+          !!v && typeof v.id === "string" && VIEW_KINDS.includes(v.kind) && isNum(v.page) && v.page >= 0 &&
+          !!v.cell && [v.cell.x, v.cell.y, v.cell.w, v.cell.h].every(isNum) &&
+          (v.level === undefined || isNum(v.level)) && (v.n === undefined || (isNum(v.n) && v.n > 0)) &&
+          (v.cut === undefined || typeof v.cut === "string"),
+      );
+      layouts[p] = { pages: Math.max(0, Math.round(l.pages)), views };
+    }
+    out.layouts = layouts;
+  }
+  if (Array.isArray(s.cuts)) {
+    out.cuts = s.cuts.filter((c): c is SheetCut => !!c && typeof c.id === "string" && typeof c.name === "string" && isPt(c.a) && isPt(c.b));
+  }
+  return out;
 }
 
 export interface MolaFile {
@@ -104,7 +231,7 @@ export function fromFile(raw: unknown): { model: Model; inventory: InventoryConf
     model: { nodes, members, plates, connectors, nextId: maxId + 1, ...(boards.length ? { boards } : {}) },
     inventory: f.inventory ?? { kits: {}, unlimited: false },
     name: f.name ?? "Estrutura",
-    sheet: f.sheet,
+    sheet: cleanSheet(f.sheet),
   };
 }
 
