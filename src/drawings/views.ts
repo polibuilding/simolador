@@ -4,7 +4,7 @@ import { continuousOutline } from "../core/shapes";
 import { type Model, type Vec3, cross, norm, sub } from "../core/model";
 import { GRAY, PEN, type Prim, type Pt } from "./prims";
 
-export type ViewId = "A" | "B" | "C" | "D" | "plan" | "iso";
+export type ViewId = "A" | "B" | "C" | "D" | "plan" | "iso" | "cut";
 
 /** Vetores da vista em coordenadas do mundo (mm): h = direita no papel, v = para cima, d = em direção a quem olha. */
 const VIEW: Record<"A" | "B" | "C" | "D", { h: Vec3; d: Vec3 }> = {
@@ -31,8 +31,19 @@ export function projector(id: ViewId): Projector {
     const u = cross(c, r);
     return { id, p: (w) => [dot(w, r), dot(w, u), dot(w, c)], depthAxis: c };
   }
-  const { h, d } = VIEW[id];
+  const { h, d } = VIEW[id === "cut" ? "A" : id];
   return { id, p: (w) => [dot(w, h), w[1], dot(w, d)], depthAxis: d };
+}
+
+/**
+ * Corte: vista na direção da linha de corte (`h`, horizontal, no mundo). Quem olha fica do lado de +d, com
+ * d = h × cima (como nas vistas: A tem h = +x e d = +z), e vê o que fica atrás da linha.
+ */
+export function cutProjector(h: Vec3): Projector {
+  const u = norm([h[0], 0, h[2]]);
+  const d: Vec3 = [-u[2], 0, u[0]];
+  const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  return { id: "cut", p: (w) => [dot(w, u), w[1], dot(w, d)], depthAxis: d };
 }
 
 /** Elemento desenhável: forma 2D (mm reais) + profundidade para a ordem de pintura. */

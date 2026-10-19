@@ -851,3 +851,60 @@ dl { margin: 0 0 16px; }
 .lib-list small { color: var(--graphite); font-size: 11px; }
 .cfg-adv-win { height: min(700px, calc(100vh - 60px)); }
 .props .stab-note { margin: 6px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--graphite); }
+
+/* =====================================================================
+   Pranchas (1.24): a mesma linguagem leve da montagem.
+   ===================================================================== */
+.sheets { background: #e9ecea; }
+.sheets-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: nowrap;
+  min-height: 48px; padding: 6px 12px 6px 10px; background: var(--panel); border-bottom: 1px solid var(--rule);
+}
+.sb-left, .sb-mid, .sb-right { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.sb-mid { flex: 1; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.sb-right { gap: 6px; }
+.sb-title { font-size: 14px; font-weight: 600; padding: 0 6px; }
+.sheets .sheets-bar button, .sheets figcaption button, .sheet-side button, .sheet-pop button {
+  display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px;
+  border: 1px solid transparent; border-radius: 8px; background: transparent; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
+}
+.sheets .sheets-bar button:hover:not(:disabled), .sheets figcaption button:hover, .sheet-side button:hover:not(:disabled), .sheet-pop button:hover { background: var(--hover); }
+.sheets .sheets-bar button:disabled { opacity: 0.35; cursor: default; }
+.sheets .sheets-bar button.primary { background: var(--ink); color: #fff; border-color: var(--ink); padding: 0 13px; }
+.sheets .sheets-bar button.primary:hover:not(:disabled) { background: #333c3a; border-color: #333c3a; }
+.sheets .ico { width: 15px; height: 15px; flex: none; }
+.sheets-bar .sb-field { display: inline-flex; flex-direction: row; align-items: center; gap: 2px; height: 30px; padding: 0 2px 0 8px; border-radius: 8px; font-size: 12px; color: var(--graphite); }
+.sheets-bar .sb-field:hover { background: var(--hover); }
+.sheets-bar .sb-field > span { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: #a1a9a6; margin-right: 2px; }
+.sheets-bar .sb-field select, .sheets-bar .sb-field input {
+  min-width: 0; height: 26px; border: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 500; color: var(--ink); padding: 0 4px; cursor: pointer;
+}
+.sheets-bar .sb-field select:focus, .sheets-bar .sb-field input:focus { outline: none; }
+.sheets-bar .sb-field input { width: 52px; text-align: right; cursor: text; border-radius: 6px; background: #fff; border: 1px solid var(--rule); }
+.sheets-bar .sb-check { display: inline-flex; flex-direction: row; align-items: center; gap: 5px; height: 30px; padding: 0 8px; border-radius: 8px; font-size: 13px; color: var(--ink); cursor: pointer; }
+.sheets-bar .sb-check:hover { background: var(--hover); }
+.sheets-bar .sb-check input { margin: 0; min-width: 0; accent-color: var(--ink); }
+.sheets-bar .sheet-boards { padding-bottom: 0; align-self: auto; }
+.sheets-bar .sheet-boards button { height: 24px; min-width: 26px; padding: 0 7px; border-radius: 6px; color: var(--graphite); }
+.sheets-bar .sheet-boards button.on { background: var(--on); color: var(--ink); font-weight: 600; }
+.sheets-list { padding: 24px 24px 64px; gap: 22px; }
+.sheet-paper { border-radius: 2px; box-shadow: 0 1px 2px rgba(20, 30, 28, 0.08), 0 8px 28px rgba(20, 30, 28, 0.08); }
+.sheet figcaption { margin-top: 6px; font-size: 12.5px; color: var(--graphite); }
+.sheet figcaption b { color: var(--ink); font-weight: 600; margin-right: 6px; font-variant-numeric: tabular-nums; }
+.sheet figcaption button { height: 26px; font-size: 12px; color: var(--graphite); }
+.sheets-empty { color: var(--graphite); }
+.sheets-hint {
+  position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 21; margin: 0;
+  width: max-content; max-width: min(760px, calc(100% - 32px)); padding: 6px 14px; border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92); border: 1px solid var(--rule); box-shadow: 0 4px 18px rgba(20, 30, 28, 0.06);
+  font-size: 12px; line-height: 1.45; color: #3d4644; text-align: center; pointer-events: none;
+}
+.sheets-hint.bad { color: #b4373b; }
+/* textos que se editam clicando neles (carimbo e títulos dos desenhos) */
+.sheet-paper .editable { cursor: text; }
+.sheet-paper .editable:hover > rect { fill: #2563eb; fill-opacity: 0.06; stroke: #2563eb; stroke-opacity: 0.45; stroke-width: 0.25; }
+.sheet-edit {
+  position: fixed; z-index: 25; margin: 0; padding: 0 4px; box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff;
+  border: 1px solid var(--focus); border-radius: 4px; box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15); outline: none;
+}

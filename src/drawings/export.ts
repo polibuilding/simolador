@@ -42,7 +42,12 @@ export function sheetToSvg(sheet: Sheet, opts: { interactive?: boolean } = {}): 
           const anchor = p.anchor ?? "start";
           const tr = p.rot ? ` transform="rotate(${p.rot} ${f(p.p[0])} ${f(p.p[1])})"` : "";
           const tag = p.tag ? ` data-tag="${esc(p.tag)}" style="cursor:move"` : "";
-          return `<text${tag} x="${f(p.p[0])}" y="${f(p.p[1])}" font-family="Arial, Helvetica, sans-serif" font-size="${f(p.size)}" font-weight="${p.bold ? 700 : 400}" text-anchor="${anchor}" fill="${p.fill ?? "#000"}"${tr}>${esc(p.s)}</text>`;
+          const text = `<text${tag} x="${f(p.p[0])}" y="${f(p.p[1])}" font-family="Arial, Helvetica, sans-serif" font-size="${f(p.size)}" font-weight="${p.bold ? 700 : 400}" text-anchor="${anchor}" fill="${p.fill ?? "#000"}"${tr}>${esc(p.s)}</text>`;
+          if (!opts.interactive || !p.edit) return text;
+          // na tela: o texto se edita clicando nele (a área de clique vale mesmo com o texto vazio)
+          const w = Math.max(24, p.s.length * p.size * 0.62);
+          const x = anchor === "middle" ? p.p[0] - w / 2 : anchor === "end" ? p.p[0] - w : p.p[0];
+          return `<g class="editable" data-edit="${esc(p.edit)}"><rect x="${f(x - 0.8)}" y="${f(p.p[1] - p.size * 0.95)}" width="${f(w + 1.6)}" height="${f(p.size * 1.25)}" fill="#fff" fill-opacity="0"/>${text}</g>`;
         }
       }
   };
@@ -72,18 +77,19 @@ export function sheetToSvg(sheet: Sheet, opts: { interactive?: boolean } = {}): 
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}mm" height="${h}mm" viewBox="0 0 ${w} ${h}"><rect x="0" y="0" width="${w}" height="${h}" fill="#fff"/>\n${parts.join("\n")}\n</svg>`;
 }
 
-/** PDF com uma folha (A3 ou A4, paisagem) por prancha (vetorial). */
+/** PDF com uma folha (A2, A3, A4 ou personalizada) por prancha (vetorial). */
 export async function sheetsToPdf(sheets: Sheet[]): Promise<Blob> {
   const { jsPDF } = await import("jspdf");
   await import("svg2pdf.js");
-  const fmt = (sh: Sheet) => sh.paper.toLowerCase();
-  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: fmt(sheets[0]), compress: true });
+  const fmt = (sh: Sheet) => (sh.paper === "custom" ? [sh.size.w, sh.size.h] : sh.paper.toLowerCase());
+  const orient = (sh: Sheet) => (sh.size.w >= sh.size.h ? "landscape" : "portrait");
+  const doc = new jsPDF({ orientation: orient(sheets[0]), unit: "mm", format: fmt(sheets[0]), compress: true });
   const host = document.createElement("div");
   host.style.cssText = "position:fixed;left:-10000px;top:0;width:1px;height:1px;overflow:hidden";
   document.body.appendChild(host);
   try {
     for (let i = 0; i < sheets.length; i++) {
-      if (i > 0) doc.addPage(fmt(sheets[i]), "landscape");
+      if (i > 0) doc.addPage(fmt(sheets[i]), orient(sheets[i]));
       host.innerHTML = sheetToSvg(sheets[i]);
       const el = host.querySelector("svg")!;
       await (doc as unknown as { svg: (e: Element, o: object) => Promise<unknown> }).svg(el, { x: 0, y: 0, width: sheets[i].size.w, height: sheets[i].size.h });
