@@ -10,7 +10,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 
 - **No ar:** https://polibuilding.github.io/simolador/
 - **Repositório:** `polibuilding/simolador`, branch `main`. A publicação é por GitHub Actions no GitHub Pages (`.github/workflows/pages.yml`).
-- **Versão atual:** 1.23.1. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
+- **Versão atual:** 1.24. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
 - **Usuários:** estudantes de engenharia e arquitetura, que montam e documentam estruturas para a competição.
 
 ## Como trabalhar com a equipe

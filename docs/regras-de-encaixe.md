@@ -1,6 +1,6 @@
 # Regras de encaixe — siMOLAdor
 
-Versão 4.15 · 19/10/2026 (siMOLAdor 1.24, em preparação: edição por etapas E2f, Tab nas referências E2g, RC90 só no plano dela L10; pranchas F1–F12) (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
+Versão 4.15 · 21/10/2026 (siMOLAdor 1.24: edição por etapas E2f, Tab nas referências E2g, RC90 só no plano dela L10; pranchas F1–F12) (fase 3: barras inclinadas sob demanda, folga das esferas, CC em 4 lados, seleção por retângulo; placas, diagonais e ligações em planos inclinados; guias e coordenadas da GC). Especificação de `src/core/rules.ts` e `snapping.ts`. Cada regra cita a resposta da equipe em `A-CONFIRMAR.xlsx` (E = Encaixes, Q = Decisões). Valores numéricos vêm de `data/parametros.xlsx` (nome do parâmetro entre crases), nunca escritos no código.
 
 Uma regra **bloqueia** quando torna o encaixe inválido (fantasma vermelho, não deixa soltar). Uma regra **avisa** quando a montagem é possível, mas não é recomendada (fantasma verde, aviso na barra de status).
 
