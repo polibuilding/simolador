@@ -160,6 +160,29 @@ function usePalette() {
   return { groups, info, tool };
 }
 
+/** S4: esferas (C) não se escolhem (entram com as barras), mas acabam: a linha mostra quantas restam. */
+function Spheres() {
+  const model = useModel();
+  const inventory = useApp((s) => s.inventory);
+  const total = available(catalog, inventory, "C");
+  if (!Number.isFinite(total)) return null;
+  const left = total - (usage(model).C ?? 0);
+  return (
+    <div className={`piece is-static${left <= 0 ? " empty" : ""}`} title={left <= 0 ? "Acabaram as esferas: as barras só ligam esferas que já existem" : "Esferas C: entram sozinhas com as barras"}>
+      <svg viewBox="0 0 48 24" aria-hidden>
+        <circle cx="24" cy="12" r="7" className="i-steel" />
+      </svg>
+      <span className="piece-name">
+        <strong>C</strong>
+        <KitDots code="C" />
+      </span>
+      <span className="piece-count">
+        <b>{left}</b>/{total}
+      </span>
+    </div>
+  );
+}
+
 /** Clicar arma a peça (de novo, desarma); arrastar leva a peça para a cena. */
 function pieceHandlers(code: string, armed: boolean, empty: boolean, viaDrag: boolean) {
   const { arm, disarm } = useApp.getState();
@@ -194,6 +217,7 @@ export function Palette({ hidden = false }: { hidden?: boolean }) {
       {groups.map((g) => (
         <section key={g.title}>
           <h2>{g.title}</h2>
+          {g.title === "Apoio" && <Spheres />}
           {g.codes.map((code) => {
             const { total, left, armed, empty, unit } = info(code);
             return (

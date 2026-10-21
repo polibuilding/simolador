@@ -86,6 +86,7 @@ Direções possíveis para uma barra a partir de um nó: os 6 eixos (±X, ±Y, �
 | S1 | O usuário escolhe quantos kits de cada tipo tem (ex.: 2 Kits 1 + 1 Kit 2). Estoque = soma das quantidades de `kits.json`. | estrutura | Q03 |
 | S3 | A paleta mostra só as peças que existem nos kits escolhidos (ou que já estão no modelo). Zerar um kit tira as peças dele; voltar o kit traz de volta. | — | equipe 08/10 |
 | S2 | Ao esgotar uma peça, ela fica cinza na paleta e o encaixe bloqueia. Existe um modo "sem limite", para projetos livres. | bloqueia (modo padrão) | Q03 |
+| S4 | **Esferas (C)**: toda barra que vai até um ponto novo leva uma esfera. A paleta mostra quantas restam (linha C, em Apoio; não se escolhe). Sem esferas, a barra só entra ligando duas esferas que já existem, e o rodapé diz que acabaram as esferas (o mesmo vale para a peça esgotada). | bloqueia (modo padrão) | equipe 21/10 |
 
 ## 7b. Cabo e enrijecedor (Kit 3, desde 1.18)
 

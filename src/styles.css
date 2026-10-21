@@ -149,6 +149,9 @@ button { font: inherit; color: inherit; }
 .piece:hover:not(:disabled) { border-color: var(--rule); background: #fff; }
 .piece.armed { border-color: var(--ink); background: #fff; box-shadow: inset 3px 0 0 var(--ink); }
 .piece:disabled { cursor: not-allowed; opacity: 0.45; }
+.piece.is-static { cursor: default; }
+.palette .piece.is-static:hover { border-color: transparent; background: transparent; }
+.piece.is-static.empty .piece-count b { color: #c0392b; }
 .piece svg { width: 48px; height: 24px; }
 .piece-name { font-size: 13px; }
 .piece-name strong { font-size: 15px; font-weight: 700; margin-right: 4px; }
