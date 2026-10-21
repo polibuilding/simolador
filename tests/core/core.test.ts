@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { catalog } from "../../src/core/catalog";
 import { available, defaultInventory, usage } from "../../src/core/inventory";
 import { addMember, addSupport, emptyModel, removeMember, removeNode, type Model, type Vec3 } from "../../src/core/model";
-import { validateMember, validateSupport } from "../../src/core/rules";
+import { stockBlock, validateMember, validateSupport } from "../../src/core/rules";
 import { memberCandidates, supportPosition } from "../../src/core/snapping";
 import { fromFile, toFile, MolaFileError } from "../../src/core/serialization";
 import { createHistory, push, redo, undo } from "../../src/core/history";
@@ -86,6 +86,28 @@ describe("regras", () => {
     const g = Object.values(m.nodes).find((n) => n.kind === "support")!.id;
     const semB6 = { kits: { "1": 0, "2": 0 }, unlimited: false };
     expect(validateMember(catalog, semB6, m, "B6", g, [3, 6, 9]).errors.join()).toMatch(/Acabaram/);
+  });
+  it("S4: sem esferas, a barra só liga esferas que já existem, e o motivo é dito", () => {
+    // 1 Kit 1 = 12 C: quatro pilares de três B6 usam todas
+    const kit1 = { kits: { "1": 1, "2": 0, "3": 0 }, unlimited: false };
+    let m = emptyModel();
+    const tops: string[] = [];
+    for (const [x, z] of [[3, 3], [9, 3], [9, 9], [3, 9]]) {
+      let r = addSupport(m, [x, 0, z]); m = r.model;
+      for (let y = 6; y <= 18; y += 6) {
+        const from = Object.values(m.nodes).find((n) => n.pos[0] === x && n.pos[2] === z && n.pos[1] === y - 6)!.id;
+        r = addMember(m, "B6", from, [x, y, z]); m = r.model;
+      }
+      tops.push(Object.values(m.nodes).find((n) => n.pos[0] === x && n.pos[2] === z && n.pos[1] === 18)!.id);
+    }
+    expect(usage(m).C).toBe(12);
+    expect(validateMember(catalog, kit1, m, "B6", tops[0], [3, 24, 3]).errors.join()).toMatch(/esferas \(C\)/);
+    expect(validateMember(catalog, kit1, m, "B6", tops[0], [9, 18, 3]).ok).toBe(true); // viga entre dois topos
+    expect(stockBlock(catalog, kit1, m, "B6")).toMatch(/esferas \(C\).*só entra ligando/);
+    expect(stockBlock(catalog, kit1, m, "D6x6")).toBeNull(); // a diagonal não leva esfera
+    expect(stockBlock(catalog, { kits: { "1": 0 }, unlimited: false }, m, "B6")).toMatch(/Acabaram as B6/);
+    expect(stockBlock(catalog, { kits: {}, unlimited: true }, m, "B6")).toBeNull();
+    expect(stockBlock(catalog, inv, m, "B6")).toBeNull();
   });
   it("candidatos: do topo do pilar, os 6 eixos (mais inclinadas), só as válidas passam", () => {
     const m = portico();

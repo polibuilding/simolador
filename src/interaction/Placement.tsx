@@ -17,7 +17,7 @@ import { reachAction, reachPoint, supportReach, type ReachGuide } from "../core/
 import { pasteClip, transformClip, type Clip, type PasteResult } from "../core/clipboard";
 import { AXES, add, boardsOf, dot, findNodeAt, len, norm, rotDir, scale, sub, toDisp, type Model, type Vec3 } from "../core/model";
 import { frameRadAt } from "../core/boards";
-import { validateMember, validateRope, validateStiffener } from "../core/rules";
+import { stockBlock, validateMember, validateRope, validateStiffener } from "../core/rules";
 import { ropeInfo, ropeText, STIFF_TOOL } from "../core/rope";
 import type { Sel } from "../core/edit";
 import {
@@ -1007,7 +1007,7 @@ export function Placement() {
           null,
           empty
             ? "Comece por uma ligação de base: as outras peças saem das esferas."
-            : "Leve o cursor até um ponto verde ou até uma esfera.",
+            : (stockBlock(catalog, inv, model, code) ?? "Leve o cursor até um ponto verde ou até uma esfera."),
         );
       }
       // Ponto sem esfera que é só a ponta de uma peça saindo de uma esfera próxima: vale a esfera (puxar a barra a partir dela).

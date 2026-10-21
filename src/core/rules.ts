@@ -27,6 +27,20 @@ function stockErrors(cat: Catalog, inv: InventoryConfig, model: Model, code: str
   return remaining(cat, inv, model, code) < 1 ? [`Acabaram as ${code} do estoque.`] : [];
 }
 
+/**
+ * S4: por que o estoque segura a peça `code` (null se não segura). Acabou a própria peça, ou acabaram as esferas (C):
+ * a barra até um ponto novo leva uma esfera, então ela só entra ligando duas esferas que já existem.
+ */
+export function stockBlock(cat: Catalog, inv: InventoryConfig, model: Model, code: string): string | null {
+  if (inv.unlimited || !cat.pieces[code]) return null;
+  const left = remaining(cat, inv, model, code);
+  if (left < 1) return `Acabaram as ${code} do estoque (${available(cat, inv, code)} nos kits escolhidos). Aumente os kits no Estoque.`;
+  if (cat.pieces[code].type === "bar" && remaining(cat, inv, model, "C") < 1) {
+    return `Acabaram as esferas (C) do estoque (${available(cat, inv, "C")} nos kits escolhidos): a ${code} só entra ligando duas esferas que já existem. Aumente os kits no Estoque.`;
+  }
+  return null;
+}
+
 // ---------------- Ligação de base (GC) ----------------
 
 export function validateSupport(cat: Catalog, inv: InventoryConfig, model: Model, pos: Vec3, ignore: Set<string> = new Set()): Check {
