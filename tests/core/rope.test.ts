@@ -36,6 +36,10 @@ describe("cabo (Kit 3)", () => {
     expect(ropeInfo(catalog, [0, 0, 0], [(ropeMinMm(catalog) - 1) / M, 0, 0])).toBeNull();
   });
 
+  it("calibração da equipe (26/10): a diagonal de um quadrado de 12M × 12M pede 60 bolinhas", () => {
+    expect(ropeInfo(catalog, [0, 6, 0], [12, 6, 12])!.balls).toBe(60);
+  });
+
   it("liga duas esferas que já existem; curto demais, repetido ou na mesma esfera não", () => {
     const m = pilares(12);
     const a = id(m, [3, 6, 3]);

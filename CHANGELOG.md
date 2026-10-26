@@ -27,6 +27,7 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 - **Clique num desenho** abre o painel dele: título e subtítulo ("pavimento tipo"), escala, prancha, "Global" e as indicações só dele (desmarcando "Global", o desenho não muda quando se mexe na barra de cima) e "Tirar da prancha" (ou Delete). Ex.: numa torre, tirar os pavimentos repetidos.
 - **Cortes**: botão "Corte" e dois cliques numa planta baixa marcam a linha; o "Corte 1" vem pronto para colocar na prancha. Aparece o que está na linha ou atrás dela, e a mola atravessada vira a seção cortada. A linha de corte, com setas e número, aparece nas plantas.
 - O arranjo das pranchas, os cortes e os ajustes de cada desenho ficam no arquivo `.mola`.
+- **Cabo calibrado** (26/10): a distância entre bolinhas passou de 3,2 para 3,15 mm, para a diagonal de um quadrado de 12M × 12M dar as **60 bolinhas** que a equipe mediu (antes dava 59). Os cabos já colocados são recontados.
 
 ## 1.23.1 — Correção: clique que não colocava a peça · 14/10/2026
 - Depois de **ligar uma mola clicando nas duas esferas**, o programa guardava a esfera que estava sob o cursor e, nos comandos seguintes (outra peça, GC, caminho azul), o clique só trocava a esfera de partida da ligação, sem colocar nada, até recarregar a página. Agora isso vale só enquanto a própria ligação está em uso.

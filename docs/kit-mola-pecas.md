@@ -111,7 +111,7 @@ Escala tirada da esfera (15 mm) e da mola (6 mm) na foto do nó com cabos (≈ 1
 
 | Parâmetro (`parametros.xlsx`) | Valor | Como foi estimado / como medir |
 |---|---|---|
-| `cabo_passo_mm` | 3,2 mm | corrente de bolinhas padrão nº 3; **medir**: contar as bolinhas em 10 cm (≈ 31) e dividir 100 mm pela contagem |
+| `cabo_passo_mm` | 3,15 mm | **calibrado pela equipe (26/10)**: a diagonal de um quadrado de 12M × 12M pede 60 bolinhas para ficar esticada (antes 3,2 mm, que dava 59). O valor põe a diagonal no meio do intervalo de 60 bolinhas. **Conferir**: contar as bolinhas em 10 cm (≈ 32); se der 31, o passo volta a 3,2 mm e quem encurta são as pontas (`cabo_ligacao_mm` + `cabo_clip_mm`) |
 | `cabo_bolinha_mm` | 2,4 mm | foto: bolinha ≈ 2,1–2,4 mm |
 | `cabo_rolo_mm` | 3350 mm | site oficial (≈ 1046 bolinhas) |
 | `cabo_ligacao_mm` | 16 mm | CABLE C: mola ≈ 4 mm de diâmetro e ≈ 13 mm de comprimento + anel ≈ 3 mm |
@@ -122,7 +122,7 @@ Escala tirada da esfera (15 mm) e da mola (6 mm) na foto do nó com cabos (≈ 1
 | anel pequeno / médio | ≈ 10 / 15 mm | foto da caixa, comparando com as esferas |
 | M CABLE CLIP C | ≈ 11 mm | foto do nó com cabos |
 
-Com essas medidas, um cabo entre esferas a 12 módulos (178 mm) tem 36 bolinhas (≈ 11,5 cm); o mínimo entre centros para caber um cabo é ≈ 68 mm.
+Com essas medidas, a diagonal de um quadrado de 12M × 12M (252 mm entre centros) tem 60 bolinhas, um cabo entre esferas a 12 módulos (178 mm) tem 37 (≈ 11,7 cm), e o mínimo entre centros para caber um cabo é ≈ 68 mm.
 
 Dúvida: os 3 quadrados transparentes da foto "Conteúdo da caixa" não estão na lista oficial. São placas P6x6 ou embalagem?
 

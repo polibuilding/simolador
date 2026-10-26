@@ -2,7 +2,7 @@
   "_meta": {
     "generatedBy": "scripts/gerar-dados.mjs",
     "source": "data/parametros.xlsx",
-    "generatedAt": "2026-10-14T02:09:43.895Z",
+    "generatedAt": "2026-10-26T17:52:45.745Z",
     "doNotEdit": "Arquivo gerado. Edite data/parametros.xlsx e rode npm run dados."
   },
   "schemaVersion": 2,
@@ -36,7 +36,7 @@
     "tolerancia_encaixe_mm": 0.5,
     "passo_inclinacao_graus": 15,
     "gc_angulo_minimo_base_graus": 40,
-    "cabo_passo_mm": 3.2,
+    "cabo_passo_mm": 3.15,
     "cabo_bolinha_mm": 2.4,
     "cabo_rolo_mm": 3350,
     "cabo_ligacao_mm": 16,
@@ -301,7 +301,7 @@
       "type": "rope",
       "spanM": null,
       "geometry": {
-        "pitchMm": 3.2,
+        "pitchMm": 3.15,
         "ballMm": 2.4,
         "rollMm": 3350,
         "connectionMm": 16,
