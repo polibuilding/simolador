@@ -54,6 +54,8 @@ const two = (n: number) => String(n).padStart(2, "0");
 
 const Ico = {
   back: <path d="M9.5 3.5 5 8l4.5 4.5" />,
+  undo: <path d="M5.5 4 2.5 7l3 3M2.5 7h7a3.5 3.5 0 0 1 0 7H7" />,
+  redo: <path d="M10.5 4l3 3-3 3M13.5 7h-7a3.5 3.5 0 0 0 0 7H9" />,
   download: <path d="M8 2v8M4.75 6.75 8 10l3.25-3.25M2.5 11v2.5h11V11" />,
 };
 
@@ -94,6 +96,8 @@ export function SheetsView() {
   const inventory = useApp((s) => s.inventory);
   const name = useApp((s) => s.name);
   const meta = useApp((s) => s.sheet);
+  const canUndo = useApp((s) => s.sheetPast.length > 0);
+  const canRedo = useApp((s) => s.sheetFuture.length > 0);
   const { setSheet, setSheetsOpen } = useApp.getState();
   /** muda só uma parte do carimbo (sempre a partir do estado atual) */
   const setMeta = (patch: Partial<SheetMeta>) => setSheet({ ...useApp.getState().sheet, ...patch });
@@ -374,6 +378,12 @@ export function SheetsView() {
           </button>
           <span className="tb-sep" />
           <span className="sb-title">Pranchas</span>
+          <button className="icon ghost" onClick={() => useApp.getState().undoSheet()} disabled={!canUndo} title="Desfazer nas pranchas (Ctrl+Z)" aria-label="Desfazer">
+            <Icon d={Ico.undo} />
+          </button>
+          <button className="icon ghost" onClick={() => useApp.getState().redoSheet()} disabled={!canRedo} title="Refazer nas pranchas (Ctrl+Y)" aria-label="Refazer">
+            <Icon d={Ico.redo} />
+          </button>
         </div>
         <div className="sb-mid">
           <div className="sb-field">

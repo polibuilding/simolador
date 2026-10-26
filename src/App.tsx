@@ -43,6 +43,13 @@ function useShortcuts() {
       if (st.settingsOpen) return; // janela de configurações aberta: as teclas são dela
       if (st.sheetsOpen) {
         if (e.key === "Escape") st.setSheetsOpen(false);
+        // nas pranchas, Ctrl+Z / Ctrl+Y desfazem e refazem as mudanças das pranchas (não as da montagem)
+        const k = e.key.toLowerCase();
+        if ((e.ctrlKey || e.metaKey) && (k === "z" || k === "y")) {
+          e.preventDefault();
+          if (k === "y" || e.shiftKey) st.redoSheet();
+          else st.undoSheet();
+        }
         return;
       }
       const mod = e.ctrlKey || e.metaKey;

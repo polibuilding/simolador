@@ -188,6 +188,11 @@ interface State {
   setInventory: (inv: InventoryConfig) => void;
   setName: (n: string) => void;
   setSheet: (s: SheetMeta) => void;
+  /** desfazer e refazer das pranchas (separado do da montagem) */
+  sheetPast: SheetMeta[];
+  sheetFuture: SheetMeta[];
+  undoSheet: () => boolean;
+  redoSheet: () => boolean;
   setCamera: (v: CameraView) => void;
   setSheetsOpen: (v: boolean) => void;
   newProject: () => void;
@@ -196,6 +201,9 @@ interface State {
 }
 
 const STORAGE_KEY = "simolador:autosave";
+
+/** passos guardados no desfazer das pranchas */
+const SHEET_UNDO = 100;
 
 /** Do carimbo, só o que é preferência da equipe (título, folha, escala, o que mostrar); arranjo, cortes e posições são do projeto. */
 const sheetPrefs = ({ line1, line2, paper, custom, scale, show }: SheetMeta): SheetMeta => ({ line1, line2, paper, custom, scale, show });
@@ -689,13 +697,30 @@ export const useApp = create<State>((set, get) => ({
   setShiftHeld: (shiftHeld) => (get().shiftHeld === shiftHeld ? undefined : set({ shiftHeld, rotIndex: 0 })),
   setInventory: (inventory) => set({ inventory }),
   setName: (name) => set({ name }),
-  setSheet: (sheet) => set({ sheet }),
+  setSheet: (sheet) =>
+    set((s) => (sheet === s.sheet ? {} : { sheet, sheetPast: [...s.sheetPast, s.sheet].slice(-SHEET_UNDO), sheetFuture: [] })),
+  sheetPast: [],
+  sheetFuture: [],
+  undoSheet: () => {
+    const s = get();
+    const prev = s.sheetPast[s.sheetPast.length - 1];
+    if (!prev) return false;
+    set({ sheet: prev, sheetPast: s.sheetPast.slice(0, -1), sheetFuture: [s.sheet, ...s.sheetFuture] });
+    return true;
+  },
+  redoSheet: () => {
+    const s = get();
+    const next = s.sheetFuture[0];
+    if (!next) return false;
+    set({ sheet: next, sheetPast: [...s.sheetPast, s.sheet], sheetFuture: s.sheetFuture.slice(1) });
+    return true;
+  },
   setCamera: (view) => set((s) => ({ camera: { view, n: s.camera.n + 1 } })),
   // abrir as pranchas limpa seleção e destaque (a foto da capa sai sem cores de seleção)
   setSheetsOpen: (sheetsOpen) =>
     set(sheetsOpen ? { sheetsOpen, tool: { kind: "select" }, ghost: null, selection: null, multi: [], hoverId: null, hoverBoard: null } : { sheetsOpen, sheetBoards: null }),
   newProject: () =>
-    set((s) => ({ history: push(s.history, emptyModel()), selection: null, ghost: null, name: "Estrutura 01", tool: { kind: "select" }, sheet: sheetPrefs(s.sheet) })),
+    set((s) => ({ history: push(s.history, emptyModel()), selection: null, ghost: null, name: "Estrutura 01", tool: { kind: "select" }, sheet: sheetPrefs(s.sheet), sheetPast: [], sheetFuture: [] })),
 
   load: (raw) => {
     const f = fromFile(raw);
@@ -710,6 +735,8 @@ export const useApp = create<State>((set, get) => ({
       inventory: f.inventory,
       name: f.name,
       sheet: f.sheet ?? sheetPrefs(s.sheet),
+      sheetPast: [],
+      sheetFuture: [],
       selection: null,
       multi: [],
       hint: null,
