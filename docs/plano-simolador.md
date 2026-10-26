@@ -228,7 +228,7 @@ Análise estrutural: fora do escopo (Q09).
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0`, `v1.1`…).
 
-- **1.x — geométrica** (atual: 1.24): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.25): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: o módulo extra ajustável.
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
@@ -257,7 +257,7 @@ Em aberto:
   1. **Clip de múltiplos cabos (M CABLE CLIP C)**: até 5 cabos numa só CABLE C (leque saindo de uma esfera). No programa: ao ligar um cabo numa esfera que já tem cabo saindo quase na mesma direção, oferecer juntar no mesmo clip múltiplo (economiza CABLE C; conta MCLIP-C).
   2. **Anéis (CABLE R pequeno e médio)**: vários cabos chegando radialmente num ponto no ar (redes de cabos, cobertura suspensa, tensegridade). No programa: um novo tipo de nó, "anel", que não é esfera e só recebe cabos; posição de equilíbrio calculada (3.x) ou definida pelo usuário (1.x).
   3. **Emenda linear (dois cabos num CABLE CLIP C)**: cabos maiores que um pedaço, ou reaproveitar sobras. No programa: o plano de corte pode propor emendas quando um cabo não cabe no que sobrou de um rolo.
-  4. **Cabo perpendicular ou inclinado a outro cabo (clip no meio)**: pendurais de ponte pênsil, cabos que saem de um cabo principal. No programa: clicar num cabo (não numa esfera) cria um ponto de ligação no meio dele.
+  4. **Cabo perpendicular ou inclinado a outro cabo (clip no meio)**: pendurais de ponte pênsil, cabos que saem de um cabo principal. **Primeira versão na 1.25 (K7–K9)**: a ponta do cabo novo pode ser uma bolinha de outro cabo (ponto de cabo), com referências verde/amarela e o ponto descendo bolinha a bolinha. A conferir com a equipe e com o kit em mãos.
   5. **Laço e furo central do clip**: o clip prende qualquer bolinha, não só a da ponta; dá para fazer laços e não cortar o cabo na medida exata. No programa: opção "sem cortar" (o resto do cabo sobra para fora) no plano de corte.
   6. **Cruz de cabos (dois clips sobrepostos + pino, não incluso)**: ligação fixa em cruz entre cabos.
   7. **Cabo frouxo / forma funicular**: cabo mais longo que a distância, com flecha (catenária, formas funiculares com pesos). Fica para 2.x/3.x (forma depende das cargas).

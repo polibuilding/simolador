@@ -14,7 +14,9 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
-## 1.25 (em preparação, ainda não publicada)
+## 1.25 — Pranchas mais completas e cabo preso em cabo · 26/10/2026
+- **Cabo preso em cabo (pendural)**, primeira versão: com o cabo na mão, a ponta pode ser uma **bolinha de outro cabo** em vez de uma esfera. Um CABLE CLIP C prende a bolinha do cabo principal pelo furo do meio e a ponta do pendural; o cabo principal continua um pedaço só. Referências nos cabos, como os pontos das barras: **verde** na bolinha que fica na vertical de uma esfera ou GC (pendural a prumo) e **amarela** no meio do cabo e na bolinha mais perto da primeira ponta (pendural perpendicular). O **ponto de cabo** só recebe cabos, uma bolinha prende um pendural só e, com duplo clique, desce ou sobe bolinha a bolinha na linha do pendural, com o cabo principal recontado (forma de ponte pênsil). Tirar o pendural junta o cabo de volta; tirar o cabo principal leva os pendurais.
+- **Cabo calibrado**: a distância entre bolinhas passou de 3,2 para 3,15 mm, para a diagonal de um quadrado de 12M × 12M dar as **60 bolinhas** que a equipe mediu (antes dava 59). Os cabos já colocados são recontados.
 - **Pranchas: escala personalizada**: além das escalas usuais, "Personalizada" abre o campo 1/n (na barra de cima e no painel de cada desenho).
 - **Pranchas: Ctrl+Z e Ctrl+Y** desfazem e refazem as mudanças das pranchas (carimbo, folha, escala, Mostrar, desenhos inseridos, tirados ou mudados de prancha, cortes, títulos, posições). Também pelos botões ao lado de "Pranchas". É separado do desfazer da montagem.
 - **"Voltar ao automático"** (antes, dois botões que confundiam): um menu com **Desenhos das pranchas** (quais desenhos vão em cada prancha: tira os inseridos, devolve os tirados) e **Posições** (onde cada coisa fica na folha: o que foi arrastado volta ao lugar), cada um dizendo o que faz.
@@ -37,8 +39,6 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 - **Clique num desenho** abre o painel dele: título e subtítulo ("pavimento tipo"), escala, prancha, "Global" e as indicações só dele (desmarcando "Global", o desenho não muda quando se mexe na barra de cima) e "Tirar da prancha" (ou Delete). Ex.: numa torre, tirar os pavimentos repetidos.
 - **Cortes**: botão "Corte" e dois cliques numa planta baixa marcam a linha; o "Corte 1" vem pronto para colocar na prancha. Aparece o que está na linha ou atrás dela, e a mola atravessada vira a seção cortada. A linha de corte, com setas e número, aparece nas plantas.
 - O arranjo das pranchas, os cortes e os ajustes de cada desenho ficam no arquivo `.mola`.
-- **Cabo calibrado** (26/10): a distância entre bolinhas passou de 3,2 para 3,15 mm, para a diagonal de um quadrado de 12M × 12M dar as **60 bolinhas** que a equipe mediu (antes dava 59). Os cabos já colocados são recontados.
-
 ## 1.23.1 — Correção: clique que não colocava a peça · 14/10/2026
 - Depois de **ligar uma mola clicando nas duas esferas**, o programa guardava a esfera que estava sob o cursor e, nos comandos seguintes (outra peça, GC, caminho azul), o clique só trocava a esfera de partida da ligação, sem colocar nada, até recarregar a página. Agora isso vale só enquanto a própria ligação está em uso.
 
