@@ -67,12 +67,22 @@ export function CutIcon() {
   );
 }
 
+/** Lixeira (apagar). */
+export function TrashIcon() {
+  return (
+    <svg className="ico" viewBox="0 0 16 16" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.5 4.5h11M6.5 4.5V3h3v1.5M4 4.5l.7 9h6.6l.7-9M6.7 7v4.5M9.3 7v4.5" />
+    </svg>
+  );
+}
+
 /** Grupo "Inserir" da barra de cima. */
-export function InsertTools({ levels, cuts, armed, onArm, cutting, onCut }: {
+export function InsertTools({ levels, cuts, armed, onArm, cutting, onCut, onDeleteCut }: {
   levels: Level[];
   cuts: { id: string; name: string }[];
   armed: ViewSpec | null;
   onArm: (s: ViewSpec | null) => void;
+  onDeleteCut: (id: string) => void;
   /** desenhando uma linha de corte */
   cutting: boolean;
   onCut: () => void;
@@ -89,10 +99,17 @@ export function InsertTools({ levels, cuts, armed, onArm, cutting, onCut }: {
         </button>
       ))}
       {cuts.map((c) => (
-        <button key={c.id} className={is("cut", c.id) ? "on" : ""} onClick={() => onArm(is("cut", c.id) ? null : { kind: "cut", cut: c.id })} title={`Inserir o ${c.name.toLowerCase()}`}>
-          <CubeIcon face="cut" />
-          {c.name.replace(/^corte\s*/i, "C")}
-        </button>
+        <span key={c.id} className="cut-pick">
+          <button className={is("cut", c.id) ? "on" : ""} onClick={() => onArm(is("cut", c.id) ? null : { kind: "cut", cut: c.id })} title={`Inserir o ${c.name.toLowerCase()}`}>
+            <CubeIcon face="cut" />
+            {c.name.replace(/^corte\s*/i, "C")}
+          </button>
+          {is("cut", c.id) && (
+            <button className="trash" onClick={() => onDeleteCut(c.id)} title={`Apagar o ${c.name.toLowerCase()}: a linha nas plantas e os desenhos dele (Ctrl+Z desfaz)`} aria-label={`Apagar o ${c.name.toLowerCase()}`}>
+              <TrashIcon />
+            </button>
+          )}
+        </span>
       ))}
       <span className="sb-sep" />
       <button className={cutting ? "on" : ""} onClick={onCut} title="Novo corte: clique no primeiro e no segundo ponto da linha de corte numa planta baixa">

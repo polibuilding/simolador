@@ -192,6 +192,15 @@ export function SheetsView() {
     // o corte pronto vai direto para a mão: o próximo clique numa prancha coloca o desenho dele
     setArmed({ kind: "cut", cut: id });
   };
+  /** apaga o corte: a linha nas plantas e os desenhos dele */
+  const removeCut = (id: string) => {
+    const name = meta.cuts?.find((c) => c.id === id)?.name ?? "corte";
+    setSheet(deleteCut(useApp.getState().sheet, id));
+    setArmed(null);
+    setGhost(null);
+    setSelected(null);
+    setNote(`${name} apagado. Ctrl+Z desfaz.`);
+  };
   const selInfo = built.views.find((v) => v.view.id === selected) ?? null;
   const armedName = armed
     ? armed.kind === "plan"
@@ -429,7 +438,7 @@ export function SheetsView() {
               );
             })}
           </div>
-          <InsertTools levels={levels} cuts={meta.cuts ?? []} armed={armed} onArm={arm} cutting={!!cutting} onCut={startCut} />
+          <InsertTools levels={levels} cuts={meta.cuts ?? []} armed={armed} onArm={arm} cutting={!!cutting} onCut={startCut} onDeleteCut={removeCut} />
         </div>
         <div className="sb-right">
           <RestoreMenu
@@ -545,12 +554,7 @@ export function SheetsView() {
           onShow={(s) => setViewShow(selInfo.view.id, s)}
           onRemove={removeSelected}
           onDeleteCut={
-            selInfo.view.kind === "cut"
-              ? () => {
-                  setSheet(deleteCut(useApp.getState().sheet, selInfo.view.cut!));
-                  setSelected(null);
-                }
-              : undefined
+            selInfo.view.kind === "cut" ? () => removeCut(selInfo.view.cut!) : undefined
           }
           onClose={() => setSelected(null)}
         />

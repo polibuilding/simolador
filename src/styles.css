@@ -928,6 +928,9 @@ dl { margin: 0 0 16px; }
 .sheets .sheet-pop button { justify-content: flex-start; height: 30px; color: var(--ink); }
 .sheet-pop-empty { margin: 6px 10px; font-size: 12px; color: var(--graphite); }
 .sheet-pop.right { left: auto; right: 0; }
+.cut-pick { display: inline-flex; align-items: center; gap: 1px; }
+.sheets .sheets-bar .sb-insert button.trash, .sheets .sheet-tools button.trash { color: var(--bad); padding: 0 5px; }
+.sheets .sheets-bar .sb-insert button.trash:hover, .sheets .sheet-tools button.trash:hover { background: #fdf0f0; }
 .sheet-pop.restore { width: 300px; }
 .sheets .sheet-pop.restore button { flex-direction: column; align-items: flex-start; gap: 2px; height: auto; padding: 8px 10px; white-space: normal; text-align: left; }
 .sheets .sheet-pop.restore button:disabled { opacity: 0.4; cursor: default; background: transparent; }

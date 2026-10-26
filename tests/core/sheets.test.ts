@@ -203,6 +203,19 @@ describe("pranchas: cortes", () => {
     expect(body.filter((p) => p.layer === "MOLA-BARRA" && p.t === "poly").length).toBe(3);
   });
 
+  it("corte indicado nas vistas que olham ao longo da linha dele", () => {
+    const arrows = (sheet: number, group: string, b = build({ cuts: [along] })) =>
+      b.sheets[sheet].prims.filter((p) => p.group === group && p.t === "poly" && p.pts.length === 3 && p.fill === "#000").length;
+    // corte ao longo de x: aparece de lado nas vistas B e D, não em A e C
+    expect(arrows(2, "desenho:vista B")).toBe(2);
+    expect(arrows(3, "desenho:vista D")).toBe(2);
+    expect(arrows(2, "desenho:vista A")).toBe(0);
+    expect(arrows(2, "desenho:vista B", build({ cuts: [along], show: { markers: false } }))).toBe(0);
+    // corte ao longo de z: de lado na vista A
+    const b = withCut(across);
+    expect(b.sheets[2].prims.filter((p) => p.group === "desenho:vista A" && p.t === "poly" && p.pts.length === 3 && p.fill === "#000").length).toBe(2);
+  });
+
   it("apagar o corte tira a linha e os desenhos dele", () => {
     const b = withCut(across);
     const meta = deleteCut({ ...base, cuts: [across], layouts: { A3: b.layout } }, "c2");

@@ -502,6 +502,34 @@ function cutLine(cut: SheetCut, P: Placed): Prim[] {
   return out;
 }
 
+/**
+ * Corte numa vista que olha ao longo da linha dele (vista transversal): o plano do corte aparece de lado, como uma
+ * linha vertical, com as pontas grossas, as setas para o lado que se vê e o número.
+ */
+function cutLineSide(cut: SheetCut, P: Placed, pr: Projector): Prim[] {
+  const L = Math.hypot(cut.b[0] - cut.a[0], cut.b[1] - cut.a[1]);
+  if (L < 1e-6) return [];
+  const u: Vec3 = [(cut.b[0] - cut.a[0]) / L, 0, (cut.b[1] - cut.a[1]) / L];
+  if (Math.abs(pr.p(u)[0]) > 1e-3) return []; // a vista não olha ao longo da linha
+  const x = P.to([pr.p([cut.a[0], 0, cut.a[1]])[0], 0])[0];
+  const look = Math.sign(pr.p([u[2], 0, -u[0]])[0]) || 1; // para onde o corte olha, no papel
+  const top = P.box.y0 - 6;
+  const bottom = P.to([0, 0])[1] + 5;
+  const label = /\d+/.exec(cut.name)?.[0] ?? cut.name;
+  const out: Prim[] = [
+    { t: "line", a: [x, top], b: [x, bottom], stroke: "#000", pen: PEN.thin, dash: "center", layer: "MOLA-EIXO" },
+    { t: "line", a: [x, top], b: [x, top + 5], stroke: "#000", pen: PEN.ground, layer: "MOLA-TEXTO" },
+    { t: "line", a: [x, bottom], b: [x, bottom - 5], stroke: "#000", pen: PEN.ground, layer: "MOLA-TEXTO" },
+  ];
+  for (const y of [top, bottom]) {
+    const tip: Pt = [x + 5 * look, y];
+    out.push({ t: "line", a: [x, y], b: tip, stroke: "#000", pen: PEN.part, layer: "MOLA-TEXTO" });
+    out.push({ t: "poly", pts: [tip, [tip[0] - 1.8 * look, y - 0.9], [tip[0] - 1.8 * look, y + 0.9]], closed: true, fill: "#000", stroke: "#000", pen: PEN.thin, layer: "MOLA-TEXTO" });
+    out.push(txt([x + 2.6 * look, y === top ? y - 1.6 : y + 3.8], label, 2.8, { bold: true, anchor: "middle" }));
+  }
+  return out;
+}
+
 function planDrawing(ctx: Ctx, v: SheetView, n: number, sh: SheetShow): { prims: Prim[]; P: Placed } {
   const { cat, model } = ctx.input;
   const W = world(cat);
@@ -616,6 +644,8 @@ function elevationDrawing(ctx: Ctx, v: SheetView, n: number, sh: SheetShow, pr: 
   // terreno (topo da chapa)
   const gy = P.to([0, 0])[1];
   out.push({ t: "line", a: [x0, gy], b: [x1 + 4, gy], stroke: "#000", pen: PEN.ground, layer: "MOLA-BASE" });
+  // cortes vistos de lado (esta vista olha ao longo da linha deles)
+  if (sh.markers) for (const c of ctx.cuts) if (c.id !== v.cut) out.push(...cutLineSide(c, P, pr));
   if (sh.labels) out.push(...callouts(items, ELEV_LABELS, P, P.box.x1 + 20, P.box.y0, P.box.y1, labelKey(v), ctx.input.meta.labels));
   return out;
 }
