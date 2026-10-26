@@ -25,3 +25,5 @@ v1.21 888d2ef Girar o conjunto em torno das GC, atalhos novos
 v1.22 59871df Rigidez: a estrutura acompanha ou trava
 v1.23 77a69c4 O que mexe junto (Tab amplia) e GC perto da estrutura
 v1.23.1 92c17df Correção: clique que não colocava a peça
+v1.24 f7148c3 Edição por etapas, RC90 só no plano dela e pranchas editáveis
+v1.25 0d42918 Pranchas mais completas e cabo preso em cabo
