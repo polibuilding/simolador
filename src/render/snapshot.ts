@@ -33,7 +33,6 @@ export interface IsoImage {
 /** Renderiza o modelo em isométrica (projeção paralela) e devolve um JPEG. Null se a cena não estiver pronta. */
 export function renderIso(model: Model, widthPx = 2600): IsoImage | null {
   if (!ctx) return null;
-  const { gl, scene } = ctx;
   const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), ISO_DIR).normalize();
   const up = new THREE.Vector3().crossVectors(ISO_DIR, right);
   // limites na tela: a chapa inteira e as esferas (com folga do raio)
@@ -63,11 +62,19 @@ export function renderIso(model: Model, widthPx = 2600): IsoImage | null {
   cam.lookAt(0, 0, 0);
   cam.updateProjectionMatrix();
   cam.updateMatrixWorld();
+  const url = shoot(cam, W, H);
+  return url ? { url, aspect: W / H } : null;
+}
 
+/** Tira a foto com a câmera dada (fundo branco, chapa opaca) e devolve o JPEG; restaura a cena depois. */
+function shoot(cam: THREE.Camera, W: number, H: number, clip: THREE.Plane[] = []): string | null {
+  if (!ctx) return null;
+  const { gl, scene } = ctx;
   // estado a restaurar
   const size = gl.getSize(new THREE.Vector2());
   const ratio = gl.getPixelRatio();
   const bg = scene.background;
+  const planes = gl.clippingPlanes;
   const mats: THREE.MeshStandardMaterial[] = [];
   scene.traverse((o) => {
     if (o.name.startsWith("chapa") && (o as THREE.Mesh).material) mats.push((o as THREE.Mesh).material as THREE.MeshStandardMaterial);
@@ -76,15 +83,50 @@ export function renderIso(model: Model, widthPx = 2600): IsoImage | null {
   try {
     scene.background = new THREE.Color("#ffffff");
     for (const m of mats) (m.transparent = false, m.opacity = 1, m.depthWrite = true, (m.needsUpdate = true));
+    gl.clippingPlanes = clip;
     gl.setPixelRatio(1);
     gl.setSize(W, H, false);
     gl.render(scene, cam);
-    const url = gl.domElement.toDataURL("image/jpeg", 0.92);
-    return { url, aspect: W / H };
+    return gl.domElement.toDataURL("image/jpeg", 0.9);
   } finally {
     scene.background = bg;
+    gl.clippingPlanes = planes;
     mats.forEach((m, i) => Object.assign(m, saved[i], { needsUpdate: true }));
     gl.setPixelRatio(ratio);
     gl.setSize(size.x, size.y, false);
   }
+}
+
+/** Pedido de foto de um desenho renderizado das pranchas (ver RenderRequest em drawings/sheets.ts). */
+export interface ViewShot {
+  right: [number, number, number];
+  up: [number, number, number];
+  h0: number;
+  h1: number;
+  v0: number;
+  v1: number;
+  px: number;
+  clip?: { normal: [number, number, number]; max: number };
+}
+
+/**
+ * Foto paralela do modelo para um desenho das pranchas: a tela mostra exatamente o quadro [h0, h1] × [v0, v1] (mm,
+ * nas coordenadas do desenho), olhando no sentido de −(right × up). Null se a cena não estiver pronta.
+ */
+export function renderView(req: ViewShot): string | null {
+  if (!ctx) return null;
+  const right = new THREE.Vector3(...req.right).normalize();
+  const up = new THREE.Vector3(...req.up).normalize();
+  const back = new THREE.Vector3().crossVectors(right, up).normalize();
+  const D = 8000;
+  const cam = new THREE.OrthographicCamera(req.h0, req.h1, req.v1, req.v0, 1, 2 * D);
+  cam.position.copy(back).multiplyScalar(D);
+  cam.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, up, back));
+  cam.updateProjectionMatrix();
+  cam.updateMatrixWorld();
+  const W = Math.round(req.px);
+  const H = Math.max(1, Math.min(4000, Math.round((W * (req.v1 - req.v0)) / Math.max(1e-6, req.h1 - req.h0))));
+  // some o que tiver normal·p > max (Three guarda o lado em que normal·p + constante ≥ 0)
+  const clip = req.clip ? [new THREE.Plane(new THREE.Vector3(...req.clip.normal).negate(), req.clip.max)] : [];
+  return shoot(cam, W, H, clip);
 }

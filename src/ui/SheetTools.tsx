@@ -269,6 +269,7 @@ const SHOW_ROWS: [keyof SheetShow, string][] = [
   ["labels", "Indicações de peças"],
   ["axes", "Eixos"],
   ["dims", "Cotas"],
+  ["render", "Renderizada"],
 ];
 
 /** Painel lateral do desenho escolhido: título, escala, prancha, o que mostrar e tirar da prancha. */

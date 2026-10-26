@@ -10,7 +10,7 @@ import { useApp } from "./store";
 import { boardsOf } from "../core/model";
 import { boardName } from "../core/boards";
 import { filterByBoards } from "../core/boards";
-import { renderIso, type IsoImage } from "../render/snapshot";
+import { renderIso, renderView, type IsoImage } from "../render/snapshot";
 import { loadLogos, type Logo } from "./logos";
 import { Icon } from "./Toolbar";
 
@@ -21,6 +21,7 @@ const SHOW_KEYS: [keyof SheetShow, string, string][] = [
   ["axes", "Eixos", "Eixos e níveis"],
   ["labels", "Peças", "Indicações de peças (PILAR, LIGAÇÃO…)"],
   ["markers", "Vistas", "Indicações de vistas (A–D) e de cortes"],
+  ["render", "Renderizada", "Desenhos renderizados (foto da cena 3D na escala do desenho); desligado = simplificado, em linhas"],
 ];
 
 /** Largura × altura da folha personalizada: grava ao sair do campo ou com Enter. */
@@ -133,7 +134,20 @@ export function SheetsView() {
     };
   }, []);
   const input: SheetInput = useMemo(() => ({ cat: catalog, model, inventory, name, meta }), [model, inventory, name, meta]);
-  const built = useMemo(() => buildSheets({ ...input, isoImage, logos }), [input, isoImage, logos]);
+  // fotos dos desenhos renderizados, por pedido; a estrutura mudou: tira de novo
+  const [renders, setRenders] = useState<Record<string, string | null>>({});
+  useEffect(() => setRenders({}), [model]);
+  const built = useMemo(() => buildSheets({ ...input, isoImage, logos, renders }), [input, isoImage, logos, renders]);
+  useEffect(() => {
+    const todo = built.renderRequests.filter((r) => !(r.key in renders));
+    if (!todo.length) return;
+    // uma foto por quadro, para a tela não travar; a seleção e os destaques da cena já saíram
+    const id = requestAnimationFrame(() => {
+      const r = todo[0];
+      setRenders((cur) => ({ ...cur, [r.key]: renderView(r) }));
+    });
+    return () => cancelAnimationFrame(id);
+  }, [built, renders]);
   const { sheets, scale: used } = built;
   const svgs = useMemo(() => sheets.map((sh) => sheetToSvg(sh, { interactive: true })), [sheets]);
   const levels = useMemo(() => levelsOf(model, catalog), [model]);
@@ -432,7 +446,8 @@ export function SheetsView() {
           <div className="sb-field sb-toggles" role="group" aria-label="Mostrar nos desenhos (todas as pranchas)">
             <span>Mostrar</span>
             {SHOW_KEYS.map(([k, label, tip]) => {
-              const on = meta.show?.[k] !== false;
+              // "Renderizada" vem desligada; as outras, ligadas
+              const on = k === "render" ? meta.show?.render === true : meta.show?.[k] !== false;
               return (
                 <button key={k} className={on ? "on" : ""} aria-pressed={on} title={`${tip}: liga e desliga em todas as pranchas (menos nos desenhos com ajuste próprio)`} onClick={() => setMeta({ show: { ...meta.show, [k]: !on } })}>
                   {label}

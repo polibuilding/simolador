@@ -24,10 +24,33 @@ export interface SheetInput {
   isoImage?: { url: string; aspect: number } | null;
   /** logos do carimbo (Mola e equipe), lado a lado no canto inferior esquerdo; sem elas, o hexágono */
   logos?: { url: string; aspect: number }[];
+  /** fotos dos desenhos renderizados, por RenderRequest.key (null: não deu para renderizar; fica em linhas) */
+  renders?: Record<string, string | null>;
 }
 
 /** Tudo ligado: o padrão da barra de cima. */
-export const SHOW_ALL: SheetShow = { markers: true, labels: true, axes: true, dims: true };
+export const SHOW_ALL: SheetShow = { markers: true, labels: true, axes: true, dims: true, render: false };
+
+/**
+ * Pedido de foto da cena 3D para um desenho renderizado: câmera paralela olhando no sentido de −(right × up), com o
+ * quadro [h0, h1] × [v0, v1] (mm reais, nas coordenadas do desenho). `clip`: some o que tiver normal·p > max
+ * (planta: o que fica acima do pavimento; corte: o que fica entre a linha e quem olha).
+ */
+export interface RenderRequest {
+  key: string;
+  right: Vec3;
+  up: Vec3;
+  h0: number;
+  h1: number;
+  v0: number;
+  v1: number;
+  /** largura da imagem (px) */
+  px: number;
+  clip?: { normal: Vec3; max: number };
+}
+
+/** px por mm de papel nas fotos dos desenhos renderizados (≈ 200 dpi) */
+const RENDER_PX_MM = 8;
 
 const SCALES = [1, 2, 2.5, 5, 10, 20];
 const MARGIN = 10;
@@ -469,6 +492,28 @@ interface Ctx {
   input: SheetInput;
   levels: Level[];
   cuts: SheetCut[];
+  /** fotos pedidas pelos desenhos renderizados */
+  requests: RenderRequest[];
+}
+
+/**
+ * Desenho renderizado: pede a foto da cena 3D vista por `pr` no quadro `rb` (mm reais) e, se ela já existe, devolve a
+ * imagem no lugar das peças em linhas (cotas, eixos e indicações continuam por cima).
+ */
+function rendered(ctx: Ctx, pr: Projector, rb: ReturnType<typeof bounds>, P: Placed, clip?: RenderRequest["clip"]): Prim | null {
+  // a projeção é linear: as linhas de p() dão os eixos da tela no mundo
+  const col = (i: 0 | 1): Vec3 => [pr.p([1, 0, 0])[i], pr.p([0, 1, 0])[i], pr.p([0, 0, 1])[i]];
+  const right = col(0);
+  const up = col(1);
+  const r2 = (x: number) => Math.round(x * 100) / 100 + 0; // + 0: sem −0
+  const a = P.to([rb.x0, rb.y1]);
+  const c = P.to([rb.x1, rb.y0]);
+  const px = Math.min(3200, Math.max(200, Math.round((c[0] - a[0]) * RENDER_PX_MM)));
+  const req: Omit<RenderRequest, "key"> = { right: right.map(r2) as Vec3, up: up.map(r2) as Vec3, h0: r2(rb.x0), h1: r2(rb.x1), v0: r2(rb.y0), v1: r2(rb.y1), px, ...(clip ? { clip: { normal: clip.normal.map(r2) as Vec3, max: r2(clip.max) } } : {}) };
+  const key = JSON.stringify(req);
+  ctx.requests.push({ key, ...req });
+  const url = ctx.input.renders?.[key];
+  return url ? { t: "image", x: a[0], y: a[1], w: c[0] - a[0], h: c[1] - a[1], href: url, layer: "MOLA-BASE" } : null;
 }
 
 /** Chave das etiquetas arrastadas de um desenho (a mesma das versões anteriores para plantas e vistas). */
@@ -569,7 +614,10 @@ function planDrawing(ctx: Ctx, v: SheetView, n: number, sh: SheetShow): { prims:
       out.push(axisLine([left + 2.4, y], [right, y]), ...bubble([left, y], a.label));
     }
   }
-  out.push(...paint(items, P));
+  // renderizada: a foto de cima, só do pavimento para baixo
+  const plan = projector("plan");
+  const img = sh.render ? rendered(ctx, plan, bounds(itemsFor(cat, model, plan), frames.flat()), P, { normal: [0, 1, 0], max: levelY + W.R + 3 }) : null;
+  out.push(...(img ? [img] : paint(items, P)));
   // cotas entre eixos (em cima e à esquerda, junto das bolinhas) e totais (embaixo e à direita)
   if (sh.dims && xs.length > 1) {
     const px = xs.map((a) => P.to([a.x, 0]));
@@ -599,7 +647,10 @@ function planDrawing(ctx: Ctx, v: SheetView, n: number, sh: SheetShow): { prims:
 }
 
 /** Vista (A–D) ou corte: projeção de lado com níveis, eixos, cotas de altura e terreno. */
-function elevationDrawing(ctx: Ctx, v: SheetView, n: number, sh: SheetShow, pr: Projector, model: Model, axes: { h: number; label: string }[], extra: Item[] = []): Prim[] {
+function elevationDrawing(
+  ctx: Ctx, v: SheetView, n: number, sh: SheetShow, pr: Projector, model: Model, axes: { h: number; label: string }[], extra: Item[] = [],
+  clip?: RenderRequest["clip"],
+): Prim[] {
   const { cat } = ctx.input;
   const cell = v.cell;
   const items = [...itemsFor(cat, model, pr), ...extra];
@@ -640,7 +691,8 @@ function elevationDrawing(ctx: Ctx, v: SheetView, n: number, sh: SheetShow, pr: 
     out.push(...dimChainH(px, P.box.y0 - 7, vals));
     if (vals.length > 1) out.push(...dimChainH([px[0], px[px.length - 1]], P.to([0, 0])[1] + 6, [Math.abs(sorted[sorted.length - 1].h - sorted[0].h)], true));
   }
-  out.push(...paint(items, P));
+  const img = sh.render ? rendered(ctx, pr, b, P, clip) : null;
+  out.push(...(img ? [img] : paint(items, P)));
   // terreno (topo da chapa)
   const gy = P.to([0, 0])[1];
   out.push({ t: "line", a: [x0, gy], b: [x1 + 4, gy], stroke: "#000", pen: PEN.ground, layer: "MOLA-BASE" });
@@ -677,10 +729,15 @@ const ISO_PAD = { left: 10, right: 44, top: 10, bottom: 22 };
 /** Isométrica (sem escala): chapas, peças e as indicações de peças. */
 function isoDrawing(ctx: Ctx, v: SheetView, n: number, sh: SheetShow): Prim[] {
   const { cat, model } = ctx.input;
-  const { items, boards, b } = isoParts(cat, model, v.iso);
+  const { pr, items, boards, b } = isoParts(cat, model, v.iso);
   const P = place(b, inner(v.cell, ISO_PAD), n);
-  const out: Prim[] = boards.map((pts) => ({ t: "poly", pts: pts.map((q) => P.to(q)), closed: true, fill: "#f2f2f2", stroke: "#000", pen: PEN.base, layer: "MOLA-BASE" }) as Prim);
-  out.push(...paint(items, P));
+  const img = sh.render ? rendered(ctx, pr, b, P) : null;
+  const out: Prim[] = img
+    ? [img]
+    : [
+        ...boards.map((pts) => ({ t: "poly", pts: pts.map((q) => P.to(q)), closed: true, fill: "#f2f2f2", stroke: "#000", pen: PEN.base, layer: "MOLA-BASE" }) as Prim),
+        ...paint(items, P),
+      ];
   if (sh.labels) out.push(...callouts(items, ELEV_LABELS, P, P.box.x1 + 14, P.box.y0, P.box.y1, labelKey(v), ctx.input.meta.labels));
   return out;
 }
@@ -734,7 +791,10 @@ function viewDrawing(ctx: Ctx, v: SheetView, nGlobal: number): { prims: Prim[]; 
     const cut = ctx.cuts.find((c) => c.id === v.cut);
     if (!cut) return null;
     const cm = cutModel(cat, model, cut);
-    body = elevationDrawing(ctx, v, n, sh, cm.pr, cm.model, sideAxes(ctx, cm.pr, cm.h), cm.sections);
+    // renderizado: some o que fica entre a linha de corte e quem olha
+    const d = cm.pr.depthAxis;
+    const clip = { normal: d, max: cut.a[0] * d[0] + cut.a[1] * d[2] + 0.01 };
+    body = elevationDrawing(ctx, v, n, sh, cm.pr, cm.model, sideAxes(ctx, cm.pr, cm.h), cm.sections, clip);
     titleAt = [v.cell.x + ELEV_PAD.left, v.cell.y + v.cell.h - 24];
   } else if (v.kind === "iso") {
     body = isoDrawing(ctx, v, n, sh);
@@ -986,13 +1046,15 @@ export interface BuiltSheets {
   views: ViewInfo[];
   paper: PaperName;
   size: { w: number; h: number };
+  /** fotos que os desenhos renderizados pediram (a tela renderiza e chama buildSheets de novo com `renders`) */
+  renderRequests: RenderRequest[];
 }
 
 /** Monta todas as folhas. */
 export function buildSheets(input: SheetInput): BuiltSheets {
   setPaper(input.meta);
   const n = computeScale(input);
-  const ctx: Ctx = { input, levels: levelsOf(input.model, input.cat), cuts: input.meta.cuts ?? [] };
+  const ctx: Ctx = { input, levels: levelsOf(input.model, input.cat), cuts: input.meta.cuts ?? [], requests: [] };
   const saved = input.meta.layouts?.[PAPER_NAME];
   const layout = saved ?? autoLayout(ctx);
   const pages: { title: string; prims: Prim[]; entries: string[]; scales: number[] }[] = [];
@@ -1041,7 +1103,7 @@ export function buildSheets(input: SheetInput): BuiltSheets {
       ...titleBlock(input, { number: i + 1, total, entries: p.entries, scales: p.scales }),
     ],
   }));
-  return { sheets, scale: n, layout, manual: !!saved, views, paper: PAPER_NAME, size: { ...PG } };
+  return { sheets, scale: n, layout, manual: !!saved, views, paper: PAPER_NAME, size: { ...PG }, renderRequests: ctx.requests };
 }
 
 /** O que inserir: planta de um pavimento, vista A–D ou corte. */

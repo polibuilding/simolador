@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { catalog } from "../../src/core/catalog";
 import { cleanSheet, fromFile, type SheetMeta } from "../../src/core/serialization";
-import { buildSheets, newViewCell } from "../../src/drawings/sheets";
+import { SHOW_ALL, buildSheets, newViewCell } from "../../src/drawings/sheets";
 import type { Prim } from "../../src/drawings/prims";
 import { addPage, deleteCut, moveToPage, nextCut, nextViewId, removePage, removeView, setViewScale } from "../../src/drawings/layout";
 
@@ -114,7 +114,7 @@ describe("pranchas: folha e arranjo", () => {
     expect(texts(off.sheets[1].prims)).not.toContain("VISTA");
     const local = build({
       show: { dims: false },
-      views: { "PLANTA BAIXA PAV. TÉRREO": { show: { dims: true, axes: true, labels: true, markers: true } } },
+      views: { "PLANTA BAIXA PAV. TÉRREO": { show: { dims: true, axes: true, labels: true, markers: true, render: false } } },
     });
     const ground = local.sheets[1].prims.filter((p) => p.group === "desenho:PLANTA BAIXA PAV. TÉRREO");
     const top = local.sheets[1].prims.filter((p) => p.group === "desenho:PLANTA DE COBERTURA");
@@ -159,6 +159,33 @@ describe("pranchas: mexer no arranjo", () => {
     const l = removeView(build().layout, "vista A");
     expect(build({ layouts: { A3: l } }).views.some((v) => v.view.id === "vista A")).toBe(false);
     expect(build({ paper: "A4", layouts: { A3: l } }).views.some((v) => v.view.id === "vista A")).toBe(true);
+  });
+});
+
+describe("pranchas: renderizada", () => {
+  it("padrão em linhas; ligada, pede as fotos e põe a imagem no lugar das peças", () => {
+    const off = build();
+    expect(off.renderRequests).toEqual([]);
+    const on = build({ show: { render: true } });
+    // 2 plantas + 4 vistas
+    expect(on.renderRequests.length).toBe(6);
+    const plan = on.renderRequests[0];
+    expect(plan.right).toEqual([1, 0, 0]);
+    expect(plan.up).toEqual([0, 0, -1]);
+    expect(plan.clip?.normal).toEqual([0, 1, 0]);
+    // sem foto ainda: continua em linhas; com a foto: imagem no lugar das barras
+    expect(on.sheets[1].prims.some((p) => p.t === "image")).toBe(false);
+    const renders = Object.fromEntries(on.renderRequests.map((r) => [r.key, "data:image/jpeg;base64,AAAA"]));
+    const shot = buildSheets({ cat: catalog, model: portico.model, inventory: portico.inventory, name: "Pórtico", meta: { ...base, show: { render: true } }, renders });
+    const ground = shot.sheets[1].prims.filter((p) => p.group === "desenho:PLANTA BAIXA PAV. TÉRREO");
+    expect(ground.filter((p) => p.t === "image").length).toBe(1);
+    expect(ground.some((p) => p.layer === "MOLA-BARRA")).toBe(false);
+    expect(ground.some((p) => p.layer === "MOLA-COTA")).toBe(true); // cotas continuam por cima
+    // só um desenho renderizado (sem "global")
+    const one = build({ views: { "vista A": { show: { ...SHOW_ALL, render: true } } } });
+    expect(one.renderRequests.length).toBe(1);
+    expect(one.renderRequests[0].right).toEqual([1, 0, 0]);
+    expect(one.renderRequests[0].up).toEqual([0, 1, 0]);
   });
 });
 
@@ -256,10 +283,10 @@ describe("carimbo no arquivo .mola", () => {
     expect(s?.line2).toBe("");
     expect(s?.paper).toBe("A2");
     expect(s?.scale).toBeUndefined();
-    expect(s?.show).toEqual({ markers: true, labels: true, axes: true, dims: false });
+    expect(s?.show).toEqual({ markers: true, labels: true, axes: true, dims: false, render: false });
     expect(s?.layouts?.A3?.views.map((v) => v.id)).toEqual(["x"]);
     expect(s?.cuts?.map((c) => c.id)).toEqual(["c1"]);
-    expect(s?.views?.x).toEqual({ title: "T", show: { markers: true, labels: true, axes: true, dims: false } });
+    expect(s?.views?.x).toEqual({ title: "T", show: { markers: true, labels: true, axes: true, dims: false, render: false } });
     expect(cleanSheet(null)).toBeUndefined();
   });
 });

@@ -15,6 +15,8 @@ export interface SheetShow {
   axes: boolean;
   /** cotas */
   dims: boolean;
+  /** desenho renderizado (foto da cena 3D na escala do desenho); desligado = simplificado, em linhas */
+  render: boolean;
 }
 
 /** Desenho numa prancha. `cell` é o quadro dele (mm de papel); o desenho fica no centro. */
@@ -93,7 +95,7 @@ const VIEW_KINDS: SheetView["kind"][] = ["plan", "A", "B", "C", "D", "cut", "iso
 function cleanShow(v: unknown): SheetShow | undefined {
   const o = v as Partial<SheetShow> | null;
   if (!o || typeof o !== "object") return undefined;
-  return { markers: o.markers !== false, labels: o.labels !== false, axes: o.axes !== false, dims: o.dims !== false };
+  return { markers: o.markers !== false, labels: o.labels !== false, axes: o.axes !== false, dims: o.dims !== false, render: o.render === true };
 }
 
 /** Confere o carimbo vindo de um arquivo: o que não tem o formato certo fica de fora (as pranchas voltam ao automático). */
