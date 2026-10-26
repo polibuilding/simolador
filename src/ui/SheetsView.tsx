@@ -5,7 +5,7 @@ import { sheetToSvg, sheetsToDxf, sheetsToPdf } from "../drawings/export";
 import type { SheetLayout, SheetMeta, SheetPaper, SheetShow, SheetView } from "../core/serialization";
 import { CUSTOM_MAX, CUSTOM_MIN, type Pt } from "../drawings/prims";
 import { addPage, addView, deleteCut, moveToPage, nextCut, nextViewId, removePage, removeView, setViewScale, withLayout } from "../drawings/layout";
-import { InsertTools, ViewPanel } from "./SheetTools";
+import { InsertTools, RestoreMenu, ScalePick, ViewPanel } from "./SheetTools";
 import { useApp } from "./store";
 import { boardsOf } from "../core/model";
 import { boardName } from "../core/boards";
@@ -376,15 +376,10 @@ export function SheetsView() {
           <span className="sb-title">Pranchas</span>
         </div>
         <div className="sb-mid">
-          <label className="sb-field">
+          <div className="sb-field">
             <span>Escala</span>
-            <select value={String(scale)} onChange={(e) => setMeta({ scale: e.target.value === "auto" ? "auto" : Number(e.target.value) })}>
-              <option value="auto">Automática ({fmt(used)})</option>
-              {SCALES.map((n) => (
-                <option key={n} value={n}>{fmt(n)}</option>
-              ))}
-            </select>
-          </label>
+            <ScalePick value={scale} current={used} scales={SCALES} autoLabel={`Automática (${fmt(used)})`} onChange={(v) => setMeta({ scale: v })} />
+          </div>
           <div className="sb-field">
             <span>Folha</span>
             <select value={paper} onChange={(e) => setMeta({ paper: e.target.value as SheetPaper })} aria-label="Tamanho da folha">
@@ -427,31 +422,24 @@ export function SheetsView() {
           <InsertTools levels={levels} cuts={meta.cuts ?? []} armed={armed} onArm={arm} cutting={!!cutting} onCut={startCut} />
         </div>
         <div className="sb-right">
-          {built.manual && (
-            <button
-              className="ghost"
-              onClick={() => {
-                if (!window.confirm("Voltar ao arranjo automático? Os desenhos inseridos, tirados ou mudados de prancha nesta folha voltam ao padrão.")) return;
-                const cur = useApp.getState().sheet;
-                const layouts = { ...cur.layouts };
-                delete layouts[built.paper];
-                setSheet({ ...cur, layouts });
-                setSelected(null);
-              }}
-              title="Refaz as pranchas a partir da estrutura, como na primeira vez"
-            >
-              Arranjo automático
-            </button>
-          )}
-          {moved > 0 && (
-            <button
-              className="ghost"
-              onClick={() => setMeta({ labels: {}, blocks: Object.fromEntries(Object.entries(meta.blocks ?? {}).filter(([k]) => !k.startsWith(`${built.paper}|`))) })}
-              title="Volta etiquetas, desenhos, títulos e tabela para a posição automática"
-            >
-              Posições no automático
-            </button>
-          )}
+          <RestoreMenu
+            paper={built.paper === "custom" ? `${built.size.w} × ${built.size.h}` : built.paper}
+            layout={built.manual}
+            positions={moved > 0}
+            onLayout={() => {
+              const cur = useApp.getState().sheet;
+              const layouts = { ...cur.layouts };
+              delete layouts[built.paper];
+              setSheet({ ...cur, layouts });
+              setSelected(null);
+              setNote("Desenhos das pranchas no automático. Ctrl+Z desfaz.");
+            }}
+            onPositions={() => {
+              const cur = useApp.getState().sheet;
+              setSheet({ ...cur, labels: {}, blocks: Object.fromEntries(Object.entries(cur.blocks ?? {}).filter(([k]) => !k.startsWith(`${built.paper}|`))) });
+              setNote("Posições no automático. Ctrl+Z desfaz.");
+            }}
+          />
           <button
             className="ghost"
             disabled={empty}

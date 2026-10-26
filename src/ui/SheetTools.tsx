@@ -102,6 +102,128 @@ export function InsertTools({ levels, cuts, armed, onArm, cutting, onCut }: {
   );
 }
 
+/** limites da escala personalizada (n de 1:n) */
+const SCALE_MIN = 0.1;
+const SCALE_MAX = 1000;
+
+/**
+ * Escala: automática (ou geral), as usuais e "Personalizada", que abre o campo 1/n.
+ * `current`: a escala em uso, para começar o campo personalizado.
+ */
+export function ScalePick({ value, current, scales, autoLabel, onChange, label }: {
+  value: number | "auto";
+  current: number;
+  scales: number[];
+  autoLabel: string;
+  onChange: (v: number | "auto") => void;
+  label?: string;
+}) {
+  const listed = value === "auto" || scales.includes(value);
+  const [custom, setCustom] = useState(!listed);
+  useEffect(() => {
+    if (!listed) setCustom(true);
+  }, [listed]);
+  const show = (n: number) => String(n).replace(".", ",");
+  const [text, setText] = useState(show(value === "auto" ? current : value));
+  useEffect(() => setText(show(value === "auto" ? current : value)), [value, current]);
+  const commit = () => {
+    const n = Number(text.replace(",", "."));
+    if (Number.isFinite(n) && n >= SCALE_MIN && n <= SCALE_MAX) onChange(n);
+    else setText(show(value === "auto" ? current : value));
+  };
+  return (
+    <>
+      <select
+        value={custom ? "custom" : String(value)}
+        aria-label={label ?? "Escala"}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === "custom") return setCustom(true);
+          setCustom(false);
+          onChange(v === "auto" ? "auto" : Number(v));
+        }}
+      >
+        <option value="auto">{autoLabel}</option>
+        {scales.map((n) => (
+          <option key={n} value={n}>{fmt(n)}</option>
+        ))}
+        <option value="custom">Personalizada</option>
+      </select>
+      {custom && (
+        <span className="scale-custom" title={`Escala 1/n, com n entre ${show(SCALE_MIN)} e ${SCALE_MAX}`}>
+          1/
+          <input
+            value={text}
+            inputMode="decimal"
+            aria-label="Escala personalizada: n de 1/n"
+            onChange={(e) => setText(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => e.key === "Enter" && commit()}
+          />
+        </span>
+      )}
+    </>
+  );
+}
+
+/**
+ * "Voltar ao automático ▾": duas coisas diferentes, com o que cada uma faz.
+ * Desenhos: quais desenhos estão em cada prancha. Posições: onde cada um está dentro da folha.
+ */
+export function RestoreMenu({ paper, layout, positions, onLayout, onPositions }: {
+  paper: string;
+  /** o arranjo desta folha foi mexido */
+  layout: boolean;
+  /** há desenhos, títulos ou nomes de peças arrastados */
+  positions: boolean;
+  onLayout: () => void;
+  onPositions: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  if (!layout && !positions) return null;
+  return (
+    <span className="menu">
+      <button className={`ghost${open ? " on" : ""}`} onClick={() => setOpen((o) => !o)} aria-expanded={open} title="Desfaz o que foi mexido nas pranchas">
+        Voltar ao automático <span className="caret">▾</span>
+      </button>
+      {open && (
+        <RestoreList
+          paper={paper}
+          layout={layout}
+          positions={positions}
+          onLayout={() => (setOpen(false), onLayout())}
+          onPositions={() => (setOpen(false), onPositions())}
+          onClose={close}
+        />
+      )}
+    </span>
+  );
+}
+function RestoreList({ paper, layout, positions, onLayout, onPositions, onClose }: {
+  paper: string;
+  layout: boolean;
+  positions: boolean;
+  onLayout: () => void;
+  onPositions: () => void;
+  onClose: () => void;
+}) {
+  const ref = useDismiss(onClose);
+  return (
+    <div ref={ref} className="sheet-pop right restore" role="menu">
+      <button role="menuitem" disabled={!layout} onClick={onLayout}>
+        <b>Desenhos das pranchas</b>
+        <small>Quais desenhos vão em cada prancha: tira os inseridos, devolve os tirados e cada um à prancha dele (folha {paper}).</small>
+      </button>
+      <button role="menuitem" disabled={!positions} onClick={onPositions}>
+        <b>Posições</b>
+        <small>Onde cada coisa fica na folha: desenhos, títulos e nomes das peças arrastados voltam ao lugar. Os desenhos continuam os mesmos.</small>
+      </button>
+      <p className="sheet-pop-foot">Ctrl+Z desfaz.</p>
+    </div>
+  );
+}
+
 const SHOW_ROWS: [keyof SheetShow, string][] = [
   ["markers", "Indicações de vistas"],
   ["labels", "Indicações de peças"],
@@ -143,15 +265,19 @@ export function ViewPanel({ info, general, pages, scales, onText, onScale, onPag
         <span>Subtítulo</span>
         <input value={s} onChange={(e) => setS(e.target.value)} onBlur={() => s !== info.sub && onText("sub", s)} onKeyDown={(e) => e.key === "Enter" && onText("sub", s)} spellCheck={false} />
       </label>
-      <label className="ss-row">
+      <div className="ss-row">
         <span>Escala</span>
-        <select value={own ? String(info.view.n) : "geral"} onChange={(e) => onScale(e.target.value === "geral" ? undefined : Number(e.target.value))}>
-          <option value="geral">Geral ({fmt(general)})</option>
-          {scales.map((n) => (
-            <option key={n} value={n}>{fmt(n)}</option>
-          ))}
-        </select>
-      </label>
+        <span className="ss-scale">
+          <ScalePick
+            value={own ? info.view.n! : "auto"}
+            current={info.n}
+            scales={scales}
+            autoLabel={`Geral (${fmt(general)})`}
+            onChange={(v) => onScale(v === "auto" ? undefined : v)}
+            label="Escala do desenho"
+          />
+        </span>
+      </div>
       <label className="ss-row">
         <span>Prancha</span>
         <select value={info.sheet - 1} onChange={(e) => onPage(Number(e.target.value))}>
