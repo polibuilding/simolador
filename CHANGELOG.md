@@ -14,6 +14,16 @@ Regra para numerar: sobe o número depois do ponto (1.5 → 1.6) quando entra um
 
 ---
 
+## 1.25 (em preparação, ainda não publicada)
+- **Pranchas: escala personalizada**: além das escalas usuais, "Personalizada" abre o campo 1/n (na barra de cima e no painel de cada desenho).
+- **Pranchas: Ctrl+Z e Ctrl+Y** desfazem e refazem as mudanças das pranchas (carimbo, folha, escala, Mostrar, desenhos inseridos, tirados ou mudados de prancha, cortes, títulos, posições). Também pelos botões ao lado de "Pranchas". É separado do desfazer da montagem.
+- **"Voltar ao automático"** (antes, dois botões que confundiam): um menu com **Desenhos das pranchas** (quais desenhos vão em cada prancha: tira os inseridos, devolve os tirados) e **Posições** (onde cada coisa fica na folha: o que foi arrastado volta ao lugar), cada um dizendo o que faz.
+- **Barra lateral "Inserir"** à esquerda, como a paleta recolhida da montagem: planta, vistas A–D, isométricas, cortes e Corte.
+- **Quatro isométricas** para inserir, uma de cada canto (A-D, D-C, C-B, B-A). Saem "SEM ESCALA".
+- **Cortes nas vistas transversais**: a vista que olha ao longo da linha de corte mostra o corte de lado, com setas e número.
+- **Apagar um corte**: clicando em C1, aparece a lixeira vermelha ao lado (Ctrl+Z desfaz).
+- **Renderizada**: nova opção no Mostrar e no painel de cada desenho (vem desligada, no "simplificado"). Ligada, o desenho vira a foto da cena 3D na escala dele, com cotas, eixos e indicações por cima.
+
 ## 1.24 — Edição por etapas, RC90 só no plano dela e pranchas editáveis · 21/10/2026
 - **Edição por etapas** (duplo clique numa peça): a primeira etapa continua sendo a liberdade local (numa esfera, o "mover só o nó"). **Espaço passa para a próxima etapa** (antes era o Tab): a posição da etapa atual fica (um passo no Desfazer) e a **forma dela trava**, e só a próxima liberdade mexe. Exemplo: no pórtico simples, a esfera anda na circunferência; com Espaço, o pórtico inteiro tomba em volta das GC sem se deformar. **Shift+Espaço** volta uma etapa. O rodapé mostra "Etapa 2 de 3".
 - **Tab percorre as referências do caminho**: limites azul/vermelho e posições na horizontal/vertical (o que as setas ← / → faziam, e elas continuam valendo). Na **esfera de uma mola**, o Tab passa também pelas **circunferências**: a da mesma altura (a mola mantém a inclinação), a vertical no mesmo rumo, a horizontal e as verticais nos planos X–Z e Y–Z. Escolhida uma, a esfera desliza só nela, seguindo o cursor.
