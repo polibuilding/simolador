@@ -36,6 +36,18 @@ export function projector(id: ViewId): Projector {
 }
 
 /**
+ * Isométrica a partir de um canto: quem olha fica do lado de sx·x e sz·z (sx, sz = ±1), acima, na direção (sx, 1, sz)
+ * (isométrica verdadeira: os três eixos encurtam igual).
+ */
+export function isoProjector(sx: number, sz: number): Projector {
+  const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const c = norm([sx, 1, sz]);
+  const r = norm(cross([0, 1, 0], c));
+  const u = cross(c, r);
+  return { id: "iso", p: (w) => [dot(w, r), dot(w, u), dot(w, c)], depthAxis: c };
+}
+
+/**
  * Corte: vista na direção da linha de corte (`h`, horizontal, no mundo). Quem olha fica do lado de +d, com
  * d = h × cima (como nas vistas: A tem h = +x e d = +z), e vê o que fica atrás da linha.
  */

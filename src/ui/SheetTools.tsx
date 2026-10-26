@@ -1,14 +1,17 @@
 // Pranchas: ferramentas de inserir desenhos (cubo visto de cada lado) e o painel lateral de um desenho.
 import { useCallback, useEffect, useState } from "react";
-import type { SheetShow } from "../core/serialization";
+import { ISO_CORNERS, type IsoCorner, type SheetShow } from "../core/serialization";
 import type { Level, ViewInfo, ViewSpec } from "../drawings/sheets";
 import { useDismiss } from "./Toolbar";
 
 const fmt = (n: number) => `1/${String(n).replace(".", ",")}`;
 const two = (n: number) => String(n).padStart(2, "0");
 
-/** Cubo em perspectiva com a face vista destacada: planta (em cima), A (frente), D (direita), B e C (atrás). */
-export function CubeIcon({ face }: { face: "top" | "A" | "B" | "C" | "D" | "cut" }) {
+type Face = "top" | "A" | "B" | "C" | "D" | "cut";
+
+/** Cubo em perspectiva com a(s) face(s) vista(s) destacada(s): planta (em cima), A (frente), D (direita), B e C (atrás). */
+export function CubeIcon({ face }: { face: Face | Face[] }) {
+  const faces = Array.isArray(face) ? face : [face];
   const P = { T0: "8 1.5", T1: "14 4.5", T2: "8 7.5", T3: "2 4.5", B0: "8 8.5", B1: "14 11.5", B2: "8 14.5", B3: "2 11.5" };
   const F: Record<string, string> = {
     top: `M${P.T0}L${P.T1}L${P.T2}L${P.T3}Z`,
@@ -19,25 +22,27 @@ export function CubeIcon({ face }: { face: "top" | "A" | "B" | "C" | "D" | "cut"
     // corte: plano vertical atravessando o cubo
     cut: "M5 3 11 6 11 13 5 10Z",
   };
-  const hidden = face === "B" || face === "C";
   return (
     <svg className="ico cube" viewBox="0 0 16 16" aria-hidden fill="none" stroke="currentColor" strokeWidth="1" strokeLinejoin="round">
-      <path d={F[face]} fill="currentColor" fillOpacity={hidden ? 0.22 : 0.32} stroke="none" />
+      {faces.map((f) => (
+        <path key={f} d={F[f]} fill="currentColor" fillOpacity={f === "B" || f === "C" ? 0.22 : 0.32} stroke="none" />
+      ))}
       <path d={`M${P.T0}L${P.T1}L${P.T2}L${P.T3}ZM${P.T3}L${P.B3}L${P.B2}L${P.B1}L${P.T1}M${P.T2}L${P.B2}`} />
       <path d={`M${P.T0}L${P.B0}M${P.B3}L${P.B0}L${P.B1}`} strokeDasharray="1.2 1.2" strokeOpacity="0.6" />
-      {face === "cut" && <path d={F.cut} strokeWidth="1.1" />}
+      {faces.includes("cut") && <path d={F.cut} strokeWidth="1.1" />}
     </svg>
   );
 }
 
-/** Botão "Planta ▾": escolhe o pavimento e arma a inserção. */
+/** Botão da planta: abre ao lado a lista de pavimentos e arma a inserção. */
 function PlanPicker({ levels, armed, onPick }: { levels: Level[]; armed: boolean; onPick: (y: number) => void }) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   return (
-    <span className="menu">
-      <button className={armed ? "on" : ""} onClick={() => setOpen((o) => !o)} aria-expanded={open} title="Inserir a planta de um pavimento">
-        <CubeIcon face="top" /> Planta <span className="caret">▾</span>
+    <span className="menu st-item">
+      <button className={`st-btn${armed || open ? " on" : ""}`} onClick={() => setOpen((o) => !o)} aria-expanded={open} title="Inserir a planta de um pavimento">
+        <CubeIcon face="top" />
+        <small>Planta ▸</small>
       </button>
       {open && <PlanList levels={levels} onPick={(y) => (setOpen(false), onPick(y))} onClose={close} />}
     </span>
@@ -46,7 +51,7 @@ function PlanPicker({ levels, armed, onPick }: { levels: Level[]; armed: boolean
 function PlanList({ levels, onPick, onClose }: { levels: Level[]; onPick: (y: number) => void; onClose: () => void }) {
   const ref = useDismiss(onClose);
   return (
-    <div ref={ref} className="sheet-pop" role="menu">
+    <div ref={ref} className="sheet-pop side" role="menu">
       {levels.length === 0 && <p className="sheet-pop-empty">Sem pavimentos.</p>}
       {levels.map((lv) => (
         <button key={lv.y} role="menuitem" onClick={() => onPick(lv.y)}>
@@ -76,8 +81,10 @@ export function TrashIcon() {
   );
 }
 
-/** Grupo "Inserir" da barra de cima. */
-export function InsertTools({ levels, cuts, armed, onArm, cutting, onCut, onDeleteCut }: {
+const ISO_NAMES: Record<IsoCorner, string> = { AD: "frente e direita", DC: "direita e fundos", CB: "fundos e esquerda", BA: "esquerda e frente" };
+
+/** Barra lateral "Inserir" (como a paleta recolhida da montagem): plantas, vistas, isométricas, cortes e Corte. */
+export function InsertBar({ levels, cuts, armed, onArm, cutting, onCut, onDeleteCut }: {
   levels: Level[];
   cuts: { id: string; name: string }[];
   armed: ViewSpec | null;
@@ -87,22 +94,37 @@ export function InsertTools({ levels, cuts, armed, onArm, cutting, onCut, onDele
   cutting: boolean;
   onCut: () => void;
 }) {
-  const is = (k: ViewSpec["kind"], cut?: string) => armed?.kind === k && (k !== "cut" || (armed as { cut: string }).cut === cut);
+  const is = (k: ViewSpec["kind"], extra?: string) =>
+    armed?.kind === k && (k === "cut" ? (armed as { cut: string }).cut === extra : k === "iso" ? (armed as { iso: string }).iso === extra : true);
   return (
-    <div className="sb-field sb-insert" role="group" aria-label="Inserir desenho">
-      <span>Inserir</span>
+    <nav className="sheet-tools" aria-label="Inserir desenho">
+      <span className="st-label">Inserir</span>
       <PlanPicker levels={levels} armed={is("plan")} onPick={(y) => onArm({ kind: "plan", level: y })} />
       {(["A", "B", "C", "D"] as const).map((k) => (
-        <button key={k} className={is(k) ? "on" : ""} onClick={() => onArm(is(k) ? null : { kind: k })} title={`Inserir a vista ${k}`} aria-label={`Vista ${k}`}>
+        <button key={k} className={`st-btn${is(k) ? " on" : ""}`} onClick={() => onArm(is(k) ? null : { kind: k })} title={`Inserir a vista ${k}`} aria-label={`Vista ${k}`}>
           <CubeIcon face={k} />
-          {k}
+          <small>Vista {k}</small>
         </button>
       ))}
+      <span className="st-sep" />
+      {ISO_CORNERS.map((c) => (
+        <button
+          key={c}
+          className={`st-btn${is("iso", c) ? " on" : ""}`}
+          onClick={() => onArm(is("iso", c) ? null : { kind: "iso", iso: c })}
+          title={`Inserir a isométrica ${c[0]}-${c[1]} (${ISO_NAMES[c]})`}
+          aria-label={`Isométrica ${c[0]}-${c[1]}`}
+        >
+          <CubeIcon face={["top", c[0] as Face, c[1] as Face]} />
+          <small>Iso {c[0]}-{c[1]}</small>
+        </button>
+      ))}
+      {cuts.length > 0 && <span className="st-sep" />}
       {cuts.map((c) => (
-        <span key={c.id} className="cut-pick">
-          <button className={is("cut", c.id) ? "on" : ""} onClick={() => onArm(is("cut", c.id) ? null : { kind: "cut", cut: c.id })} title={`Inserir o ${c.name.toLowerCase()}`}>
+        <span key={c.id} className="st-item">
+          <button className={`st-btn${is("cut", c.id) ? " on" : ""}`} onClick={() => onArm(is("cut", c.id) ? null : { kind: "cut", cut: c.id })} title={`Inserir o ${c.name.toLowerCase()}`}>
             <CubeIcon face="cut" />
-            {c.name.replace(/^corte\s*/i, "C")}
+            <small>{c.name}</small>
           </button>
           {is("cut", c.id) && (
             <button className="trash" onClick={() => onDeleteCut(c.id)} title={`Apagar o ${c.name.toLowerCase()}: a linha nas plantas e os desenhos dele (Ctrl+Z desfaz)`} aria-label={`Apagar o ${c.name.toLowerCase()}`}>
@@ -111,11 +133,12 @@ export function InsertTools({ levels, cuts, armed, onArm, cutting, onCut, onDele
           )}
         </span>
       ))}
-      <span className="sb-sep" />
-      <button className={cutting ? "on" : ""} onClick={onCut} title="Novo corte: clique no primeiro e no segundo ponto da linha de corte numa planta baixa">
-        <CutIcon /> Corte
+      <span className="st-sep" />
+      <button className={`st-btn${cutting ? " on" : ""}`} onClick={onCut} title="Novo corte: clique no primeiro e no segundo ponto da linha de corte numa planta baixa">
+        <CutIcon />
+        <small>Corte</small>
       </button>
-    </div>
+    </nav>
   );
 }
 

@@ -5,7 +5,7 @@ import { sheetToSvg, sheetsToDxf, sheetsToPdf } from "../drawings/export";
 import type { SheetLayout, SheetMeta, SheetPaper, SheetShow, SheetView } from "../core/serialization";
 import { CUSTOM_MAX, CUSTOM_MIN, type Pt } from "../drawings/prims";
 import { addPage, addView, deleteCut, moveToPage, nextCut, nextViewId, removePage, removeView, setViewScale, withLayout } from "../drawings/layout";
-import { InsertTools, RestoreMenu, ScalePick, ViewPanel } from "./SheetTools";
+import { InsertBar, RestoreMenu, ScalePick, ViewPanel } from "./SheetTools";
 import { useApp } from "./store";
 import { boardsOf } from "../core/model";
 import { boardName } from "../core/boards";
@@ -207,7 +207,9 @@ export function SheetsView() {
       ? `a planta ${(levels.find((l) => Math.abs(l.y - armed.level) < 0.5)?.name ?? "").toLowerCase().replace("pav. ", "")}`
       : armed.kind === "cut"
         ? `o ${(meta.cuts?.find((c) => c.id === armed.cut)?.name ?? "corte").toLowerCase()}`
-        : `a vista ${armed.kind}`
+        : armed.kind === "iso"
+          ? `a isométrica ${armed.iso.split("").join("-")}`
+          : `a vista ${armed.kind}`
     : "";
 
   /** ponto da folha (mm de papel) sob o cursor, e o número da folha */
@@ -227,7 +229,7 @@ export function SheetsView() {
     const cell = newViewCell(input, armed, used, p.at);
     const v: SheetView = {
       id: nextViewId(meta, [built.layout]), kind: armed.kind, page: p.sheet - 1, cell, n: used,
-      ...(armed.kind === "plan" ? { level: armed.level } : armed.kind === "cut" ? { cut: armed.cut } : {}),
+      ...(armed.kind === "plan" ? { level: armed.level } : armed.kind === "cut" ? { cut: armed.cut } : armed.kind === "iso" ? { iso: armed.iso } : {}),
     };
     saveLayout(addView(built.layout, v));
     setArmed(null);
@@ -438,7 +440,6 @@ export function SheetsView() {
               );
             })}
           </div>
-          <InsertTools levels={levels} cuts={meta.cuts ?? []} armed={armed} onArm={arm} cutting={!!cutting} onCut={startCut} onDeleteCut={removeCut} />
         </div>
         <div className="sb-right">
           <RestoreMenu
@@ -488,6 +489,7 @@ export function SheetsView() {
         </div>
       </header>
       <div className="sheets-body">
+      {!empty && <InsertBar levels={levels} cuts={meta.cuts ?? []} armed={armed} onArm={arm} cutting={!!cutting} onCut={startCut} onDeleteCut={removeCut} />}
       {empty ? (
         <p className="sheets-empty">Monte a estrutura primeiro: as pranchas saem dela.</p>
       ) : (

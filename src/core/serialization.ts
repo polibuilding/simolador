@@ -18,9 +18,15 @@ export interface SheetShow {
 }
 
 /** Desenho numa prancha. `cell` é o quadro dele (mm de papel); o desenho fica no centro. */
+/** Canto de onde se olha uma isométrica: as duas vistas que ela mostra (AD = frente e direita…). */
+export type IsoCorner = "AD" | "DC" | "CB" | "BA";
+export const ISO_CORNERS: IsoCorner[] = ["AD", "DC", "CB", "BA"];
+
 export interface SheetView {
   id: string;
-  kind: "plan" | "A" | "B" | "C" | "D" | "cut";
+  kind: "plan" | "A" | "B" | "C" | "D" | "cut" | "iso";
+  /** isométrica: canto de onde se olha */
+  iso?: IsoCorner;
   /** planta: altura do pavimento (mm, acima da chapa) */
   level?: number;
   /** corte: id do corte */
@@ -82,7 +88,7 @@ export interface SheetMeta {
 const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const isPt = (v: unknown): v is [number, number] => Array.isArray(v) && v.length === 2 && v.every(isNum);
 const PAPERS: SheetPaper[] = ["A2", "A3", "A4", "custom"];
-const VIEW_KINDS: SheetView["kind"][] = ["plan", "A", "B", "C", "D", "cut"];
+const VIEW_KINDS: SheetView["kind"][] = ["plan", "A", "B", "C", "D", "cut", "iso"];
 
 function cleanShow(v: unknown): SheetShow | undefined {
   const o = v as Partial<SheetShow> | null;
@@ -131,7 +137,8 @@ export function cleanSheet(raw: unknown): SheetMeta | undefined {
           !!v && typeof v.id === "string" && VIEW_KINDS.includes(v.kind) && isNum(v.page) && v.page >= 0 &&
           !!v.cell && [v.cell.x, v.cell.y, v.cell.w, v.cell.h].every(isNum) &&
           (v.level === undefined || isNum(v.level)) && (v.n === undefined || (isNum(v.n) && v.n > 0)) &&
-          (v.cut === undefined || typeof v.cut === "string"),
+          (v.cut === undefined || typeof v.cut === "string") &&
+          (v.kind !== "iso" || ISO_CORNERS.includes(v.iso as IsoCorner)),
       );
       layouts[p] = { pages: Math.max(0, Math.round(l.pages)), views };
     }

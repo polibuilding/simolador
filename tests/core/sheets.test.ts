@@ -162,6 +162,26 @@ describe("pranchas: mexer no arranjo", () => {
   });
 });
 
+describe("pranchas: isométricas", () => {
+  it("as 4 isométricas entram como desenho sem escala e não mudam a escala do carimbo", () => {
+    const auto = build({ scale: 5 });
+    const cell = newViewCell({ cat: catalog, model: portico.model, inventory: portico.inventory, name: "", meta: base }, { kind: "iso", iso: "CB" }, 10, [300, 200]);
+    const views = (["AD", "DC", "CB", "BA"] as const).map((iso, i) => ({ id: `d${i + 1}`, kind: "iso" as const, iso, page: auto.layout.pages, n: 10, cell }));
+    const b = build({ scale: 5, layouts: { A3: { pages: auto.layout.pages + 1, views: [...auto.layout.views, ...views] } } });
+    const sh = b.sheets[b.sheets.length - 1];
+    expect(sh.title).toBe("ISO A-D · ISO D-C · ISO C-B · ISO B-A");
+    const t = texts(sh.prims);
+    expect(t).toContain("ISOMÉTRICA C-B");
+    expect(t.filter((s) => s === "SEM ESCALA").length).toBe(5); // 4 títulos + o carimbo
+    // as quatro são diferentes (cada uma de um canto)
+    const shape = (id: string) => JSON.stringify(sh.prims.filter((p) => p.group === `desenho:${id}` && p.layer === "MOLA-BARRA").map((p) => (p.t === "poly" ? p.pts.map((q) => q.map(Math.round)) : 0)));
+    expect(new Set(["d1", "d2", "d3", "d4"].map(shape)).size).toBe(4);
+    // num .mola, só cantos conhecidos
+    const clean = cleanSheet({ ...base, layouts: { A3: { pages: 1, views: [{ ...views[0] }, { ...views[1], iso: "XX" }] } } });
+    expect(clean?.layouts?.A3?.views.map((v) => v.id)).toEqual(["d1"]);
+  });
+});
+
 describe("pranchas: cortes", () => {
   // pórtico em x = 3..9 M, z = 3 M; corte ao longo de x, passando no meio da viga (olha para −z)
   const M = catalog.settings.modulo_mm;

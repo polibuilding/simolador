@@ -8,9 +8,9 @@ import { ropePlan } from "../core/rope";
 import { minKits, usage } from "../core/inventory";
 import { boardsOf, type Model, type Vec3 } from "../core/model";
 import { boardCorners, fromBoardLocal } from "../core/boards";
-import type { SheetCut, SheetLayout, SheetMeta, SheetShow, SheetView } from "../core/serialization";
+import type { IsoCorner, SheetCut, SheetLayout, SheetMeta, SheetShow, SheetView } from "../core/serialization";
 import { CUSTOM_MAX, CUSTOM_MIN, GRAY, PAPER, PEN, movePrim, type PaperName, type Prim, type Pt, type Sheet } from "./prims";
-import { bounds, cutProjector, itemsFor, projector, world, type Item, type Projector, type ViewId } from "./views";
+import { bounds, cutProjector, isoProjector, itemsFor, projector, world, type Item, type Projector, type ViewId } from "./views";
 
 export interface SheetInput {
   cat: Catalog;
@@ -227,11 +227,11 @@ function callouts(
 }
 
 /** Título do desenho: nome, subtítulo (os dois se editam clicando na tela) e escala. */
-function viewTitle(at: Pt, title: string, sub: string, n: number, id: string): Prim[] {
+function viewTitle(at: Pt, title: string, sub: string, n: number | null, id: string): Prim[] {
   return [
     txt(at, title, 4.4, { bold: true, edit: `vt:${id}` }),
     txt([at[0], at[1] + 5.2], sub, 3.3, { edit: `vs:${id}` }),
-    txt([at[0], at[1] + 9.4], `ESCALA: ${fmtScale(n)}`, 2.3),
+    txt([at[0], at[1] + 9.4], n === null ? "SEM ESCALA" : `ESCALA: ${fmtScale(n)}`, 2.3),
   ];
 }
 
@@ -659,6 +659,32 @@ function sideAxes(ctx: Ctx, pr: Projector, h: Vec3) {
 
 const SIDE_H: Record<"A" | "B" | "C" | "D", Vec3> = { A: [1, 0, 0], B: [0, 0, 1], C: [-1, 0, 0], D: [0, 0, -1] };
 
+/** Isométrica de cada canto: de que lado de x e de z fica quem olha (A = frente, +z; D = direita, +x). */
+const ISO_SIDE: Record<IsoCorner, [number, number]> = { AD: [1, 1], DC: [1, -1], CB: [-1, -1], BA: [-1, 1] };
+const isoProj = (c: IsoCorner = "AD") => isoProjector(...ISO_SIDE[c]);
+
+/** Itens e contorno das chapas de uma isométrica (mm reais na projeção). */
+function isoParts(cat: Catalog, model: Model, corner?: IsoCorner) {
+  const W = world(cat);
+  const pr = isoProj(corner);
+  const items = itemsFor(cat, model, pr);
+  const boards = boardsOf(model).map((bd) => boardCorners(cat, bd).map(([x, z]) => pr.p([x * W.M, 0, z * W.M])).map(([h, v]) => [h, v] as Pt));
+  return { pr, items, boards, b: bounds(items, boards.flat()) };
+}
+
+const ISO_PAD = { left: 10, right: 44, top: 10, bottom: 22 };
+
+/** Isométrica (sem escala): chapas, peças e as indicações de peças. */
+function isoDrawing(ctx: Ctx, v: SheetView, n: number, sh: SheetShow): Prim[] {
+  const { cat, model } = ctx.input;
+  const { items, boards, b } = isoParts(cat, model, v.iso);
+  const P = place(b, inner(v.cell, ISO_PAD), n);
+  const out: Prim[] = boards.map((pts) => ({ t: "poly", pts: pts.map((q) => P.to(q)), closed: true, fill: "#f2f2f2", stroke: "#000", pen: PEN.base, layer: "MOLA-BASE" }) as Prim);
+  out.push(...paint(items, P));
+  if (sh.labels) out.push(...callouts(items, ELEV_LABELS, P, P.box.x1 + 14, P.box.y0, P.box.y1, labelKey(v), ctx.input.meta.labels));
+  return out;
+}
+
 /** Título e subtítulo padrão de um desenho. */
 function defaultTitle(ctx: Ctx, v: SheetView): [string, string] {
   const name = ctx.input.name.toUpperCase();
@@ -667,6 +693,7 @@ function defaultTitle(ctx: Ctx, v: SheetView): [string, string] {
     return lv ? [...lv.planTitle] : ["PLANTA BAIXA", `NÍVEL +${mmText(v.level ?? 0)}`];
   }
   if (v.kind === "cut") return [(ctx.cuts.find((c) => c.id === v.cut)?.name ?? "CORTE").toUpperCase(), name];
+  if (v.kind === "iso") return [`ISOMÉTRICA ${(v.iso ?? "AD").split("").join("-")}`, name];
   return [`VISTA - ${v.kind}`, name];
 }
 
@@ -682,6 +709,7 @@ function entryOf(v: SheetView, title: string, sub: string) {
   const t = title.toUpperCase().trim();
   if (v.kind === "plan") return `${t.replace(/^PLANTA( BAIXA| DE)?(?=\s|$)/, "PB")} ${sub.toUpperCase()}`.trim();
   if (v.kind === "cut") return t;
+  if (v.kind === "iso") return t.replace(/^ISOMÉTRICA/, "ISO");
   return t.replace(/\s*-\s*/, "-");
 }
 
@@ -689,7 +717,7 @@ function entryOf(v: SheetView, title: string, sub: string) {
 const showOf = (meta: SheetMeta, id: string): SheetShow => meta.views?.[id]?.show ?? { ...SHOW_ALL, ...meta.show };
 
 /** Desenho completo de uma vista: o bloco do desenho e o do título (arrastáveis). */
-function viewDrawing(ctx: Ctx, v: SheetView, nGlobal: number): { prims: Prim[]; entry: string; n: number; P?: Placed } | null {
+function viewDrawing(ctx: Ctx, v: SheetView, nGlobal: number): { prims: Prim[]; entry: string; n: number; scaled: boolean; P?: Placed } | null {
   const n = v.n ?? nGlobal;
   const sh = showOf(ctx.input.meta, v.id);
   const [title, sub] = titlesOf(ctx, v);
@@ -708,15 +736,20 @@ function viewDrawing(ctx: Ctx, v: SheetView, nGlobal: number): { prims: Prim[]; 
     const cm = cutModel(cat, model, cut);
     body = elevationDrawing(ctx, v, n, sh, cm.pr, cm.model, sideAxes(ctx, cm.pr, cm.h), cm.sections);
     titleAt = [v.cell.x + ELEV_PAD.left, v.cell.y + v.cell.h - 24];
+  } else if (v.kind === "iso") {
+    body = isoDrawing(ctx, v, n, sh);
+    titleAt = [v.cell.x + 2, v.cell.y + v.cell.h - 13];
   } else {
     const pr = projector(v.kind);
     body = elevationDrawing(ctx, v, n, sh, pr, model, sideAxes(ctx, pr, SIDE_H[v.kind]));
     titleAt = [v.cell.x + ELEV_PAD.left, v.cell.y + v.cell.h - 24];
   }
   return {
-    prims: [...tagged(body, `desenho:${v.id}`), ...tagged(viewTitle(titleAt, title, sub, n, v.id), `titulo:${v.id}`)],
+    // a isométrica não fica em escala verdadeira (os três eixos encurtam): "SEM ESCALA"
+    prims: [...tagged(body, `desenho:${v.id}`), ...tagged(viewTitle(titleAt, title, sub, v.kind === "iso" ? null : n, v.id), `titulo:${v.id}`)],
     entry: entryOf(v, title, sub),
     n,
+    scaled: v.kind !== "iso",
     P: placed,
   };
 }
@@ -973,7 +1006,7 @@ export function buildSheets(input: SheetInput): BuiltSheets {
       if (!d) continue;
       page.prims.push(...d.prims);
       page.entries.push(d.entry);
-      page.scales.push(d.n);
+      if (d.scaled) page.scales.push(d.n);
       const [title, sub] = titlesOf(ctx, v);
       const o = input.meta.views?.[v.id];
       const P = d.P;
@@ -1012,7 +1045,11 @@ export function buildSheets(input: SheetInput): BuiltSheets {
 }
 
 /** O que inserir: planta de um pavimento, vista A–D ou corte. */
-export type ViewSpec = { kind: "plan"; level: number } | { kind: "A" | "B" | "C" | "D" } | { kind: "cut"; cut: string };
+export type ViewSpec =
+  | { kind: "plan"; level: number }
+  | { kind: "A" | "B" | "C" | "D" }
+  | { kind: "cut"; cut: string }
+  | { kind: "iso"; iso: IsoCorner };
 
 /** Quadro de um desenho novo com o centro em `at` (mm de papel), na escala 1:n. */
 export function newViewCell(input: SheetInput, spec: ViewSpec, n: number, at: Pt): Cell {
@@ -1028,8 +1065,9 @@ export function newViewFrame(input: SheetInput, spec: ViewSpec, n: number, at: P
     const cut = (input.meta.cuts ?? []).find((c) => c.id === spec.cut);
     const cm = cut ? cutModel(cat, model, cut) : null;
     b = withGround(bounds(cm ? [...itemsFor(cat, cm.model, cm.pr), ...cm.sections] : []));
-  } else b = withGround(bounds(itemsFor(cat, model, projector(spec.kind))));
-  const pad = spec.kind === "plan" ? PLAN_PAD : ELEV_PAD;
+  } else if (spec.kind === "iso") b = isoParts(cat, model, spec.iso).b;
+  else b = withGround(bounds(itemsFor(cat, model, projector(spec.kind))));
+  const pad = spec.kind === "plan" ? PLAN_PAD : spec.kind === "iso" ? ISO_PAD : ELEV_PAD;
   const w = (b.x1 - b.x0) / n;
   const h = (b.y1 - b.y0) / n;
   const m = 4; // folga em volta
