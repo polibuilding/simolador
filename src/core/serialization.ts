@@ -199,12 +199,12 @@ export function fromFile(raw: unknown): { model: Model; inventory: InventoryConf
   for (const n of f.nodes) {
     const pos = vec(n.pos);
     if (!n.id || !pos) throw new MolaFileError("Nó inválido no arquivo.");
-    nodes[n.id] = { id: n.id, kind: n.kind === "support" ? "support" : "sphere", pos };
+    nodes[n.id] = { id: n.id, kind: n.kind === "support" || n.kind === "clip" ? n.kind : "sphere", pos };
   }
   const members: Model["members"] = {};
   for (const m of f.members) {
     if (!nodes[m.a] || !nodes[m.b]) throw new MolaFileError(`Peça ${m.id} liga um nó que não existe.`);
-    members[m.id] = { id: m.id, code: m.code, a: m.a, b: m.b, ...(m.stiff ? { stiff: true } : {}) };
+    members[m.id] = { id: m.id, code: m.code, a: m.a, b: m.b, ...(m.stiff ? { stiff: true } : {}), ...(typeof m.chain === "string" ? { chain: m.chain } : {}) };
   }
   const plates: Model["plates"] = {};
   for (const p of f.plates ?? []) {

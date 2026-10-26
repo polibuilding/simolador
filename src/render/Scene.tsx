@@ -8,14 +8,15 @@ import { catalog } from "../core/catalog";
 import { boardsOf, componentOf, type Model, type Vec3 } from "../core/model";
 import { markerPos, type Candidate } from "../core/snapping";
 import { boardCorners } from "../core/boards";
-import { barGuidesFor, candidatesFor, globalFor, guidesFor, locusStatusFor, nodeOptionsFor, pathFor, Placement, reachFor } from "../interaction/Placement";
+import { barGuidesFor, candidatesFor, globalFor, guidesFor, locusStatusFor, nodeOptionsFor, pathFor, Placement, reachFor, ropeRefsFor } from "../interaction/Placement";
+import { ropeEndAt } from "../core/rope";
 import { reachPoint } from "../core/reach";
 import { validateSupport } from "../core/rules";
 import { locusCirclePoint, locusSpherePoint } from "../core/edit";
 import { panelOpen, scopesOf, useApp, useDisplayModel, useModel, inclineOn, workingModel } from "../ui/store";
 import type { Sel } from "../core/edit";
 import { Bar, GroundConnection, Sphere, type Look } from "./pieces/pieces";
-import { Cable, ContinuousConnector, PlateMesh, RigidConnector, Rope } from "./pieces/more";
+import { Cable, ContinuousConnector, PlateMesh, RigidConnector, Rope, RopeClip } from "./pieces/more";
 import { COLORS, M, PLATE_D, PLATE_W, toWorld } from "./units";
 import { Boards } from "./Boards";
 import { SnapshotHook } from "./snapshot";
@@ -24,8 +25,8 @@ const typeOf = (code: string) => catalog.pieces[code]?.type;
 
 /** Desenha um modelo. `lookOf` decide a aparência de cada peça; `interactive` liga seleção e arraste. */
 function ModelGroup({
-  model, lookOf, interactive, hidden,
-}: { model: Model; lookOf: (id: string) => Look; interactive: boolean; hidden?: Set<string> }) {
+  model, lookOf, interactive, hidden, context = model,
+}: { model: Model; lookOf: (id: string) => Look; interactive: boolean; hidden?: Set<string>; context?: Model }) {
   const { select, toggleMulti, setHover, setPendingDrag } = useApp.getState();
   const selection = useApp((s) => s.selection);
   const handlers = (kind: Sel["kind"], id: string) =>
@@ -73,6 +74,8 @@ function ModelGroup({
       {Object.values(model.nodes).filter((n) => !hidden?.has(n.id)).map((n) =>
         n.kind === "support" ? (
           <GroundConnection key={n.id} position={pos[n.id]} look={lookOf(n.id)} {...handlers("node", n.id)} />
+        ) : n.kind === "clip" ? (
+          <RopeClip key={n.id} position={pos[n.id]} look={lookOf(n.id)} {...handlers("node", n.id)} />
         ) : (
           <Sphere key={n.id} position={pos[n.id]} look={lookOf(n.id)} {...handlers("node", n.id)} />
         ),
@@ -81,7 +84,7 @@ function ModelGroup({
         typeOf(m.code) === "cable" ? (
           <Cable key={m.id} a={pos[m.a]} b={pos[m.b]} look={lookOf(m.id)} {...handlers("member", m.id)} />
         ) : typeOf(m.code) === "rope" ? (
-          <Rope key={m.id} a={pos[m.a]} b={pos[m.b]} look={lookOf(m.id)} {...handlers("member", m.id)} />
+          <Rope key={m.id} a={pos[m.a]} b={pos[m.b]} ends={[ropeEndAt(context, m, m.a), ropeEndAt(context, m, m.b)]} look={lookOf(m.id)} {...handlers("member", m.id)} />
         ) : (
           <Bar key={m.id} a={pos[m.a]} b={pos[m.b]} code={m.code} stiff={!!m.stiff} look={lookOf(m.id)} {...handlers("member", m.id)} />
         ),
@@ -129,7 +132,7 @@ function ModelView() {
       connectors: Object.fromEntries(Object.entries(model.connectors).filter(([, c]) => keep(c.node))),
     };
   }, [model, groupGhost]);
-  return <ModelGroup model={shown} lookOf={lookOf} interactive={selecting} />;
+  return <ModelGroup model={shown} lookOf={lookOf} interactive={selecting} context={model} />;
 }
 
 function candidateModel(base: Model, c: Candidate): { model: Model } {
@@ -161,7 +164,7 @@ function GhostView() {
     // colar: só as peças novas; esferas que já existem não são redesenhadas
     const look: Look = ghost.check.ok ? "valid" : "invalid";
     const old = new Set(Object.keys(ghost.part.nodes).filter((k) => !ghost.ids.has(k)));
-    return <ModelGroup model={ghost.part} lookOf={() => look} interactive={false} hidden={old} />;
+    return <ModelGroup model={ghost.part} lookOf={() => look} interactive={false} hidden={old} context={ghost.model} />;
   }
   if (ghost.kind === "group") {
     const look: Look = ghost.check.ok ? "valid" : "invalid";
@@ -182,7 +185,7 @@ function GhostView() {
       connectors: Object.fromEntries(Object.entries(g.connectors).filter(([, c]) => ids.has(c.node))),
     };
     const fixedEnds = new Set([...used].filter((k) => !ids.has(k)));
-    return <ModelGroup model={part} lookOf={() => look} interactive={false} hidden={fixedEnds} />;
+    return <ModelGroup model={part} lookOf={() => look} interactive={false} hidden={fixedEnds} context={g} />;
   }
   const look: Look = ghost.cand.check.ok ? "valid" : "invalid";
   const { model } = candidateModel(base, ghost.cand);
@@ -403,6 +406,35 @@ function LinkMark() {
       <sphereGeometry args={[12, 24, 16]} />
       <meshBasicMaterial color={COLORS.select} transparent opacity={0.35} depthWrite={false} />
     </mesh>
+  );
+}
+
+/**
+ * Cabo na mão (K7, K8): a bolinha sob o cursor acesa, a primeira ponta escolhida numa bolinha (halo) e as
+ * referências nos cabos: verdes (na vertical de uma esfera) e amarelas (meio do cabo, pendural perpendicular).
+ */
+function RopeMarks() {
+  const tool = useApp((s) => s.tool);
+  const ball = useApp((s) => s.ballHover);
+  const start = useApp((s) => s.ropeBall);
+  const linkFrom = useApp((s) => s.linkFrom);
+  const model = useApp((s) => workingModel(s));
+  const on = tool.kind === "place" && catalog.pieces[tool.code]?.type === "rope";
+  const from = start?.pos ?? (linkFrom ? model.nodes[linkFrom]?.pos : undefined);
+  const refs = useMemo(() => (on ? ropeRefsFor(model, from) : []), [on, model, from]);
+  if (!on) return null;
+  const dot = (p: Vec3, r: number, color: string, opacity: number, key: string) => (
+    <mesh key={key} position={toWorld(p)} raycast={() => null} renderOrder={6}>
+      <sphereGeometry args={[r, 14, 10]} />
+      <meshBasicMaterial color={color} transparent opacity={opacity} depthTest={false} />
+    </mesh>
+  );
+  return (
+    <group raycast={() => null}>
+      {refs.map((r, i) => dot(r.pos, 2.4, r.kind === "green" ? COLORS.valid : COLORS.guideYellow, 0.95, `r${i}`))}
+      {start && dot(start.pos, 6, COLORS.select, 0.4, "start")}
+      {ball && dot(ball, 2.2, COLORS.select, 1, "ball")}
+    </group>
   );
 }
 
@@ -842,6 +874,7 @@ export function Scene() {
       <GhostView />
       <Markers />
       <LinkMark />
+      <RopeMarks />
       <ScopeMark />
       <ReachView />
       <NodeLocusView />

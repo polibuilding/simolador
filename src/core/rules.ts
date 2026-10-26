@@ -4,9 +4,9 @@ import type { Catalog } from "./catalog";
 import { available, remaining, type InventoryConfig } from "./inventory";
 import { boardAt, frameRadAt } from "./boards";
 import { pointSegDist, polygonsCross, rc90Outline, segmentHitsPolygon, segSegDist } from "./geom";
-import { ropeInfo, ropeMinMm, ropePlan, ROPE, ROPE_CLIP, ROPE_CONN, stiffenerFor, ballsPerRoll, ropeSpec } from "./rope";
+import { kit3Usage, ropeEndAt, ropeInfo, ropeMinMm, ropePlan, ROPE, ROPE_CLIP, ROPE_CONN, stiffenerFor, ballsPerRoll, ropeSpec, type RopeEnd } from "./rope";
 import {
-  DIR_TOL, EPS, UP, type Model, boardsOf, type Vec3, type Member, add, cross, dot, findNodeAt, len, membersAt,
+  DIR_TOL, EPS, UP, type Model, boardsOf, type Vec3, type Member, add, chainOf, cross, dot, findNodeAt, len, membersAt,
   directionFrom, memberAlong, norm, plateKey, rotYRad, samePos, scale, sub,
 } from "./model";
 
@@ -119,7 +119,7 @@ function collisionErrors(cat: Catalog, model: Model, a: Vec3, b: Vec3, fromId: s
   const thinD = cable === "rope" ? Number(s.cabo_bolinha_mm ?? 2.4) : s.cabo_diametro_mm;
   const clear = (s.esfera_diametro_mm / 2 + (cable ? thinD : s.barra_diametro_mm) / 2) / s.modulo_mm;
   for (const n of Object.values(model.nodes)) {
-    if (n.id === fromId || n.id === targetId) continue;
+    if (n.id === fromId || n.id === targetId || n.kind === "clip") continue; // o ponto de cabo é só um clip no cabo
     const { t, perp } = onSegment(n.pos);
     if (perp < clear && t > EPS && t < L - EPS) return ["A peça atravessaria uma esfera."];
   }
@@ -310,6 +310,8 @@ export function validateMember(
   if (!piece || (piece.type !== "bar" && piece.type !== "cable")) return result([`${code} não é barra nem diagonal.`]);
   if (!from) return result(["Nó de origem não existe."]);
   const cable = piece.type === "cable";
+  // K7: o ponto de cabo só recebe cabos
+  if (from.kind === "clip" || findNodeAt(model, toPos)?.kind === "clip") return result(["O ponto de cabo só recebe cabos."]);
 
   const v = sub(toPos, from.pos);
   const L = len(v);
@@ -631,7 +633,9 @@ export function validateMovedModel(cat: Catalog, model: Model, moved: Set<string
     }
     const others = { ...model, members: Object.fromEntries(Object.entries(model.members).filter(([k]) => k !== m.id)) };
     errors.push(...collisionErrors(cat, others, a, b, m.a, m.b, typeOf(cat, m.code) === "rope" ? "rope" : typeOf(cat, m.code) === "cable"));
-    if (typeOf(cat, m.code) === "rope" && !ropeInfo(cat, a, b)) errors.push("Um cabo ficaria curto demais para as ligações das pontas.");
+    if (typeOf(cat, m.code) === "rope" && !ropeInfo(cat, a, b, [ropeEndAt(model, m, m.a), ropeEndAt(model, m, m.b)])) {
+      errors.push("Um cabo ficaria curto demais para as ligações das pontas.");
+    }
   }
   return result([...new Set(errors)]);
 }
@@ -663,18 +667,28 @@ export function validateRope(cat: Catalog, inv: InventoryConfig, model: Model, a
   if (Object.values(model.members).some((m) => (m.a === aId && m.b === bId) || (m.a === bId && m.b === aId))) {
     return result(["Já existe uma peça entre essas duas esferas."]);
   }
+  // K7: ponta num ponto de cabo (pendural): um clip por bolinha, e não liga um cabo nele mesmo
+  const passing = (id: string) => new Set(membersAt(model, id).filter((m) => ropeEndAt(model, m, id) === "pass").map(chainOf));
+  for (const n of [A, B]) {
+    if (n.kind === "clip" && membersAt(model, n.id).some((m) => ropeEndAt(model, m, n.id) === "tap")) {
+      return result(["Essa bolinha já prende outro cabo: escolha outra bolinha."]);
+    }
+  }
+  if (A.kind === "clip" && B.kind === "clip" && [...passing(aId)].some((c) => passing(bId).has(c))) return result(["As duas pontas ficariam no mesmo cabo."]);
+  const ends: [RopeEnd, RopeEnd] = [A.kind === "clip" ? "tap" : "sphere", B.kind === "clip" ? "tap" : "sphere"];
   const fmt = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
   // K1: comprimento mínimo (as duas ligações de cabo e os clipes já ocupam um tanto)
-  const info = ropeInfo(cat, A.pos, B.pos);
+  const info = ropeInfo(cat, A.pos, B.pos, ends);
   if (!info) {
     const d = len(sub(B.pos, A.pos)) * s.modulo_mm;
-    return result([`Curto demais para um cabo: as ligações das pontas pedem ${fmt(ropeMinMm(cat))} mm entre os centros das esferas; aqui são ${fmt(d)} mm.`]);
+    return result([`Curto demais para um cabo: as ligações das pontas pedem ${fmt(ropeMinMm(cat, ends))} mm entre os centros; aqui são ${fmt(d)} mm.`]);
   }
   if (onGround(A.pos, B.pos)) errors.push("Nada pode ficar deitado na chapa."); // G6
-  // K2: lugar da CABLE C em cada esfera (ângulo mínimo com as outras peças)
+  // K2: lugar da CABLE C em cada esfera (ângulo mínimo com as outras peças); no ponto de cabo, o clip prende em qualquer ângulo
   const minA = Number(s.cabo_angulo_minimo_graus ?? 20);
   const d = norm(sub(B.pos, A.pos));
   for (const [id, dir] of [[aId, d], [bId, scale(d, -1)]] as const) {
+    if (model.nodes[id].kind === "clip") continue;
     for (const m of membersAt(model, id)) {
       const ang = angleDeg(directionFrom(model, m, id), dir);
       if (ang < minA - 0.5) {
@@ -691,20 +705,23 @@ export function validateRope(cat: Catalog, inv: InventoryConfig, model: Model, a
   // K4: não atravessa placas nem RC90
   if (Object.values(model.plates).some((p) => segmentHitsPlate(A.pos, B.pos, p.corners.map((id) => model.nodes[id].pos)))) errors.push("O cabo atravessaria uma placa.");
   if (rc90Polys(cat, model).some(({ poly }) => segmentHitsPolygon(A.pos, B.pos, poly))) errors.push("O cabo passaria por dentro de uma RC90.");
-  // K5: estoque — cabo pelos rolos (plano de corte) e as peças das pontas
+  // K5: estoque — cabo pelos rolos (plano de corte) e as peças das pontas (contadas com o cabo novo no modelo)
   if (!inv.unlimited) {
+    const after: Model = { ...model, members: { ...model.members, _novo: { id: "_novo", code: ROPE, a: aId, b: bId } } };
     const rolls = available(cat, inv, ROPE);
     if (rolls < 1) errors.push("Não há cabo no estoque: o cabo vem no Kit 3.");
     else {
-      const plan = ropePlan(cat, model, { id: "_novo", balls: info.balls, cutMm: info.cutMm });
+      const plan = ropePlan(cat, after);
       const cap = ballsPerRoll(ropeSpec(cat));
       if (info.balls > cap) errors.push(`Esse cabo pede ${info.balls} bolinhas; um rolo inteiro tem ${cap}.`);
       else if (plan.rolls.length > rolls) {
         errors.push(`Acabou o cabo: esse pedaço (${info.balls} bolinhas) não cabe no que sobrou ${rolls > 1 ? `dos ${rolls} rolos` : "do rolo"}.`);
       }
     }
+    const use = kit3Usage(cat, after);
     for (const code of [ROPE_CONN, ROPE_CLIP]) {
-      if (remaining(cat, inv, model, code) < 2) errors.push(`Acabaram as ${cat.pieces[code]?.name ?? code} do estoque (o cabo usa duas).`);
+      const have = available(cat, inv, code);
+      if ((use[code] ?? 0) > have) errors.push(`Acabaram as ${cat.pieces[code]?.name ?? code} do estoque (${have} nos kits escolhidos).`);
     }
   }
   return result(errors);

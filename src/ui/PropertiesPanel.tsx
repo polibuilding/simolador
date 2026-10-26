@@ -6,7 +6,7 @@ import { boardsOf, componentOf, DISP_AXIS, len, sub, toDisp, type Vec3 } from ".
 import { boardCenter, boardName, boardSelection, boardSize, boardsGap } from "../core/boards";
 import { NumField } from "../render/Boards";
 import { Chevrons } from "./Palette";
-import { ballsPerRoll, ropePlan, ropeSpec, ropeText, ropeInfo, stiffenerFor } from "../core/rope";
+import { ballsPerRoll, ropeChainOf, ropeChains, ropePlan, ropeSpec, ropeText, ropeInfo, stiffenerFor } from "../core/rope";
 import { panelOpen, useApp, useModel } from "./store";
 
 const M = catalog.settings.modulo_mm;
@@ -190,6 +190,33 @@ function Selected() {
     const plates = Object.values(model.plates).filter((p) => p.corners.includes(n.id));
     const group = componentOf(model, n.id).size;
     const gc = n.kind === "support";
+    if (n.kind === "clip") {
+      // K7: ponto de cabo (bolinha do cabo principal com o clip do pendural)
+      const chains = ropeChains(catalog, model);
+      const pass = chains.filter((c) => c.points.some((p) => p.node === n.id));
+      const taps = chains.filter((c) => (c.nodes[0] === n.id || c.nodes[c.nodes.length - 1] === n.id) && !pass.includes(c));
+      return (
+        <>
+          <h2>Ponto de cabo <span className="code-chip">CLIP-C</span></h2>
+          <Section title="Posição e geometria">
+            <dl>
+              <Row k="Posição" v={posText(n.pos)} />
+              {pass.map((c) => (
+                <Row key={c.id} k="No cabo principal" v={`bolinha ${c.points.find((p) => p.node === n.id)!.ball} de ${c.balls}`} />
+              ))}
+              {taps.map((c) => <Row key={c.id} k="Pendural" v={c.balls ? ropeText(c.balls, c.cutMm) : "curto demais"} />)}
+            </dl>
+          </Section>
+          <Section title="Ligações">
+            <dl>
+              <Row k="Montagem" v="o CABLE CLIP C prende a bolinha do cabo principal (furo do meio) e a ponta do pendural" />
+              <Row k="Mover" v="duplo clique: o ponto anda na linha do pendural, bolinha a bolinha" />
+            </dl>
+          </Section>
+          <Actions removeLabel="Remover pendural (o cabo principal fica)" />
+        </>
+      );
+    }
     return (
       <>
         <h2>{gc ? "Ligação de base (GC)" : "Esfera (C)"}</h2>
@@ -225,16 +252,22 @@ function Selected() {
     const atEnd = (id: string) => Object.values(model.members).filter((x) => x.id !== m.id && (x.a === id || x.b === id)).map((x) => x.code);
     const conns = Object.values(model.connectors).filter((c) => c.node === m.a || c.node === m.b);
     if (p?.type === "rope") {
-      const info = ropeInfo(catalog, A, B);
-      const cut = ropePlan(catalog, model).cuts.findIndex((c) => c.id === m.id);
+      const ch = ropeChainOf(catalog, model, m.id);
+      const simple = !!ch && ch.members.length === 1 && ch.ends.every((e) => e === "sphere");
+      const info = simple ? ropeInfo(catalog, A, B) : null;
+      const cut = ch ? ropePlan(catalog, model).cuts.findIndex((c) => c.id === ch.id) : -1;
+      const endText = (e: string) => (e === "sphere" ? "esfera · CABLE C · CABLE CLIP C" : "CABLE CLIP C no outro cabo");
+      const tap = ch && ch.ends.includes("tap");
       return (
         <>
-          <h2>Cabo <span className="code-chip">CABLE</span></h2>
+          <h2>{tap ? "Pendural" : "Cabo"} <span className="code-chip">CABLE</span></h2>
           <Section title="Posição e geometria">
             <dl>
-              <Row k="Entre os centros das esferas" v={`${fmt(span, 2)} módulos = ${fmt(span * M)} mm`} />
-              <Row k="Pedaço de cabo" v={info ? ropeText(info.balls, info.cutMm) : "curto demais"} />
+              {simple && <Row k="Entre os centros das esferas" v={`${fmt(span, 2)} módulos = ${fmt(span * M)} mm`} />}
+              <Row k="Pedaço de cabo" v={ch?.balls ? ropeText(ch.balls, ch.cutMm) : "curto demais"} />
               {info && <Row k="Esticador (CABLE C)" v={`absorve ${fmt(info.slackMm)} mm`} />}
+              {ch && ch.members.length > 1 && <Row k="Trechos" v={`${ch.members.length} (retos entre os pontos de cabo, esticados)`} />}
+              {ch?.points.map((pt, i) => <Row key={pt.node} k={`Pendural ${i + 1}`} v={`na bolinha ${pt.ball} · ${posText(model.nodes[pt.node].pos)}`} />)}
               {cut >= 0 && <Row k="No plano de corte" v={`pedaço ${cut + 1}`} />}
               <Row k="Direção" v={directionText(A, B)} />
               <Row k="De" v={posText(A)} />
@@ -243,7 +276,7 @@ function Selected() {
           </Section>
           <Section title="Ligações">
             <dl>
-              <Row k="Montagem" v="esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera" />
+              <Row k="Montagem" v={ch && !simple ? `${endText(ch.ends[0])} · cabo · ${endText(ch.ends[1]).split(" · ").reverse().join(" · ")}` : "esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera"} />
               <Row k={`Na ponta ${posText(A)}`} v={atEnd(m.a).length ? countText(atEnd(m.a)) : "só este cabo"} />
               <Row k={`Na ponta ${posText(B)}`} v={atEnd(m.b).length ? countText(atEnd(m.b)) : "só este cabo"} />
             </dl>
@@ -584,7 +617,8 @@ function MultiSelected() {
     if (s.kind === "node") {
       const n = model.nodes[s.id];
       if (!n) continue;
-      count[n.kind === "support" ? "GC" : "C"] = (count[n.kind === "support" ? "GC" : "C"] ?? 0) + 1;
+      const k = n.kind === "support" ? "GC" : n.kind === "clip" ? "CLIP-C" : "C";
+      count[k] = (count[k] ?? 0) + 1;
       nodeIds.add(n.id);
     } else if (s.kind === "member") {
       const m = model.members[s.id];
@@ -690,7 +724,7 @@ export function SelectionTag() {
   if (multi) text = `${multi} peças selecionadas`;
   else if (sel?.kind === "node") {
     const n = model.nodes[sel.id];
-    if (n) text = `${n.kind === "support" ? "GC" : "Esfera (C)"} · ${posText(n.pos)}`;
+    if (n) text = `${n.kind === "support" ? "GC" : n.kind === "clip" ? "Ponto de cabo" : "Esfera (C)"} · ${posText(n.pos)}`;
   } else if (sel) {
     const code = sel.kind === "member" ? model.members[sel.id]?.code : sel.kind === "plate" ? model.plates[sel.id]?.code : model.connectors[sel.id]?.code;
     const name = code ? catalog.pieces[code]?.name : undefined;
@@ -698,8 +732,8 @@ export function SelectionTag() {
     if (sel.kind === "member" && model.members[sel.id]) {
       const mb = model.members[sel.id];
       if (catalog.pieces[mb.code]?.type === "rope") {
-        const info = ropeInfo(catalog, model.nodes[mb.a].pos, model.nodes[mb.b].pos);
-        text = `Cabo${info ? ` · ${ropeText(info.balls, info.cutMm)}` : ""}`;
+        const ch = ropeChainOf(catalog, model, mb.id);
+        text = `${ch?.ends.includes("tap") ? "Pendural" : "Cabo"}${ch?.balls ? ` · ${ropeText(ch.balls, ch.cutMm)}` : ""}`;
       } else if (mb.stiff) text += " · com enrijecedor";
     }
     if (sel.kind === "connector" && model.connectors[sel.id]) text += ` · ${posText(model.nodes[model.connectors[sel.id].node]?.pos ?? [0, 0, 0])}`;

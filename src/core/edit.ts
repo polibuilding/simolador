@@ -7,6 +7,7 @@ import {
   removeMember, removeNode, removePlate, samePos, scale, sub, transformNodes,
 } from "./model";
 import { inclineStep as inclineStepOf, segmentHitsPlate, validateMember, validateMovedModel, type Check } from "./rules";
+import { ropeEndAt, ropeMinMm, ropeSpec } from "./rope";
 import {
   applyCandidate, connectorCandidates, inclinedDirs, markerPos, memberCandidates, plateCandidates, type Candidate,
 } from "./snapping";
@@ -18,7 +19,7 @@ export function codeOf(model: Model, sel: Sel): string | null {
   if (sel.kind === "plate") return model.plates[sel.id]?.code ?? null;
   if (sel.kind === "connector") return model.connectors[sel.id]?.code ?? null;
   const n = model.nodes[sel.id];
-  return n ? (n.kind === "support" ? "GC" : "C") : null;
+  return n ? (n.kind === "support" ? "GC" : n.kind === "clip" ? "CLIP-C" : "C") : null;
 }
 
 export function removeSelection(model: Model, sel: Sel): Model {
@@ -189,9 +190,46 @@ function rc90BaseLock(model: Model, c: Connector, nodeId: string, con: { c: Vec3
   return { c: q, L: len(sub(pos, q)) };
 }
 
+/**
+ * K9: ponto de cabo andando. Ele desliza na linha do pendural (a prumo, se não há pendural), bolinha a bolinha do
+ * pendural; os trechos do cabo principal acompanham, sempre esticados (a forma da ponte pênsil é escolhida assim:
+ * cada ponto desce ou sobe e o programa reconta as bolinhas).
+ */
+function clipMoveOptions(cat: Catalog, model: Model, nodeId: string): NodeMoveSet {
+  const node = model.nodes[nodeId];
+  const sp = ropeSpec(cat);
+  const M = cat.settings.modulo_mm;
+  const tap = membersAt(model, nodeId).find((m) => ropeEndAt(model, m, nodeId) === "tap");
+  const far = tap ? model.nodes[tap.a === nodeId ? tap.b : tap.a] : null;
+  const u: Vec3 = far ? norm(sub(node.pos, far.pos)) : [0, 1, 0];
+  const step = sp.pitch / M;
+  // de onde a onde: o pendural com o mínimo de bolinhas até 12 módulos acima (sem pendural: da chapa até 12 acima)
+  const lo = far ? -(len(sub(node.pos, far.pos)) - ropeMinMm(cat, ["tap", ropeEndAt(model, tap!, far.id)]) / M) : -node.pos[1];
+  const kLo = Math.ceil(lo / step - 1e-9);
+  const kHi = Math.floor(12 / step);
+  if (kLo > kHi) return { options: [], locked: "O pendural já está no mínimo de bolinhas." };
+  const at = (k: number) => add(node.pos, scale(u, k * step));
+  const pts = Array.from({ length: kHi - kLo + 1 }, (_, i) => at(kLo + i));
+  const pass = membersAt(model, nodeId).filter((m) => m.id !== tap?.id).map((m) => m.id);
+  const evalAt = (raw: Vec3): NodeMove | null => {
+    const s = dot(sub(raw, node.pos), u);
+    if (len(sub(raw, at(s / step))) > 1e-3 || s < lo - 1e-6) return null;
+    const pos = raw.map((v) => Math.round(v * 1e4) / 1e4 + 0) as Vec3;
+    const next = { ...model, nodes: { ...model.nodes, [nodeId]: { ...node, pos } } };
+    const errors: string[] = [];
+    if (pos[1] < -1e-6) errors.push("O ponto iria para baixo da chapa.");
+    errors.push(...validateMovedModel(cat, next, new Set([nodeId])).errors);
+    return { pos, model: next, ids: new Set([nodeId]), check: { ok: !errors.length, errors: [...new Set(errors)], warnings: [] } };
+  };
+  const nearest = (p: Vec3): Vec3 => at(Math.max(kLo, Math.min(kHi, Math.round(dot(sub(p, node.pos), u) / step))));
+  const evalParam = (t: number) => evalAt(at(kLo + Math.round(t)));
+  return { options: [], evalAt, nearest, evalParam, locus: { kind: "path", pts, closed: false }, tracked: pass };
+}
+
 export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): NodeMoveSet {
   const node = model.nodes[nodeId];
   if (!node) return { options: [], locked: "Nó não encontrado." };
+  if (node.kind === "clip") return clipMoveOptions(cat, model, nodeId);
   const s = cat.settings;
   const fmtP = (p: Vec3) => `(${toDisp(p).map((v) => +v.toFixed(2)).join("; ")})`;
 

@@ -6,7 +6,7 @@ import { continuousOutline } from "../../core/shapes";
 import type { Vec3 } from "../../core/model";
 import { COLORS } from "../units";
 import { pickProps, SPHERE_R, useMaterial, type Look, type Pickable } from "./pieces";
-import { ropeSpec } from "../../core/rope";
+import { ropeSpec, segmentBallOffsets, type RopeEnd } from "../../core/rope";
 import { useEffect, useRef } from "react";
 
 const s = catalog.settings;
@@ -60,25 +60,25 @@ export function Cable({ a, b, look = "normal", ...p }: { a: THREE.Vector3; b: TH
  * Cabo entre dois centros de esfera (mm): em cada ponta a ligação de cabo (mola curta com ímã + anel) e o clip;
  * no meio, as bolinhas no passo do cabo. A sobra de menos de uma bolinha fica no esticador (dividida nas pontas).
  */
-export function Rope({ a, b, look = "normal", ...p }: { a: THREE.Vector3; b: THREE.Vector3; look?: Look } & Pickable) {
+export function Rope({ a, b, ends = ["sphere", "sphere"], look = "normal", ...p }: { a: THREE.Vector3; b: THREE.Vector3; ends?: [RopeEnd, RopeEnd]; look?: Look } & Pickable) {
   const sp = ropeSpec(catalog);
   const conn = Number(s.cabo_ligacao_mm ?? 16);
   const clip = Number(s.cabo_clip_mm ?? 9);
   const ringR = 1.5;
+  const [ea, eb] = ends;
   const { mid, quat, len, balls, first } = useMemo(() => {
     const dir = new THREE.Vector3().subVectors(b, a);
     const L = dir.length();
-    const chain = L - 2 * sp.end;
-    const n = chain >= sp.pitch ? Math.floor(chain / sp.pitch + 1e-9) + 1 : 0;
-    const slack = n ? chain - (n - 1) * sp.pitch : 0;
+    const offs = segmentBallOffsets(sp, L, ea, eb);
     return {
       mid: new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5),
       quat: new THREE.Quaternion().setFromUnitVectors(Y, dir.clone().normalize()),
       len: L,
-      balls: n,
-      first: -L / 2 + sp.end + slack / 2,
+      balls: offs.length,
+      first: -L / 2 + (offs[0] ?? 0),
     };
-  }, [a, b, sp.end, sp.pitch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [a, b, sp.pitch, sp.end, sp.tap, ea, eb]);
   const steel = useMaterial(look, "#aeb5bb", 0.9, 0.25);
   const dark = useMaterial(look, "#7c858c", 0.85, 0.3);
   const hit = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
@@ -100,6 +100,16 @@ export function Rope({ a, b, look = "normal", ...p }: { a: THREE.Vector3; b: THR
         <cylinderGeometry args={[0.28, 0.28, chainLen, 5]} />
       </mesh>
       {[-1, 1].map((sg) => {
+        const end = sg < 0 ? ea : eb;
+        if (end === "pass") return null; // o cabo passa pelo ponto de cabo: só bolinhas
+        if (end === "tap") {
+          // pendural: o clip do ponto de cabo segura a bolinha da ponta
+          return (
+            <mesh key={sg} position={[0, sg * (len / 2 - sp.tap / 2), 0]} material={dark}>
+              <boxGeometry args={[2.2, Math.max(0.5, sp.tap - 1), 2.2]} />
+            </mesh>
+          );
+        }
         // da superfície da esfera para dentro do cabo
         const at = (d: number) => sg * (len / 2 - SPHERE_R - d);
         return (
@@ -120,7 +130,23 @@ export function Rope({ a, b, look = "normal", ...p }: { a: THREE.Vector3; b: THR
         );
       })}
       <mesh material={hit}>
-        <cylinderGeometry args={[3.5, 3.5, Math.max(1, len - 2 * SPHERE_R), 6]} />
+        <cylinderGeometry args={[3.5, 3.5, Math.max(1, len - (ea === "sphere" ? SPHERE_R : 0) - (eb === "sphere" ? SPHERE_R : 0)), 6]} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Ponto de cabo (K7): o CABLE CLIP C que prende a bolinha do cabo principal pelo furo do meio. */
+export function RopeClip({ position, look = "normal", ...p }: { position: THREE.Vector3; look?: Look } & Pickable) {
+  const mat = useMaterial(look, "#5d666d", 0.85, 0.3);
+  const hit = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
+  return (
+    <group position={position} {...pickProps(p)}>
+      <mesh material={mat} castShadow>
+        <boxGeometry args={[3.6, 3.6, 3.6]} />
+      </mesh>
+      <mesh material={hit}>
+        <sphereGeometry args={[5, 10, 8]} />
       </mesh>
     </group>
   );

@@ -7,6 +7,7 @@ import { createHistory, push, redo, undo, type History } from "../core/history";
 import { defaultInventory, type InventoryConfig } from "../core/inventory";
 import { boardsOf, emptyModel, membersAt, rotateNodes, rotYRad, samePos, toDisp, type Model, type Vec3 } from "../core/model";
 import { overlappingNodes, type Check } from "../core/rules";
+import type { RopeBall } from "../core/rope";
 import { fromFile, toFile, type SheetMeta } from "../core/serialization";
 import { applyCandidate, type Candidate } from "../core/snapping";
 import { cutSelection, makeClip, pasteClip, repeatClip, type Clip } from "../core/clipboard";
@@ -51,6 +52,10 @@ interface State {
   triAnchor: string | null;
   /** primeira esfera escolhida para ligar duas esferas com a peça na mão (dois cliques) */
   linkFrom: string | null;
+  /** cabo (K7): primeira ponta escolhida numa bolinha de outro cabo (em vez de uma esfera, `linkFrom`) */
+  ropeBall: RopeBall | null;
+  /** cabo (K7): bolinha sob o cursor (destaque antes de clicar) */
+  ballHover: Vec3 | null;
   /** inércia da vista: a câmera desliza um pouco depois de soltar o mouse */
   inertia: boolean;
   setInertia: (on: boolean) => void;
@@ -273,6 +278,8 @@ export const useApp = create<State>((set, get) => ({
   guides: { blue: true, yellow: true },
   triAnchor: null,
   linkFrom: null,
+  ropeBall: null,
+  ballHover: null,
   inertia: readPref("simolador:inercia", true),
   setInertia: (inertia) => (writePref("simolador:inercia", inertia), set({ inertia, hint: inertia ? "Inércia ligada: a vista desliza um pouco depois de soltar o mouse (B)." : "Vista firme: para assim que você solta o mouse (B)." })),
   render: readPref("simolador:render", false),
@@ -325,7 +332,7 @@ export const useApp = create<State>((set, get) => ({
   ...restore(),
 
   arm: (code, viaDrag = false) =>
-    set({ tool: { kind: "place", code, viaDrag }, lastCode: code, selection: null, multi: [], ghost: null, rotIndex: 0, hint: null, toolHover: null }),
+    set({ tool: { kind: "place", code, viaDrag }, lastCode: code, selection: null, multi: [], ghost: null, rotIndex: 0, hint: null, toolHover: null, ballHover: null }),
   repeatLast: () => {
     const s = get();
     if (s.tool.kind !== "select") return;
@@ -333,7 +340,7 @@ export const useApp = create<State>((set, get) => ({
     s.arm(s.lastCode);
     set({ hint: `${catalog.pieces[s.lastCode]?.name ?? s.lastCode} de novo. Esc para parar.` });
   },
-  disarm: () => set({ tool: { kind: "select" }, ghost: null, hint: null, pendingDrag: null, toolHover: null }),
+  disarm: () => set({ tool: { kind: "select" }, ghost: null, hint: null, pendingDrag: null, toolHover: null, ballHover: null, ropeBall: null }),
   setGhost: (ghost, hint = null) => set({ ghost, hint }),
 
   commitGhost: () => {
@@ -385,6 +392,10 @@ export const useApp = create<State>((set, get) => ({
     const sel = s.selection;
     if (!sel || sel.kind === "connector") return s.startMove(false);
     const m = s.history.present;
+    // ponto de cabo (K9): anda sozinho na linha do pendural
+    if (sel.kind === "node" && m.nodes[sel.id]?.kind === "clip") {
+      return set({ tool: { kind: "moveNode", nodeId: sel.id, viaDrag: false }, ghost: null, hint: "O ponto anda na linha do pendural, bolinha a bolinha: o cabo principal acompanha, esticado. Esc cancela." });
+    }
     const ref: MoveRef = { kind: sel.kind, id: sel.id };
     const scopes = scopesOf(m, ref);
     if (!scopes.length) {

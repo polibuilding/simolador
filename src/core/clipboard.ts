@@ -5,13 +5,13 @@ import type { Catalog } from "./catalog";
 import type { Sel } from "./edit";
 import { available, usage, type InventoryConfig } from "./inventory";
 import {
-  type Connector, type Member, type Model, type Vec3, add, canonicalDir, findNodeAt, plateKey, prune, rotY, round4, samePos, sub,
+  type Connector, type Member, type Model, type NodeKind, type Vec3, add, canonicalDir, chainOf, findNodeAt, membersAt, plateKey, prune, rotY, round4, samePos, sub,
 } from "./model";
-import { validateConnector, validateMember, validatePlate, validateRope, validateSupport, type Check, type PlateGeom } from "./rules";
+import { validateConnector, validateMember, validateMovedModel, validatePlate, validateRope, validateSupport, type Check, type PlateGeom } from "./rules";
 
 export interface Clip {
-  nodes: { key: string; kind: "support" | "sphere"; rel: Vec3 }[];
-  members: { code: string; a: string; b: string; stiff?: boolean }[];
+  nodes: { key: string; kind: NodeKind; rel: Vec3 }[];
+  members: { code: string; a: string; b: string; stiff?: boolean; chain?: string }[];
   plates: { code: string; corners: [string, string, string, string] }[];
   connectors: { code: string; node: string; dirs: Vec3[]; base?: boolean; side?: Vec3 }[];
   /** âncora na posição original (centro da planta arredondado, no nível mais baixo) */
@@ -30,7 +30,24 @@ export function makeClip(model: Model, sels: Sel[]): Clip | null {
     if (s.kind === "member" && model.members[s.id]) memberIds.add(s.id);
     if (s.kind === "plate" && model.plates[s.id]) plateIds.add(s.id);
     if (s.kind === "connector" && model.connectors[s.id]) connIds.add(s.id);
-    if (s.kind === "node" && model.nodes[s.id]) nodeIds.add(s.id);
+    if (s.kind === "node" && model.nodes[s.id] && model.nodes[s.id].kind !== "clip") nodeIds.add(s.id);
+  }
+  // cabos: o pedaço inteiro; pendural cujo cabo principal fica de fora não vai (não teria onde prender)
+  for (const id of [...memberIds]) for (const x of Object.values(model.members)) if (chainOf(x) === chainOf(model.members[id])) memberIds.add(x.id);
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const id of memberIds) {
+      const m = model.members[id];
+      for (const end of [m.a, m.b]) {
+        if (model.nodes[end].kind !== "clip") continue;
+        const held = membersAt(model, end).some((x) => x.id !== id && memberIds.has(x.id) && chainOf(x) === chainOf(m)) ||
+          membersAt(model, end).some((x) => memberIds.has(x.id) && membersAt(model, end).filter((y) => chainOf(y) === chainOf(x)).length === 2);
+        if (held) continue;
+        for (const x of Object.values(model.members)) if (chainOf(x) === chainOf(m)) memberIds.delete(x.id);
+        changed = true;
+      }
+      if (changed) break;
+    }
   }
   for (const id of memberIds) (nodeIds.add(model.members[id].a), nodeIds.add(model.members[id].b));
   for (const id of plateIds) model.plates[id].corners.forEach((c) => nodeIds.add(c));
@@ -42,7 +59,10 @@ export function makeClip(model: Model, sels: Sel[]): Clip | null {
   const anchor: Vec3 = [Math.round((lo[0] + hi[0]) / 2), lo[1], Math.round((lo[2] + hi[2]) / 2)];
   return {
     nodes: [...nodeIds].map((id) => ({ key: id, kind: model.nodes[id].kind, rel: round4(sub(model.nodes[id].pos, anchor)) })),
-    members: [...memberIds].map((id) => ({ code: model.members[id].code, a: model.members[id].a, b: model.members[id].b, ...(model.members[id].stiff ? { stiff: true } : {}) })),
+    members: [...memberIds].map((id) => {
+      const m = model.members[id];
+      return { code: m.code, a: m.a, b: m.b, ...(m.stiff ? { stiff: true } : {}), ...(m.chain ? { chain: m.chain } : {}) };
+    }),
     plates: [...plateIds].map((id) => ({ code: model.plates[id].code, corners: model.plates[id].corners })),
     connectors: [...connIds].map((id) => {
       const c = model.connectors[id];
@@ -102,17 +122,19 @@ export function pasteClip(cat: Catalog, inv: InventoryConfig, model: Model, clip
     }
     const nid = id("n");
     // GC só no nível da chapa; fora dele vira esfera
-    const kind = n.kind === "support" && Math.abs(pos[1]) < 1e-6 ? "support" : "sphere";
+    const kind = n.kind === "clip" ? "clip" : n.kind === "support" && Math.abs(pos[1]) < 1e-6 ? "support" : "sphere";
     m.nodes[nid] = { id: nid, kind, pos };
     map.set(n.key, nid);
     newNodes.add(nid);
   }
+  const chains = new Map<string, string>(); // pedaço de cabo copiado → pedaço novo
   for (const mb of clip.members) {
     const a = map.get(mb.a)!;
     const b = map.get(mb.b)!;
     if (Object.values(m.members).some((x) => (x.a === a && x.b === b) || (x.a === b && x.b === a))) continue;
     const mid = id("m");
-    m.members[mid] = { id: mid, code: mb.code, a, b, ...(mb.stiff ? { stiff: true } : {}) } as Member;
+    if (mb.chain && !chains.has(mb.chain)) chains.set(mb.chain, mid);
+    m.members[mid] = { id: mid, code: mb.code, a, b, ...(mb.stiff ? { stiff: true } : {}), ...(mb.chain ? { chain: chains.get(mb.chain) } : {}) } as Member;
     newMembers.push(mid);
   }
   for (const p of clip.plates) {
@@ -145,6 +167,7 @@ export function pasteClip(cat: Catalog, inv: InventoryConfig, model: Model, clip
     if (n.pos[1] < -1e-6) errors.push("A cópia iria para baixo da chapa.");
     if (n.kind === "support") errors.push(...validateSupport(cat, inv2, m, n.pos, new Set([nid])).errors);
     for (const o of Object.values(m.nodes)) {
+      if (n.kind === "clip" || o.kind === "clip") continue;
       if (o.id !== nid && Math.hypot(...sub(o.pos, n.pos)) < minD) {
         errors.push("Uma esfera da cópia cairia em cima de outra.");
         break;
@@ -154,6 +177,11 @@ export function pasteClip(cat: Catalog, inv: InventoryConfig, model: Model, clip
   for (const mid of newMembers) {
     const mb = m.members[mid];
     const base = { ...m, members: without(m.members, mid) };
+    // trechos presos em pontos de cabo: o pedaço inteiro já valia no original; aqui só não pode cruzar barras
+    if (m.nodes[mb.a].kind === "clip" || m.nodes[mb.b].kind === "clip") {
+      errors.push(...validateMovedModel(cat, m, new Set([mb.a, mb.b])).errors);
+      continue;
+    }
     errors.push(...(cat.pieces[mb.code]?.type === "rope" ? validateRope(cat, inv2, base, mb.a, mb.b) : validateMember(cat, inv2, base, mb.code, mb.a, m.nodes[mb.b].pos)).errors);
   }
   for (const pid of newPlates) {

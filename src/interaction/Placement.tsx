@@ -18,7 +18,9 @@ import { pasteClip, transformClip, type Clip, type PasteResult } from "../core/c
 import { AXES, add, boardsOf, dot, findNodeAt, len, norm, rotDir, scale, sub, toDisp, type Model, type Vec3 } from "../core/model";
 import { frameRadAt } from "../core/boards";
 import { stockBlock, validateMember, validateRope, validateStiffener } from "../core/rules";
-import { ropeInfo, ropeText, STIFF_TOOL } from "../core/rope";
+import {
+  ropeBalls, ropeChainOf, ropeInfo, ropeLink, ropeRefs, ropeText, STIFF_TOOL, type RopeBall, type RopeEnd, type RopePick, type RopeRef,
+} from "../core/rope";
 import type { Sel } from "../core/edit";
 import {
   allCandidates, anchorPos, barTriangleGuides, inclinedDirs, markerPos, supportCandidate, supportGuides, supportPosition,
@@ -139,6 +141,15 @@ const TAB_PX = 40;
 
 // colar: recalcula só quando muda a posição na grade, o giro, o espelho ou a altura
 let pasteCache: { base: Model; clip: Clip; key: string; r: PasteResult } | null = null;
+
+// referências nos cabos (K8): recalcula quando muda o modelo ou a primeira ponta
+let refsCache: { model: Model; key: string; r: RopeRef[] } | null = null;
+export function ropeRefsFor(model: Model, from?: Vec3): RopeRef[] {
+  const key = from ? from.join(",") : "";
+  if (refsCache && refsCache.model === model && refsCache.key === key) return refsCache.r;
+  refsCache = { model, key, r: ropeRefs(catalog, model, from) };
+  return refsCache.r;
+}
 
 // opções de "mover só o nó" (recalcula quando muda o modelo ou o nó)
 let nodeMoveCache: { model: Model; nodeId: string; r: ReturnType<typeof nodeMoveOptions> } | null = null;
@@ -590,11 +601,14 @@ export function Placement() {
     let linkPick: string | null = null;
     /** o fantasma atual é uma ligação entre duas esferas */
     let linkGhost: { moved: number } | null = null;
-    /** Esfera sob o cursor: dentro do desenho dela na tela (mínimo 9 px). */
-    const sphereUnder = (ev: PointerEvent, rect: DOMRect, model: Model): string | null => {
+    /** bolinha de cabo clicada agora (primeira ponta de um cabo, ou de novo a primeira para cancelar) */
+    let ballPick: RopeBall | null = null;
+    /** Esfera sob o cursor: dentro do desenho dela na tela (mínimo 9 px). `skipClip`: sem os pontos de cabo. */
+    const sphereUnder = (ev: PointerEvent, rect: DOMRect, model: Model, skipClip = false): string | null => {
       const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
       let best: { id: string; d: number } | null = null;
       for (const n of Object.values(model.nodes)) {
+        if (skipClip && n.kind === "clip") continue;
         const w = toWorld(n.pos);
         const c = toScreen(w, rect);
         if (c.z > 1) continue;
@@ -641,31 +655,85 @@ export function Placement() {
       if (useApp.getState().toolHover !== id) useApp.setState({ toolHover: id });
     };
 
-    // cabo (Kit 3): primeira esfera (linkFrom) e a outra; o pedaço sai da distância entre elas
+    // cabo (Kit 3): a bolinha de um cabo sob o cursor (K7); as referências (K8) puxam quando estão perto
+    const ballUnder = (ev: PointerEvent, rect: DOMRect, model: Model, from?: Vec3): { ball: RopeBall; ref?: RopeRef } | null => {
+      const dpx = (p: Vec3) => {
+        const q = toScreen(toWorld(p), rect);
+        return q.z > 1 ? Infinity : Math.hypot(q.x - ev.clientX, q.y - ev.clientY);
+      };
+      let ref: { r: RopeRef; d: number } | null = null;
+      for (const r of ropeRefsFor(model, from)) {
+        const d = dpx(r.pos);
+        if (d < 14 && (!ref || d < ref.d)) ref = { r, d };
+      }
+      if (ref) return { ball: ref.r, ref: ref.r };
+      let seg: { id: string; d: number } | null = null;
+      for (const m of Object.values(model.members)) {
+        if (catalog.pieces[m.code]?.type !== "rope") continue;
+        const p = toScreen(toWorld(model.nodes[m.a].pos), rect);
+        const q = toScreen(toWorld(model.nodes[m.b].pos), rect);
+        if (p.z > 1 || q.z > 1) continue;
+        const [dx, dy] = [q.x - p.x, q.y - p.y];
+        const t = Math.max(0, Math.min(1, ((ev.clientX - p.x) * dx + (ev.clientY - p.y) * dy) / (dx * dx + dy * dy || 1)));
+        const d = Math.hypot(p.x + t * dx - ev.clientX, p.y + t * dy - ev.clientY);
+        if (d < 10 && (!seg || d < seg.d)) seg = { id: m.id, d };
+      }
+      if (!seg) return null;
+      const balls = ropeBalls(catalog, model, seg.id);
+      if (!balls.length) return null;
+      return { ball: balls.reduce((x, y) => (dpx(x.pos) <= dpx(y.pos) ? x : y)) };
+    };
+    const markBall = (p: Vec3 | null) => {
+      const cur = useApp.getState().ballHover;
+      if (cur !== p && !(cur && p && len(sub(cur, p)) < 1e-9)) useApp.setState({ ballHover: p });
+    };
+
+    // cabo (Kit 3): primeira ponta (linkFrom numa esfera, ropeBall numa bolinha de cabo) e a outra; o pedaço sai da
+    // distância entre elas, esticado. Ponta numa bolinha: o cabo novo é um pendural preso ali (K7).
     const ropeStep = (ev: PointerEvent, rect: DOMRect, model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"]): boolean => {
       const st = useApp.getState();
       linkPick = null;
       linkGhost = null;
-      const on = sphereUnder(ev, rect, model);
+      ballPick = null;
+      const fromNode = st.linkFrom && model.nodes[st.linkFrom] ? st.linkFrom : null;
+      const fromBall = !fromNode && st.ropeBall && model.members[st.ropeBall.member] ? st.ropeBall : null;
+      const fromPos = fromNode ? model.nodes[fromNode].pos : fromBall?.pos;
+      const on = sphereUnder(ev, rect, model, true);
+      const hit = on ? null : ballUnder(ev, rect, model, fromPos);
       markHover(on); // a esfera sob o cursor fica destacada antes do clique
-      const from = st.linkFrom && model.nodes[st.linkFrom] ? st.linkFrom : null;
-      if (!on) {
-        st.setGhost(null, from ? "Clique na esfera da outra ponta do cabo. Esc cancela." : "Clique na esfera de uma ponta do cabo e depois na da outra.");
+      markBall(hit?.ball.pos ?? null); // e a bolinha do cabo
+      const started = !!(fromNode || fromBall);
+      if (!on && !hit) {
+        st.setGhost(null, started ? "Clique na outra ponta: uma esfera ou uma bolinha de outro cabo. Esc cancela." : "Clique numa esfera (ou numa bolinha de um cabo) e depois na outra ponta.");
         return true;
       }
-      if (!from || on === from) {
-        linkPick = on;
-        st.setGhost(null, from ? "Clique na esfera da outra ponta. Clique de novo nesta (ou Esc) cancela." : "Clique para prender o cabo nesta esfera; depois clique na outra.");
+      const chainOfBall = (b: RopeBall) => ropeChainOf(catalog, model, b.member);
+      const ballText = (h: { ball: RopeBall; ref?: RopeRef }) => {
+        const n = chainOfBall(h.ball)?.balls ?? 0;
+        return `${h.ref ? `${h.ref.kind === "green" ? "Verde" : "Amarelo"}: ${h.ref.text} · ` : ""}bolinha ${h.ball.ball} de ${n} do cabo`;
+      };
+      const same = on ? on === fromNode : !!fromBall && len(sub(fromBall.pos, hit!.ball.pos)) < 1e-6;
+      if (!started || same) {
+        if (on) linkPick = on;
+        else ballPick = hit!.ball;
+        const what = on ? "nesta esfera" : `aqui (${ballText(hit!)})`;
+        st.setGhost(null, started ? "Clique na outra ponta. Clique de novo nesta (ou Esc) cancela." : `Clique para prender o cabo ${what}; depois clique na outra ponta.`);
         return true;
       }
-      const check = validateRope(catalog, inv, model, from, on);
-      const info = ropeInfo(catalog, model.nodes[from].pos, model.nodes[on].pos);
-      const cand: Candidate = { kind: "member", code, fromId: from, toPos: model.nodes[on].pos, check };
+      const a: RopePick = fromNode ? { node: fromNode } : fromBall!;
+      const b: RopePick = on ? { node: on } : hit!.ball;
+      const r = ropeLink(model, code, a, b);
+      const base: Model = { ...r.model, members: Object.fromEntries(Object.entries(r.model.members).filter(([k]) => k !== r.id)) };
+      const check = validateRope(catalog, inv, base, r.a, r.b);
+      const end = (id: string) => (r.model.nodes[id].kind === "clip" ? "tap" : "sphere") as RopeEnd;
+      const info = ropeInfo(catalog, r.model.nodes[r.a].pos, r.model.nodes[r.b].pos, [end(r.a), end(r.b)]);
       linkGhost = { moved: 0 };
-      st.setGhost(
-        { kind: "cand", cand },
-        check.ok && info ? `Cabo de ${ropeText(info.balls, info.cutMm)}. Clique para colocar.` : check.errors[0],
-      );
+      const where = hit ? ` preso na ${ballText(hit)}` : fromBall ? " preso no outro cabo" : "";
+      const text = check.ok && info ? `${r.clips.length ? "Pendural" : "Cabo"} de ${ropeText(info.balls, info.cutMm)}${where}. Clique para colocar.` : check.errors[0];
+      if (!r.clips.length) {
+        const cand: Candidate = { kind: "member", code, fromId: r.a, toPos: model.nodes[r.b].pos, check };
+        st.setGhost({ kind: "cand", cand }, text);
+      } else st.setGhost({ kind: "group", model: r.model, ids: new Set(r.clips), keep: true, check }, text);
       return true;
     };
 
@@ -737,8 +805,10 @@ export function Placement() {
       // de partida, sem colocar nada (ex.: depois de ligar uma mola, o caminho azul ou outra peça não aceitavam o clique).
       linkPick = null;
       linkGhost = null;
+      ballPick = null;
       const st = useApp.getState();
       const rect = el.getBoundingClientRect();
+      if (st.ballHover && !(st.tool.kind === "place" && catalog.pieces[st.tool.code]?.type === "rope")) useApp.setState({ ballHover: null });
       if (boxStart && st.tool.kind === "select") {
         if (st.box || Math.hypot(ev.clientX - boxStart.x, ev.clientY - boxStart.y) > DRAG_PX) {
           st.setBox({ x0: boxStart.x, y0: boxStart.y, x1: ev.clientX, y1: ev.clientY });
@@ -1122,13 +1192,19 @@ export function Placement() {
       // clique numa esfera: escolhe a primeira da ligação (ou cancela, se for a mesma)
       if (linkPick) {
         const cur = useApp.getState().linkFrom;
-        useApp.setState({ linkFrom: cur === linkPick ? null : linkPick });
+        useApp.setState({ linkFrom: cur === linkPick ? null : linkPick, ropeBall: null });
+        update(ev);
+        return;
+      }
+      if (ballPick) {
+        const cur = useApp.getState().ropeBall;
+        useApp.setState({ ropeBall: cur && len(sub(cur.pos, ballPick.pos)) < 1e-6 ? null : ballPick, linkFrom: null });
         update(ev);
         return;
       }
       const wasLink = linkGhost;
       const ok = useApp.getState().commitGhost();
-      if (ok && (wasLink || useApp.getState().linkFrom)) useApp.setState({ linkFrom: null });
+      if (ok && (wasLink || useApp.getState().linkFrom || useApp.getState().ropeBall)) useApp.setState({ linkFrom: null, ropeBall: null });
       // depois de colocar, recalcula o fantasma no mesmo lugar
       update(ev);
       if (ok && wasLink) {
@@ -1180,8 +1256,8 @@ export function Placement() {
       if (s.tool !== p.tool && s.triAnchor && !(s.tool.kind === "place" && p.tool.kind === "place" && s.tool.code === p.tool.code)) {
         useApp.setState({ triAnchor: null });
       }
-      if (s.tool !== p.tool && s.linkFrom && !(s.tool.kind === "place" && p.tool.kind === "place" && s.tool.code === p.tool.code)) {
-        useApp.setState({ linkFrom: null });
+      if (s.tool !== p.tool && (s.linkFrom || s.ropeBall) && !(s.tool.kind === "place" && p.tool.kind === "place" && s.tool.code === p.tool.code)) {
+        useApp.setState({ linkFrom: null, ropeBall: null });
       }
       // mover só o nó: ao sair ou depois de mexer, o Tab recomeça
       if ((s.history !== p.history || s.tool !== p.tool) && (nodeTab || s.nodeLimits) && (p.tool.kind === "moveNode" || p.tool.kind === "moveBody")) {
@@ -1199,7 +1275,7 @@ export function Placement() {
         freeAnchor = null;
         freeHold = s.history !== p.history && lastEv ? { x: lastEv.clientX, y: lastEv.clientY } : null;
       }
-      if (lastEv && (s.linkFrom !== p.linkFrom || s.rotIndex !== p.rotIndex || s.barMode !== p.barMode || (s.tool !== p.tool && s.tool.kind === "paste") || s.snapCycle !== p.snapCycle || s.guides !== p.guides || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
+      if (lastEv && (s.linkFrom !== p.linkFrom || s.ropeBall !== p.ropeBall || s.rotIndex !== p.rotIndex || s.barMode !== p.barMode || (s.tool !== p.tool && s.tool.kind === "paste") || s.snapCycle !== p.snapCycle || s.guides !== p.guides || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
         update(lastEv);
       }
     });

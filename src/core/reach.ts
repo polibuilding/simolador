@@ -33,7 +33,7 @@ export function supportReach(cat: Catalog, inv: InventoryConfig, model: Model): 
   const out: ReachGuide[] = [];
   const inPlate = (id: string) => Object.values(model.plates).some((p) => p.corners.includes(id));
   for (const S of Object.values(model.nodes)) {
-    if (S.kind === "support") continue;
+    if (S.kind !== "sphere") continue;
     const h = S.pos[1];
     if (h <= tol) continue;
     const center: Vec3 = [S.pos[0], 0, S.pos[2]];

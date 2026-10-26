@@ -4,11 +4,16 @@
 
 export type Vec3 = [number, number, number];
 
-export type NodeKind = "sphere" | "support";
+export type NodeKind = "sphere" | "support" | "clip";
 
 export interface MolaNode {
   id: string;
-  kind: NodeKind; // sphere = esfera C; support = ligação de base GC (esfera embutida)
+  /**
+   * sphere = esfera C; support = ligação de base GC (esfera embutida);
+   * clip = ponto de cabo (Kit 3): uma bolinha de um cabo, presa pelo furo do meio de um CABLE CLIP C, onde sai outro
+   * cabo (pendural). Só recebe cabos.
+   */
+  kind: NodeKind;
   pos: Vec3;
 }
 
@@ -20,7 +25,17 @@ export interface Member {
   b: string;
   /** mola com enrijecedor (Kit 3: tubo transparente em volta; B6 → BS6, B12 → BS12) */
   stiff?: boolean;
+  /**
+   * cabo: trechos de um mesmo pedaço de cabo (dividido pelos pontos de cabo) têm o mesmo `chain` (o id do cabo
+   * original). Sem `chain`, o pedaço é o próprio membro.
+   */
+  chain?: string;
 }
+
+/** Pedaço de cabo a que o membro pertence. */
+export const chainOf = (m: Member) => m.chain ?? m.id;
+/** Trechos do mesmo pedaço de cabo (o próprio membro incluído). */
+export const chainMembers = (model: Model, m: Member) => Object.values(model.members).filter((o) => chainOf(o) === chainOf(m));
 
 /** Placa ligada a 4 esferas (cantos em ordem ao redor do retângulo). */
 export interface Plate {
@@ -204,11 +219,55 @@ export function connectorSupported(model: Model, c: Connector): boolean {
   return true;
 }
 
-/** Remove o que ficou sem apoio: ligações sem as barras, placas sem cantos, esferas soltas. */
+/**
+ * Pontos de cabo depois de uma remoção: sem o cabo que passa por ele, o ponto sai com os pendurais (o pedaço inteiro
+ * de cada um); só com o cabo que passa (sem pendural), os dois trechos voltam a ser um.
+ */
+function pruneClips(model: Model): { model: Model; changed: boolean } {
+  for (const n of Object.values(model.nodes)) {
+    if (n.kind !== "clip") continue;
+    const at = membersAt(model, n.id);
+    const byChain = new Map<string, Member[]>();
+    for (const x of at) byChain.set(chainOf(x), [...(byChain.get(chainOf(x)) ?? []), x]);
+    const pass = [...byChain.values()].filter((l) => l.length === 2);
+    if (!pass.length) {
+      // o cabo que passava saiu: tudo o que estava preso no ponto sai junto
+      const gone = new Set(at.map(chainOf));
+      const members = Object.fromEntries(Object.entries(model.members).filter(([, x]) => !gone.has(chainOf(x))));
+      const nodes = { ...model.nodes };
+      delete nodes[n.id];
+      return { model: { ...model, nodes, members }, changed: true };
+    }
+    if (pass.length === 1 && at.length === 2) {
+      // ponto sem pendural: os dois trechos voltam a ser um
+      const [x, y] = pass[0];
+      const ex = x.a === n.id ? x.b : x.a;
+      const ey = y.a === n.id ? y.b : y.a;
+      const members = { ...model.members };
+      delete members[y.id];
+      const rest = Object.values(members).filter((o) => o.id !== x.id && chainOf(o) === chainOf(x)).length;
+      const joined: Member = { ...x, a: ex, b: ey };
+      if (!rest) delete joined.chain;
+      members[x.id] = joined;
+      const nodes = { ...model.nodes };
+      delete nodes[n.id];
+      return { model: { ...model, nodes, members }, changed: true };
+    }
+  }
+  return { model, changed: false };
+}
+
+/** Remove o que ficou sem apoio: ligações sem as barras, placas sem cantos, esferas soltas, pontos de cabo soltos. */
 export function prune(model: Model): Model {
   let m = model;
   for (let guard = 0; guard < 10; guard++) {
     let changed = false;
+    for (let k = 0; k < 50; k++) {
+      const r = pruneClips(m);
+      if (!r.changed) break;
+      m = r.model;
+      changed = true;
+    }
     const plates = { ...m.plates };
     for (const p of Object.values(plates)) if (p.corners.some((c) => !m.nodes[c])) (delete plates[p.id], (changed = true));
     const connectors = { ...m.connectors };
@@ -228,10 +287,31 @@ export function prune(model: Model): Model {
 }
 
 export function removeMember(model: Model, id: string): Model {
-  if (!model.members[id]) return model;
-  const members = { ...model.members };
-  delete members[id];
+  const m = model.members[id];
+  if (!m) return model;
+  // cabo dividido por pontos de cabo: sai o pedaço inteiro
+  const members = Object.fromEntries(Object.entries(model.members).filter(([, x]) => chainOf(x) !== chainOf(m)));
   return prune({ ...model, members });
+}
+
+/**
+ * Divide o cabo `memberId` num ponto de cabo em `pos` (uma bolinha dele): os dois trechos continuam sendo o mesmo
+ * pedaço (`chain`).
+ */
+export function splitRope(model: Model, memberId: string, pos: Vec3): { model: Model; id: string } {
+  const m = model.members[memberId];
+  const id = newId(model, "n");
+  const id2 = `m${model.nextId + 1}`;
+  const chain = chainOf(m);
+  return {
+    id,
+    model: {
+      ...model,
+      nextId: model.nextId + 2,
+      nodes: { ...model.nodes, [id]: { id, kind: "clip", pos: round4(pos) } },
+      members: { ...model.members, [m.id]: { ...m, b: id, chain }, [id2]: { id: id2, code: m.code, a: id, b: m.b, chain } },
+    },
+  };
 }
 
 export function removePlate(model: Model, id: string): Model {
@@ -247,10 +327,18 @@ export function removeConnector(model: Model, id: string): Model {
   return prune({ ...model, connectors });
 }
 
-/** Remove um nó e tudo o que depende dele. */
+/** Remove um nó e tudo o que depende dele. Ponto de cabo: saem os pendurais e o cabo que passava volta a ser um. */
 export function removeNode(model: Model, nodeId: string): Model {
-  if (!model.nodes[nodeId]) return model;
-  const members = Object.fromEntries(Object.entries(model.members).filter(([, m]) => m.a !== nodeId && m.b !== nodeId));
+  const node = model.nodes[nodeId];
+  if (!node) return model;
+  if (node.kind === "clip") {
+    const at = membersAt(model, nodeId);
+    const taps = new Set(at.filter((m) => at.filter((o) => chainOf(o) === chainOf(m)).length === 1).map(chainOf));
+    return prune({ ...model, members: Object.fromEntries(Object.entries(model.members).filter(([, m]) => !taps.has(chainOf(m)))) });
+  }
+  // os cabos que passam pelo nó saem inteiros (todos os trechos)
+  const gone = new Set(Object.values(model.members).filter((m) => m.a === nodeId || m.b === nodeId).map(chainOf));
+  const members = Object.fromEntries(Object.entries(model.members).filter(([, m]) => !gone.has(chainOf(m))));
   const nodes = { ...model.nodes };
   delete nodes[nodeId];
   return prune({ ...model, nodes, members });

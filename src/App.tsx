@@ -69,9 +69,9 @@ function useShortcuts() {
       }
       if (e.key === "Escape" && st.helpOpen) {
         st.setHelpOpen(false);
-      } else if (e.key === "Escape" && st.linkFrom) {
+      } else if (e.key === "Escape" && (st.linkFrom || st.ropeBall)) {
         // primeiro Esc: só cancela a ligação começada
-        useApp.setState({ linkFrom: null, hint: "Ligação cancelada." });
+        useApp.setState({ linkFrom: null, ropeBall: null, hint: "Ligação cancelada." });
       } else if (e.key === "Escape") {
         if (st.tool.kind !== "select") st.disarm();
         else st.select(null); // limpa também a seleção múltipla

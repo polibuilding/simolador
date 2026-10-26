@@ -2,7 +2,7 @@
   "_meta": {
     "generatedBy": "scripts/gerar-dados.mjs",
     "source": "data/parametros.xlsx",
-    "generatedAt": "2026-10-26T17:52:45.745Z",
+    "generatedAt": "2026-10-26T18:00:27.019Z",
     "doNotEdit": "Arquivo gerado. Edite data/parametros.xlsx e rode npm run dados."
   },
   "schemaVersion": 2,
@@ -41,6 +41,7 @@
     "cabo_rolo_mm": 3350,
     "cabo_ligacao_mm": 16,
     "cabo_clip_mm": 9,
+    "cabo_pendural_mm": 5,
     "cabo_ajuste_mm": 4,
     "cabo_angulo_minimo_graus": 20,
     "enrijecedor_diametro_mm": 9
