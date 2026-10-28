@@ -144,7 +144,7 @@ O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o as
 3. Atualize `docs/regras-de-encaixe.md` (regras novas ou mudadas e a versão no cabeçalho) e `docs/plano-simolador.md` (pendências e "atual").
 4. Rode `npm test` e `npm run build`, e faça um teste Playwright da interação nova.
 5. Faça o commit em português, com uma mensagem que diga **o que mudou** (nunca só "Atualizações" ou "Correção"), depois `git pull --rebase origin main && git push`.
-6. Acrescente `vX.Y.Z <hash> <título>` em `.github/versoes.txt`, faça o commit "Etiqueta vX.Y.Z" e o push. A publicação cria a tag (se o Actions não tiver permissão de escrita, crie e envie a tag à mão: `git tag -a vX.Y.Z <hash> -m ... && git push origin vX.Y.Z`).
+6. Acrescente `vX.Y.Z <hash> <título>` em `.github/versoes.txt`, faça o commit "Etiqueta vX.Y.Z" e o push. Depois crie e envie a etiqueta à mão: `git tag -a vX.Y.Z <hash> -m "siMOLAdor X.Y.Z — <título>" && git push origin vX.Y.Z`. (A publicação não consegue criar etiquetas: o token das Actions não tem a permissão "workflows".)
 7. Acompanhe com `gh run watch` até o Pages terminar.
 8. Os documentos `CHANGELOG.md`, `docs/plano-simolador.md`, `docs/regras-de-encaixe.md` e `docs/kit-mola-pecas.md` têm cópia no Drive da equipe: `I:\Meu Drive\Poli Building [GERAL]\02. Equipes\2026\Poli Mola\siMOLAdor\` (dados em `data\`). Copie para lá depois de mudar. Também há uma cópia num projeto do Claude chamado "SiMOLAdor".
 

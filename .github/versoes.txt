@@ -1,4 +1,4 @@
-# Versão do siMOLAdor (X.Y.Z: linha · fase · entrega) e o commit em que ela fica. A publicação cria a etiqueta (tag) no Git se faltar.
+# Versão do siMOLAdor (X.Y.Z: linha · fase · entrega) e o commit em que ela fica. As etiquetas (tags) são criadas à mão a partir desta lista (ver CLAUDE.md).
 # Ao lançar uma versão nova: suba o "version" do package.json, escreva no CHANGELOG.md e acrescente a linha aqui.
 # Em 28/10/2026 as versões 1.0–1.25 foram renumeradas (o número antigo está entre parênteses) e as mensagens dos commits reescritas.
 v1.0.0 7b01c000d0fe259b82df8d4f4e4d7076f7a3bf3e Primeira versão (antes v1.0)
