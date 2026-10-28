@@ -88,7 +88,7 @@ Mola: fio Ø 0,6 mm, diâmetro médio 3,4 mm, ~112 espiras ativas; EA medido ≈
 
 ## Kit 3 (cor azul) — 205 peças + cortador, manual bilíngue
 
-Levantado em 13/10/2026 (página oficial, fotos da caixa e do manual enviadas pela equipe). A soma da lista dá 205, com o cabo contado como 1. No siMOLAdor desde a 1.18 (cabo simples e enrijecedor).
+Levantado em 13/10/2026 (página oficial, fotos da caixa e do manual enviadas pela equipe). A soma da lista dá 205, com o cabo contado como 1. No siMOLAdor desde a 1.5.0 (cabo simples e enrijecedor).
 
 | Peça (nome do manual) | Código no siMOLAdor | Qtd | No programa |
 |---|---|---|---|

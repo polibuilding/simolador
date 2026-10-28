@@ -3,7 +3,7 @@
 declare const __APP_VERSION__: string;
 
 export const VERSION: string = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev";
-/** "1.5" (sem o último número quando é zero) */
-export const VERSION_SHORT = VERSION.replace(/\.0$/, "");
+/** número mostrado no rodapé: sempre as três partes (X.Y.Z), como no CHANGELOG */
+export const VERSION_SHORT = VERSION;
 const major = Number(VERSION.split(".")[0]);
 export const EDITION = major === 1 ? "geométrica" : major === 2 ? "arquitetônica" : major === 3 ? "de engenharia" : "";

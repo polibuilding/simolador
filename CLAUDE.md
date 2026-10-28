@@ -10,7 +10,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 
 - **No ar:** https://polibuilding.github.io/simolador/
 - **Repositório:** `polibuilding/simolador`, branch `main`. A publicação é por GitHub Actions no GitHub Pages (`.github/workflows/pages.yml`).
-- **Versão atual:** 1.25. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
+- **Versão atual:** 1.8.2. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
 - **Usuários:** estudantes de engenharia e arquitetura, que montam e documentam estruturas para a competição.
 
 ## Como trabalhar com a equipe
@@ -26,7 +26,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 npm install
 npm run dados     # data/parametros.xlsx → data/catalog.json e data/kits.json (nunca edite os .json à mão)
 npm run dev       # http://localhost:5173/simolador/
-npm test          # Vitest (núcleo); hoje 159 testes, todos passando
+npm test          # Vitest (núcleo); hoje 160 testes, todos passando
 npm run typecheck
 npm run build     # tsc + vite build
 npx vite preview --port 4173 --strictPort   # testar o build em http://localhost:4173/simolador/
@@ -65,9 +65,9 @@ TypeScript, React 18, Three.js via React Three Fiber + drei, Zustand, Vite, Vite
 | `rules.ts` | Todas as validações (`validateMember`, `validateSupport`, `validateMovedModel`…), cada uma com a regra de `regras-de-encaixe.md` |
 | `snapping.ts` | Candidatas de encaixe e guias da GC |
 | `edit.ts` | Edições: mover só o nó (`nodeMoveOptions`, loci esfera/círculo/pontos/caminho), ligar duas esferas (`connectReach`), girar, remover, trechos azul/vermelho do caminho (`locusStatus`), paradas na horizontal/vertical (`alignStops`) |
-| `mechanism.ts` | Modelo cinemático (1.22), detalhado abaixo |
+| `mechanism.ts` | Modelo cinemático (1.7.1), detalhado abaixo |
 | `globalMove.ts` | Duplo clique: travado, caminho ou livre; etapas do Espaço (`moveScopes`, com a forma das anteriores travada); estabilidade no resumo |
-| `reach.ts` | GC perto da estrutura: círculos onde uma mola nova ou pendurada chega à GC (1.23) |
+| `reach.ts` | GC perto da estrutura: círculos onde uma mola nova ou pendurada chega à GC (1.7.2) |
 | `rope.ts` | Cabo do Kit 3 (contado em bolinhas) e plano de corte |
 | `boards.ts` | Várias chapas |
 | `clipboard.ts` | Copiar e colar |
@@ -82,7 +82,10 @@ TypeScript, React 18, Three.js via React Three Fiber + drei, Zustand, Vite, Vite
 - **Eixos:** no modelo, **y é para cima**. Na interface, **Z é a altura**: o usuário vê (X, Y, Z) = (x, z, y) do modelo. Use `toDisp`.
 - **Ferramentas:** o estado tem uma ferramenta (`Tool` em `store.ts`): `select`, `place` (com `moving` ao mover uma peça), `moveGroup`, `moveNode`, `moveBody` (com `ref` e `level`) e `paste`. O fantasma é `ghost` (`cand` ou `group`) e `commitGhost()` grava.
 - **Caches:** os caches são indexados pela **identidade do modelo** (`history.present`). Muitos ficam em variáveis de módulo em `Placement.tsx` ou em `WeakMap` no core.
-- **Estado de um comando:** cuidado com estado de comando que sobra para o seguinte. Foi a causa de dois bugs ("o clique não coloca a peça até recarregar"). Na 1.23.1, `linkPick`/`linkGhost` passaram a ser zerados no começo de todo `update()`. Siga esse padrão para qualquer estado novo.
+- **Estado de um comando:** cuidado com estado de comando que sobra para o seguinte. Foi a causa de dois bugs ("o clique não coloca a peça até recarregar"). Em `Placement.tsx`, todo estado de comando (variáveis `let` dentro do efeito) **tem de entrar em `resetCommand()`**, que roda a cada troca de comando; o que vale só para um movimento do cursor (`linkPick`, `linkGhost`, `ballPick`) também é zerado no começo de `update()`.
+- **Erros não podem travar:** os eventos do mouse e do teclado passam por `guard()` (em `Placement.tsx`) e `onKeySafe` (em `App.tsx`): um erro recomeça o comando e avisa no rodapé, em vez de repetir a cada movimento. Não tire essas guardas; prefira corrigir a causa e manter a guarda.
+- **Desenho sob demanda:** a cena usa `frameloop="demand"` (só desenha quando algo muda). Mudanças pelo React e pela store já pedem quadro (`Invalidator` em `Scene.tsx`). Quem mexer na cena por fora (câmera, `useFrame`, efeitos com `requestAnimationFrame`) precisa chamar `invalidate()`, senão a tela não atualiza.
+- **Carregamento:** as pranchas (`SheetsView` e `src/drawings/`) carregam sob demanda (`lazy` em `App.tsx`). Não importe nada de `src/drawings/` nem de `SheetsView` no caminho da montagem, senão eles voltam para o pacote inicial.
 - **Configurações:** ficam em localStorage (`simolador:config`), com verificação de abertura (`simolador:config-teste`), `?padrao` no endereço e um ErrorBoundary.
 
 ## Modelo cinemático (rigidez)
@@ -105,7 +108,7 @@ A **GC como rótula** está **a conferir pela equipe**.
 
 - **Graus de liberdade:** saem do núcleo da matriz de rigidez, mais um teste finito (`newtonProject`) que descarta dobras que só existem no infinitesimal.
 - **Duplo clique:** com 0 graus a peça fica travada e o rodapé diz o que trava. Com 1, ela anda num caminho traçado por `tracePath`, azul onde pode e vermelho onde não pode. Com 2 ou mais, o arraste é livre (`dragTo` mexe o mínimo).
-- **Edição por etapas (1.24): Espaço amplia** o conjunto que mexe, e Shift+Espaço volta. A ordem é só a peça (numa esfera, o "mover só o nó") → vizinhas → pavimentos → estrutura toda. O que fica fora do conjunto é tratado como fixo. Ao trocar de etapa, a posição atual é gravada e a forma da etapa vira um **bloco rígido** nas seguintes (`MoveScope.frozen`, `shapeGroup`, `freezeShapes`). Assim, só a próxima liberdade mexe. Exemplo: no pórtico, o canto anda na circunferência; com Espaço, o pórtico tomba inteiro sem deformar.
+- **Edição por etapas (1.8.0): Espaço amplia** o conjunto que mexe, e Shift+Espaço volta. A ordem é só a peça (numa esfera, o "mover só o nó") → vizinhas → pavimentos → estrutura toda. O que fica fora do conjunto é tratado como fixo. Ao trocar de etapa, a posição atual é gravada e a forma da etapa vira um **bloco rígido** nas seguintes (`MoveScope.frozen`, `shapeGroup`, `freezeShapes`). Assim, só a próxima liberdade mexe. Exemplo: no pórtico, o canto anda na circunferência; com Espaço, o pórtico tomba inteiro sem deformar.
 - **Tab** (e também ← / →) percorre as referências do caminho: limites azul/vermelho e posições na horizontal/vertical. Na esfera de uma mola, também as circunferências (`sphereRings`), e a esfera desliza na escolhida.
 - **Corpos rígidos** (`Mech.rigids`): os 3 primeiros pontos ficam fora de uma reta (`rigidOf`), e `planar` liga a linha de planicidade (placas).
 - **No resumo:** o bloco "Estabilidade" mostra os graus de liberdade por parte.
@@ -119,7 +122,7 @@ A **GC como rótula** está **a conferir pela equipe**.
   - diagonais D4x6, D6x6 e D6x12;
   - placas P6x6 e P6x12;
   - RC90, CC e CC90.
-- **Kit 3 (1.18):**
+- **Kit 3 (1.5.0):**
   - **cabo** em dois cliques, com a sequência esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera, contado em bolinhas, com plano de corte dos rolos;
   - **enrijecedor**, aplicado clicando na mola B6 ou B12.
 - **Kit A:** está previsto no estoque.
@@ -133,15 +136,15 @@ A **GC como rótula** está **a conferir pela equipe**.
 | **2.x** | Arquitetônica | O módulo extra ajustável |
 | **3.x** | De engenharia | Deformação, estaticidade e estabilidade (botão **Simolar**, hoje "em breve") |
 
-O número depois do ponto sobe com uma mudança grande ou que muda o uso. Correções sobem o terceiro número (1.23.1).
+O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o assunto principal ou o jeito de usar (uma fase: 1.7 rigidez, 1.8 pranchas editáveis); **Z** conta cada entrega publicada dentro da fase, novidade ou correção (1.8.0, 1.8.1, 1.8.2…). Toda entrega publicada ganha número. Em 28/10/2026 as antigas 1.0–1.25 foram renumeradas (1.25 = 1.8.1); a equivalência está no fim do `CHANGELOG.md`.
 
 **Roteiro para lançar uma versão:**
 1. Suba `version` no `package.json` e atualize a versão no `README.md`.
-2. Escreva a entrada no topo do `CHANGELOG.md`, em linguagem de usuário.
+2. Escreva a entrada no topo do `CHANGELOG.md` (dentro da fase, `### X.Y.Z — título · data`), em linguagem de usuário.
 3. Atualize `docs/regras-de-encaixe.md` (regras novas ou mudadas e a versão no cabeçalho) e `docs/plano-simolador.md` (pendências e "atual").
 4. Rode `npm test` e `npm run build`, e faça um teste Playwright da interação nova.
-5. Faça o commit em português (descrição curta do que mudou), depois `git pull --rebase origin main && git push`.
-6. Acrescente `vX.Y <hash> <título>` em `.github/versoes.txt`, faça o commit "Etiqueta vX.Y" e o push. A publicação cria a tag.
+5. Faça o commit em português, com uma mensagem que diga **o que mudou** (nunca só "Atualizações" ou "Correção"), depois `git pull --rebase origin main && git push`.
+6. Acrescente `vX.Y.Z <hash> <título>` em `.github/versoes.txt`, faça o commit "Etiqueta vX.Y.Z" e o push. A publicação cria a tag (se o Actions não tiver permissão de escrita, crie e envie a tag à mão: `git tag -a vX.Y.Z <hash> -m ... && git push origin vX.Y.Z`).
 7. Acompanhe com `gh run watch` até o Pages terminar.
 8. Os documentos `CHANGELOG.md`, `docs/plano-simolador.md`, `docs/regras-de-encaixe.md` e `docs/kit-mola-pecas.md` têm cópia no Drive da equipe: `I:\Meu Drive\Poli Building [GERAL]\02. Equipes\2026\Poli Mola\siMOLAdor\` (dados em `data\`). Copie para lá depois de mudar. Também há uma cópia num projeto do Claude chamado "SiMOLAdor".
 
