@@ -1,8 +1,7 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Scene } from "./render/Scene";
 import { Palette } from "./ui/Palette";
 import { PropertiesPanel, SelectionTag, SummaryTab } from "./ui/PropertiesPanel";
-import { SheetsView } from "./ui/SheetsView";
 import { HintLine, VersionTag } from "./ui/StatusBar";
 import { Dock } from "./ui/Dock";
 import { Toolbar } from "./ui/Toolbar";
@@ -11,6 +10,9 @@ import { AdvancedConfig } from "./ui/Config";
 import { GROUPS, PaletteMini } from "./ui/Palette";
 import { panelOpen, useApp } from "./ui/store";
 import { catalog, configState, markConfigBootOk } from "./core/catalog";
+
+// as pranchas (desenhos, PDF, DXF) só carregam quando são abertas: o programa abre mais rápido
+const SheetsView = lazy(() => import("./ui/SheetsView").then((m) => ({ default: m.SheetsView })));
 import { available } from "./core/inventory";
 
 /** Retângulo de seleção: azul = só o que está inteiro dentro; verde tracejado = o que tocar. */
@@ -180,11 +182,21 @@ function useShortcuts() {
         st.setHelpOpen(!st.helpOpen);
       }
     };
-    window.addEventListener("keydown", onKey);
+    // um erro num atalho não trava o programa: o rodapé avisa e o comando em andamento é solto
+    const onKeySafe = (e: KeyboardEvent) => {
+      try {
+        onKey(e);
+      } catch (err) {
+        console.error("[siMOLAdor] erro no atalho", e.key, err);
+        useApp.getState().disarm();
+        useApp.setState({ hint: `O atalho ${e.key} deu erro e o comando foi cancelado (nada foi perdido).` });
+      }
+    };
+    window.addEventListener("keydown", onKeySafe);
     window.addEventListener("keyup", onShift);
     window.addEventListener("blur", onBlur);
     return () => {
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKeySafe);
       window.removeEventListener("keyup", onShift);
       window.removeEventListener("blur", onBlur);
     };
@@ -236,7 +248,11 @@ export default function App() {
       <SelectBox />
       <Shortcuts />
       <AdvancedConfig />
-      {sheetsOpen && <SheetsView />}
+      {sheetsOpen && (
+        <Suspense fallback={<div className="sheets-loading">Abrindo as pranchas…</div>}>
+          <SheetsView />
+        </Suspense>
+      )}
     </div>
   );
 }

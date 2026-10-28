@@ -530,7 +530,7 @@ dl { margin: 0 0 16px; }
 
 
 /* =====================================================================
-   Interface leve (1.12): traços finos, cantos suaves, menos peso.
+   Interface leve (1.4.2): traços finos, cantos suaves, menos peso.
    ===================================================================== */
 /* o painel da direita abre por cima da cena (a cena não muda de tamanho: nada pula de lugar ao selecionar) */
 .app { --props-w: 272px; }
@@ -704,7 +704,7 @@ dl { margin: 0 0 16px; }
 .pm-piece.on { background: var(--on); box-shadow: inset 0 0 0 1px var(--rule-strong); }
 .pm-piece:disabled { opacity: 0.35; cursor: not-allowed; }
 
-/* 1.15: a paleta fica por cima da cena e desliza ao recolher; a cena não muda de tamanho (nada pula).
+/* 1.4.5: a paleta fica por cima da cena e desliza ao recolher; a cena não muda de tamanho (nada pula).
    A imagem da cena acompanha a paleta (view offset da câmera, em Scene.tsx, com a mesma duração). */
 .app { --ease-slide: cubic-bezier(0.33, 1, 0.68, 1); --pal-w: 210px; --pal-cur: var(--pal-w); --props-cur: 0px; }
 .app.palette-mini-on { --pal-cur: 0px; }
@@ -856,7 +856,7 @@ dl { margin: 0 0 16px; }
 .props .stab-note { margin: 6px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--graphite); }
 
 /* =====================================================================
-   Pranchas (1.24): a mesma linguagem leve da montagem.
+   Pranchas (1.8.0): a mesma linguagem leve da montagem.
    ===================================================================== */
 .sheets { background: #e9ecea; }
 .sheets-bar {
@@ -1002,4 +1002,10 @@ dl { margin: 0 0 16px; }
   position: fixed; z-index: 25; margin: 0; padding: 0 4px; box-sizing: border-box;
   font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff;
   border: 1px solid var(--focus); border-radius: 4px; box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15); outline: none;
+}
+
+/* pranchas carregando (o código delas só vem quando são abertas) */
+.sheets-loading {
+  position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
+  background: #e9ecea; color: #5b6360; font-size: 14px; letter-spacing: 0.02em;
 }

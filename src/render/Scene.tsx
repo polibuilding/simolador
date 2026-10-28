@@ -701,6 +701,9 @@ function PaletteShift() {
   const inset = left - right;
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera | THREE.OrthographicCamera;
   const size = useThree((s) => s.size);
+  const invalidate = useThree((s) => s.invalidate);
+  // a cena só desenha quando algo muda (frameloop "demand"): cada passo da animação pede um quadro
+  useEffect(() => invalidate(), [inset, size, invalidate]);
   useFrame(() => {
     const off = -inset / 2;
     const v = camera.view;
@@ -774,6 +777,18 @@ function Projection() {
   return null;
 }
 
+/**
+ * A cena só desenha quando algo muda (frameloop "demand"), em vez de 60 vezes por segundo parada: o programa fica
+ * leve e o computador não esquenta. Os componentes do React pedem quadro sozinhos quando mudam; isto cobre o resto
+ * (pontos e cabos atualizados em efeitos, fantasma, destaque): qualquer mudança no estado pede um quadro novo.
+ */
+function Invalidator() {
+  const invalidate = useThree((s) => s.invalidate);
+  // dois quadros: o segundo pega o que os efeitos (useEffect) atualizam logo depois da mudança
+  useEffect(() => useApp.subscribe(() => invalidate(2)), [invalidate]);
+  return null;
+}
+
 /** W A S D giram a vista (15° por toque); com Shift, arrastam. */
 function KeyCamera() {
   const { camera, controls } = useThree();
@@ -826,6 +841,7 @@ export function Scene() {
   const propsInset = usePropsInset();
   return (
     <Canvas
+      frameloop="demand"
       shadows
       dpr={[1, 2]}
       camera={{ position: [PLATE_W / 2 + 230, 260, PLATE_D / 2 + 330], fov: FOV, near: 1, far: 60000 }}
@@ -879,6 +895,7 @@ export function Scene() {
       <ReachView />
       <NodeLocusView />
       <Placement />
+      <Invalidator />
       <CameraRig />
       {/* cubo de vistas: segue a projeção da cena (paralela ou perspectiva) */}
       <CubeHelper alignment="top-right" margin={[84 + propsInset, 84]} perspective={!ortho}>
