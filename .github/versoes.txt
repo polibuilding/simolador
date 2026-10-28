@@ -1,29 +1,31 @@
-# Versão do siMOLAdor e o commit em que ela fica. A publicação cria a etiqueta (tag) no Git se faltar.
+# Versão do siMOLAdor (X.Y.Z: linha · fase · entrega) e o commit em que ela fica. A publicação cria a etiqueta (tag) no Git se faltar.
 # Ao lançar uma versão nova: suba o "version" do package.json, escreva no CHANGELOG.md e acrescente a linha aqui.
-v1.0 7d848679017b5c2416a08e6136ca6871a962c2c2 Primeira versão
-v1.1 bcc1a97bd14d941bb7c273d0b1f786648d4da2e8 Kits 1 e 2 completos e pranchas
-v1.2 e939747b8102a8e9958ce1c990c24b781104528f Barras inclinadas e navegação de CAD
-v1.3 15fef7ad34866166413dc917392eb374a9e6a425 Planos inclinados, guias e edição fina
-v1.4 80b14bde175f1b268d771482048d7b6c4b52807f Produtividade e pranchas completas
-v1.5 5965015691d6780ecc244744fbd1ba03778cc2d5 Várias chapas
-v1.6 2d2e0acae69434f4f797632916ca1886c6d9584c Barras livres e pranchas sob medida
-v1.7 e3eeb9e66052cb393245b7a4a80d1585de751bc2 Triângulos de barras
-v1.8 73e4dec01b665b86ed2f51c2dc26d067f1898002 Chapas giradas, cruzamentos e atalhos
-v1.9 a17d5c03b4e6f5a92445c083dcd8feeb131f0ffa Vista simples e chapas soltas
-v1.10 b526b5bfb8e30680036a7444e51a6294940133e9 Vista paralela, Z para cima e 40°
-v1.11 e24e438c740927cbe89db3aa9a91a7413d1652ee Ligar duas esferas
-v1.12 4697765f23a0d530fb2772d20c8e3aa752f2f9b5 Interface leve
-v1.13 9d81f6649efec3e1cea2794fa0e3ad266d45f05a Mover com o mouse e painel da peça
-v1.14 735c0b8 Paleta recolhível e marca do siMOLAdor
-v1.15 ae8b933 Paleta e resumo deslizando, Arquivo em ícones, Kit 3 e Kit A no estoque
-v1.16 0dd49d2 Caminho azul e vermelho, resumo deslizando
-v1.17 be76004 Resumo só pelas setas
-v1.18 229902b Kit 3: cabo e enrijecedor
-v1.19 e92b637 Enter, destaque e resumo no duplo clique
-v1.20 92d146a Configurações e biblioteca
-v1.21 888d2ef Girar o conjunto em torno das GC, atalhos novos
-v1.22 59871df Rigidez: a estrutura acompanha ou trava
-v1.23 77a69c4 O que mexe junto (Tab amplia) e GC perto da estrutura
-v1.23.1 92c17df Correção: clique que não colocava a peça
-v1.24 f7148c3 Edição por etapas, RC90 só no plano dela e pranchas editáveis
-v1.25 0d42918 Pranchas mais completas e cabo preso em cabo
+# Em 28/10/2026 as versões 1.0–1.25 foram renumeradas (o número antigo está entre parênteses) e as mensagens dos commits reescritas.
+v1.0.0 ac23944fcd5f302b7d5c208ea34fa76c7531522d Primeira versão (antes v1.0)
+v1.1.0 df3e989a7ac812ad066c27492251d4e5f021c944 Kits 1 e 2 completos e pranchas (antes v1.1)
+v1.2.0 07e4c98eb771b2526859330a527d8556b10a8233 Barras inclinadas e navegação de CAD (antes v1.2)
+v1.2.1 ac4b4e8855d8a1e656bd6c45b5f93226fec2127c Planos inclinados, guias e edição fina (antes v1.3)
+v1.2.2 5ee53cacc779156b66d610c5b6a16144d144ed73 Produtividade e pranchas completas (antes v1.4)
+v1.3.0 620e45784ebb6069905c227cbc153de76dd4e80b Várias chapas (antes v1.5)
+v1.3.1 1b806979e99c79777b09538d6df3c966d5531eb2 Barras livres e pranchas sob medida (antes v1.6)
+v1.3.2 6b2b23ace3b325f61bb108f57b5a3e9913a2f322 Triângulos de barras (antes v1.7)
+v1.3.3 b6b9c336a05c68d5e3263d78bd69cc737e983c90 Chapas giradas, cruzamentos e atalhos (antes v1.8)
+v1.3.4 ffda16d0ed2f6b60269eac2a72e6c807bee25732 Vista simples e chapas soltas (antes v1.9)
+v1.4.0 4ab471d0e383dcd9c716d7b84af417d9986256cb Vista paralela, Z para cima e 40° (antes v1.10)
+v1.4.1 cd888c7664d970b8c0d2918cdc26b1297a08d605 Ligar duas esferas (antes v1.11)
+v1.4.2 5881aae0b3fb9ba2f7fef9133aae193f90cf2907 Interface leve (antes v1.12)
+v1.4.3 5a47ebd9a1d83a884da72e52f114dfb3a3916878 Mover com o mouse e painel da peça (antes v1.13)
+v1.4.4 31f2079faf26e32f152bb8d3e65ed83ca21c66de Paleta recolhível e marca do siMOLAdor (antes v1.14)
+v1.4.5 fa002f93aa127032f6fc77d292578689991d8a2e Paleta e resumo deslizando, Arquivo em ícones, Kit 3 e Kit A no estoque (antes v1.15)
+v1.4.6 3122651d0c46d46a93d9131e1afa07a4217228c2 Caminho azul e vermelho, resumo deslizando (antes v1.16)
+v1.4.7 f70ddcadbfb5e59183c93d4c47397daa6902cf1b Resumo só pelas setas (antes v1.17)
+v1.5.0 eaded69771fb3234d7edadbd6ef3e9198cd536f6 Kit 3: cabo e enrijecedor (antes v1.18)
+v1.5.1 d63dd73f7c5a524cbbf98b6c03b9a4fef5f5f2a5 Enter, destaque e resumo no duplo clique (antes v1.19)
+v1.6.0 3d1bb6edee0e9c174ef755b4124733432369bc76 Configurações e biblioteca (antes v1.20)
+v1.7.0 8073fc90fb52d09c0689036070deca27c8c348fd Girar o conjunto em torno das GC, atalhos novos (antes v1.21)
+v1.7.1 a07cb4c6b92a582877d29c3a0ca37b2fa3ef9aed Rigidez: a estrutura acompanha ou trava (antes v1.22)
+v1.7.2 894e6309be177841f2f68e21a87922d9b6cea751 O que mexe junto (Tab amplia) e GC perto da estrutura (antes v1.23)
+v1.7.3 bada0a71c640715fafa46d5c00ac8fd56b6619e9 Correção: clique que não colocava a peça (antes v1.23.1)
+v1.8.0 49435c013ecdab11c49300dc8e7ac3361e444e88 Edição por etapas, RC90 só no plano dela e pranchas editáveis (antes v1.24)
+v1.8.1 8b9af58b59a5ba352aaffdafaa380e72c988935f Pranchas mais completas e cabo preso em cabo (antes v1.25)
+v1.8.2 09865ddaa48466483e6643c794fcd0aa5e0301ed Mais leve de abrir e mais resistente a erros
