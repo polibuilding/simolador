@@ -157,3 +157,20 @@ describe("kits mínimos (modo sem limite)", () => {
     expect(minKits(catalog, {}).total).toBe(0);
   });
 });
+
+describe("arquivo com peça desconhecida", () => {
+  it("a peça sai do modelo, com o código para o aviso; o resto fica", async () => {
+    const { dropUnknownPieces } = await import("../../src/core/serialization");
+    const { catalog } = await import("../../src/core/catalog");
+    const model = {
+      nodes: { n1: { id: "n1", kind: "support", pos: [0, 0, 0] }, n2: { id: "n2", kind: "sphere", pos: [0, 6, 0] } },
+      members: { m1: { id: "m1", code: "B6", a: "n1", b: "n2" }, m2: { id: "m2", code: "XPTO", a: "n1", b: "n2" } },
+      plates: {},
+      connectors: {},
+    } as never;
+    const r = dropUnknownPieces(catalog, model);
+    expect(r.dropped).toEqual(["XPTO"]);
+    expect(Object.keys((r.model as { members: object }).members)).toEqual(["m1"]);
+    expect(dropUnknownPieces(catalog, r.model).model).toBe(r.model);
+  });
+});

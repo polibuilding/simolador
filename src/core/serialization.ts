@@ -248,3 +248,18 @@ export function fromFile(raw: unknown): { model: Model; inventory: InventoryConf
 function defaultSide(ax: Vec3): Vec3 {
   return Math.abs(ax[1]) > 0.5 ? [1, 0, 0] : [0, 1, 0];
 }
+
+/**
+ * Peças com código que o catálogo não conhece (arquivo de outra versão, planilha mudada) saem do modelo, em vez de
+ * quebrar o desenho ou as regras mais adiante. Devolve o modelo limpo e os códigos tirados (para o aviso).
+ */
+export function dropUnknownPieces(cat: { pieces: Record<string, unknown> }, model: Model): { model: Model; dropped: string[] } {
+  const known = (code: string) => !!cat.pieces[code];
+  const dropped = new Set<string>();
+  const keep = <T extends { code: string }>(rec: Record<string, T>) =>
+    Object.fromEntries(Object.entries(rec).filter(([, x]) => (known(x.code) ? true : (dropped.add(x.code), false))));
+  if (Object.values(model.members).every((m) => known(m.code)) && Object.values(model.plates).every((p) => known(p.code)) && Object.values(model.connectors).every((c) => known(c.code))) {
+    return { model, dropped: [] };
+  }
+  return { model: { ...model, members: keep(model.members), plates: keep(model.plates), connectors: keep(model.connectors) }, dropped: [...dropped] };
+}

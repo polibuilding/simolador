@@ -8,7 +8,7 @@ import { defaultInventory, type InventoryConfig } from "../core/inventory";
 import { boardsOf, emptyModel, membersAt, rotateNodes, rotYRad, samePos, toDisp, type Model, type Vec3 } from "../core/model";
 import { overlappingNodes, type Check } from "../core/rules";
 import type { RopeBall } from "../core/rope";
-import { fromFile, toFile, type SheetMeta } from "../core/serialization";
+import { dropUnknownPieces, fromFile, toFile, type SheetMeta } from "../core/serialization";
 import { applyCandidate, type Candidate } from "../core/snapping";
 import { cutSelection, makeClip, pasteClip, repeatClip, type Clip } from "../core/clipboard";
 import {
@@ -234,7 +234,8 @@ function restore(): Partial<Pick<State, "history" | "inventory" | "name" | "shee
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
-    const f = fromFile(JSON.parse(raw));
+    const f0 = fromFile(JSON.parse(raw));
+    const f = { ...f0, model: dropUnknownPieces(catalog, f0.model).model };
     return { history: createHistory(f.model), inventory: f.inventory, name: f.name, ...(f.sheet ? { sheet: f.sheet } : {}), ...overlapReport(f.model) };
   } catch {
     return {};
@@ -734,7 +735,11 @@ export const useApp = create<State>((set, get) => ({
     set((s) => ({ history: push(s.history, emptyModel()), selection: null, ghost: null, name: "Estrutura 01", tool: { kind: "select" }, sheet: sheetPrefs(s.sheet), sheetPast: [], sheetFuture: [] })),
 
   load: (raw) => {
-    const f = fromFile(raw);
+    const f0 = fromFile(raw);
+    // peças que o catálogo não conhece saem (com aviso), em vez de quebrar a cena
+    const clean = dropUnknownPieces(catalog, f0.model);
+    const f = { ...f0, model: clean.model };
+    const unknownNote = clean.dropped.length ? `Peças desconhecidas deixadas de fora: ${clean.dropped.join(", ")}.` : null;
     // arquivo feito com outro módulo (configurações): as posições valem em módulos, as medidas em mm mudam
     const fileM = Number((raw as { moduleMm?: unknown })?.moduleMm);
     const mNote =
@@ -755,7 +760,7 @@ export const useApp = create<State>((set, get) => ({
       tool: { kind: "select" },
       camera: { view: "fit", n: s.camera.n + 1 },
       ...overlapReport(f.model),
-      ...(mNote ? { hint: mNote } : {}),
+      ...(mNote || unknownNote ? { hint: [unknownNote, mNote].filter(Boolean).join(" ") } : {}),
     }));
   },
 

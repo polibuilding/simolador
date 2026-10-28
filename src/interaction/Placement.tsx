@@ -1212,6 +1212,42 @@ export function Placement() {
       }
     };
 
+    /**
+     * Estado de um comando (Tab, ligação, barra livre, GC, retângulo) que não pode passar para o comando seguinte.
+     * Todo estado novo de comando entra aqui: foi esse tipo de sobra que deixava o clique sem colocar a peça.
+     */
+    const resetCommand = () => {
+      linkPick = null;
+      linkGhost = null;
+      ballPick = null;
+      triTab = null;
+      nodeTab = null;
+      freeAnchor = null;
+      freeHold = null;
+      lastChoiceKey = "";
+      reachSpot = "";
+    };
+
+    /**
+     * Um erro no meio de um gesto não pode travar a montagem: sem esta guarda, o mesmo erro se repetia a cada movimento
+     * do mouse e nenhum clique valia até recarregar a página. Aqui o comando recomeça limpo e o rodapé avisa.
+     */
+    let lastError = 0;
+    const guard = <A extends unknown[]>(name: string, fn: (...a: A) => void) => (...a: A) => {
+      try {
+        fn(...a);
+      } catch (err) {
+        console.error(`[siMOLAdor] erro em ${name}:`, err);
+        resetCommand();
+        const now = performance.now();
+        const st = useApp.getState();
+        // dois erros seguidos em pouco tempo: solta a peça da mão (o modelo não muda)
+        if (now - lastError < 1500 && st.tool.kind !== "select") st.disarm();
+        lastError = now;
+        useApp.setState({ ghost: null, hint: "Algo deu errado neste ponto e o comando recomeçou (nada foi perdido). Se repetir, Esc e tente de novo." });
+      }
+    };
+
     // Gancho de teste/depuração: projeta posições do modelo (módulos) para a tela.
     (window as unknown as Record<string, unknown>).__simolador = {
       store: useApp,
@@ -1224,6 +1260,7 @@ export function Placement() {
     // R também atualiza o fantasma sem mexer o mouse
     let lastEv: PointerEvent | null = null;
     const track = (ev: PointerEvent) => ((lastEv = ev), update(ev));
+    const safeUpdate = guard("refazer o fantasma", update);
 
     // Enter = clique: colocando uma peça (ou movendo), vale no lugar do cursor; selecionando, pega a peça sob o cursor
     const onKey = (ev: KeyboardEvent) => {
@@ -1253,43 +1290,50 @@ export function Placement() {
       st.select({ kind, id });
     };
     const unsub = useApp.subscribe((s, p) => {
-      if (s.tool !== p.tool && s.triAnchor && !(s.tool.kind === "place" && p.tool.kind === "place" && s.tool.code === p.tool.code)) {
-        useApp.setState({ triAnchor: null });
-      }
-      if (s.tool !== p.tool && (s.linkFrom || s.ropeBall) && !(s.tool.kind === "place" && p.tool.kind === "place" && s.tool.code === p.tool.code)) {
-        useApp.setState({ linkFrom: null, ropeBall: null });
+      const toolChanged = s.tool !== p.tool;
+      const placeSame = s.tool.kind === "place" && p.tool.kind === "place" && s.tool.code === p.tool.code;
+      const patch: Partial<ReturnType<typeof useApp.getState>> = {};
+      const hadTab = !!nodeTab || !!triTab;
+      // comando novo (outra ferramenta ou outra peça): nada do anterior continua valendo
+      if (toolChanged && !placeSame) resetCommand();
+      if (toolChanged && !placeSame) {
+        if (s.triAnchor) patch.triAnchor = null;
+        if (s.linkFrom || s.ropeBall) Object.assign(patch, { linkFrom: null, ropeBall: null });
       }
       // mover só o nó: ao sair ou depois de mexer, o Tab recomeça
-      if ((s.history !== p.history || s.tool !== p.tool) && (nodeTab || s.nodeLimits) && (p.tool.kind === "moveNode" || p.tool.kind === "moveBody")) {
+      if ((s.history !== p.history || toolChanged) && (hadTab || s.nodeLimits || s.snapCycle) && (p.tool.kind === "moveNode" || p.tool.kind === "moveBody")) {
         nodeTab = null;
-        useApp.setState({ snapCycle: 0, nodeLimits: null });
-        return;
+        Object.assign(patch, { snapCycle: 0, nodeLimits: null });
       }
       // depois de colocar a peça, o Tab recomeça do ponto mais perto
-      if ((s.history !== p.history || s.tool !== p.tool) && s.snapCycle && s.tool.kind === "place" && catalog.pieces[s.tool.code]?.type === "bar") {
+      if ((s.history !== p.history || toolChanged) && s.snapCycle && s.tool.kind === "place" && catalog.pieces[s.tool.code]?.type === "bar") {
         triTab = null;
-        useApp.setState({ snapCycle: 0 });
-        return;
+        patch.snapCycle = 0;
       }
-      if (s.history !== p.history || s.tool !== p.tool || s.barMode !== p.barMode) {
+      if (s.history !== p.history || toolChanged || s.barMode !== p.barMode) {
         freeAnchor = null;
         freeHold = s.history !== p.history && lastEv ? { x: lastEv.clientX, y: lastEv.clientY } : null;
       }
-      if (lastEv && (s.linkFrom !== p.linkFrom || s.ropeBall !== p.ropeBall || s.rotIndex !== p.rotIndex || s.barMode !== p.barMode || (s.tool !== p.tool && s.tool.kind === "paste") || s.snapCycle !== p.snapCycle || s.guides !== p.guides || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
-        update(lastEv);
+      if (Object.keys(patch).length) useApp.setState(patch);
+      if (lastEv && (s.linkFrom !== p.linkFrom || s.ropeBall !== p.ropeBall || s.rotIndex !== p.rotIndex || s.barMode !== p.barMode || (toolChanged && s.tool.kind === "paste") || s.snapCycle !== p.snapCycle || s.guides !== p.guides || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
+        safeUpdate(lastEv);
       }
     });
 
-    window.addEventListener("pointermove", track);
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("pointerdown", onDown);
-    window.addEventListener("pointerup", onUp);
+    const onMove = guard("mover o cursor", track);
+    const onKeyG = guard("Enter", onKey);
+    const onDownG = guard("apertar o botão", onDown);
+    const onUpG = guard("clique", onUp);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("keydown", onKeyG);
+    window.addEventListener("pointerdown", onDownG);
+    window.addEventListener("pointerup", onUpG);
     return () => {
       unsub();
-      window.removeEventListener("pointermove", track);
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("pointerdown", onDown);
-      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("keydown", onKeyG);
+      window.removeEventListener("pointerdown", onDownG);
+      window.removeEventListener("pointerup", onUpG);
     };
   }, [camera, gl]);
 
