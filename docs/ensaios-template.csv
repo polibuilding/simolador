@@ -1,0 +1,54 @@
+ensaio,peca,montagem,grandeza,carga_g,leitura_1,leitura_2,leitura_3,unidade,amostra,observacoes
+T0,C,10 esferas juntas na balanca,massa,,,,,g,10,dividir por 10
+T0,B4,10 barras juntas,massa,,,,,g,10,dividir por 10
+T0,B6,10 barras juntas,massa,,,,,g,10,dividir por 10
+T0,B12,5 barras juntas,massa,,,,,g,5,dividir por 5
+T0,D4x6,10 diagonais juntas,massa,,,,,g,10,
+T0,D6x6,10 diagonais juntas,massa,,,,,g,10,
+T0,D6x12,10 diagonais juntas,massa,,,,,g,10,
+T0,P6x6,placa,massa,,,,,g,1,
+T0,P6x12,placa,massa,,,,,g,1,
+T0,GC,4 GC juntas,massa,,,,,g,4,
+T0,RC90,10 RC90 juntas,massa,,,,,g,10,
+T0,CC,10 CC juntas,massa,,,,,g,10,
+T0,CC90,10 CC90 juntas,massa,,,,,g,10,
+T0,CABLE,rolo inteiro,massa,,,,,g,1,dividir por 3.35 = g/m
+T1,B6,contra a luz,espiras encostadas? (s/n),,,,,-,1,
+T1,B6,paquimetro,diametro externo da espiral,,,,,mm,1,conflito 4 x 6 mm
+T1,B6,paquimetro,diametro do fio,,,,,mm,1,
+T1,B6,regua,espiras em 10 mm,,,,,un,1,
+T1,B6,regua,comprimento so da espiral (sem terminais),,,,,mm,1,
+T1,B12,regua,comprimento so da espiral (sem terminais),,,,,mm,1,
+T1,B6,pendurada pela esfera de cima; copinho na ponta de baixo,alongamento,20,,,,mm,1,repetir a cada 20 g ate soltar
+T1,B6,pendurada pela esfera de cima; copinho na ponta de baixo,alongamento,40,,,,mm,1,
+T1,B6,pendurada pela esfera de cima; copinho na ponta de baixo,alongamento,60,,,,mm,1,
+T1,B6,pendurada pela esfera de cima; copinho na ponta de baixo,peso em que comeca a esticar,,,,,g,1,pre-tensao
+T2,B6,mola vertical pendurada na esfera; copinho na ponta,peso que arranca o ima (mola x esfera),,,,,g,1,
+T2,B6,mola na esfera puxada de lado,peso que faz a ponta escorregar,,,,,g,1,
+T2,D6x6,diagonal pendurada na esfera,peso que arranca o ima (diagonal x esfera),,,,,g,1,
+T2,RC90,RC90 na esfera,peso que arranca a RC90,,,,,g,1,
+T2,P6x6,placa presa a esfera por um canto,peso que arranca o canto,,,,,g,1,
+T2,GC,GC na chapa puxada para cima,peso que arranca a GC,,,,,g,1,
+T2,GC,GC na chapa puxada de lado,peso que faz a GC escorregar,,,,,g,1,
+T3,B6,GC + RC90; mola horizontal; 1 esfera na ponta,quanto a ponta abaixa,0,,,,mm,1,carga 0 = so a esfera
+T3,B6,GC + RC90; mola horizontal; esfera + copinho,quanto a ponta abaixa,,,,,mm,1,anotar o peso do copinho + moedas
+T3,B6,GC + RC90; mola horizontal; esfera + copinho,quanto a ponta abaixa,,,,,mm,1,
+T3,B4,GC + RC90; mola horizontal; 1 esfera na ponta,quanto a ponta abaixa,0,,,,mm,1,
+T3,B12,GC + RC90; mola horizontal; 1 esfera na ponta,quanto a ponta abaixa,0,,,,mm,1,
+T4,RC90,balanco do T3 preso numa esfera + RC90 (nao na GC),quanto a ponta abaixa,,,,,mm,1,comparar com T3
+T4,RC90,canto de duas B6 com RC90; carga na ponta,quanto a ponta abaixa,,,,,mm,1,
+T4,RC90,idem,peso em que a RC90 escorrega,,,,,g,1,
+T5,B12,GC embaixo; esfera em cima; peso no topo,peso em que a mola curva,,,,,g,1,estimativa 95-110 g
+T5,B12,GC + RC90 embaixo; topo livre,peso em que a mola curva,,,,,g,1,estimativa 23-28 g
+T5,B6,GC embaixo; esfera em cima; peso no topo,peso em que a mola curva,,,,,g,1,estimativa 375-535 g (o ima pode soltar antes)
+T6,D6x6,porticos B6 sem RC90 + 1 diagonal; puxar o topo de lado,deslocamento do topo,,,,,mm,1,
+T6,D6x6,montada no vao nominal,folga,,,,,mm,1,0 = esticada
+T7,B6,T3 com 1 esfera; toque e filmar em camera lenta,oscilacoes por segundo,,,,,Hz,1,estimativa 5-6 Hz
+T7,B6,idem,amplitude no 1o e no 5o ciclo,,,,,mm,1,da o amortecimento
+T7,B6,portico GC + RC90 com viga B6; empurrao lateral,oscilacoes por segundo,,,,,Hz,1,estimativa 4.5 Hz
+T8,B6,portico do TFG: viga apoiada nas esferas; 40 g no meio,flecha no meio,40,,,,mm,1,
+T8,B6,idem com RC90 nos dois cantos de cima,flecha no meio,40,,,,mm,1,
+T9,CABLE,30 bolinhas com CABLE C + clip; pendurar peso,alongamento,,,,,mm,1,
+T9,CABLE,idem,peso que solta,,,,,g,1,
+T10,P6x6,portico sem diagonal com placa vertical; empurrar de lado,peso que faz escorregar,,,,,g,1,
+T11,BS6,T3 com a B6 enrijecida,quanto a ponta abaixa,0,,,,mm,1,

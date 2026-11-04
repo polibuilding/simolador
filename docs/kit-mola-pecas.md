@@ -76,9 +76,15 @@ Sistemas do manual: balanço, viga contínua, grelha, comprimento de flambagem, 
 - Placas têm ímãs no perímetro (polaridade única); encaixam entre barras/esferas.
 - Diagonais são cabos finos: só trabalham à tração.
 
-## Dados mecânicos (TCC UPC, Kit 1)
+## Dados mecânicos (TFG da UPC, Kit 1)
 
-Mola: fio Ø 0,6 mm, diâmetro médio 3,4 mm, ~112 espiras ativas; EA medido ≈ 414 N; EI ≈ 2.966 N·mm²; k teórico ≈ 2,96 N/mm. O mesmo texto cita L = 100 mm e parte flexível ≈ 87 mm, que não fecham com 90 mm c/c — tratar como aproximados.
+Resumo; a análise completa, com as correções, está em **`docs/fisica-das-pecas.md`**. Fonte: Marc Garcia Bautista, TFG ETSEIB-UPC, jan. 2026.
+
+- Mola (nominal): fio Ø 0,6 mm, diâmetro médio 3,4 mm (externo 4,0 mm, contra 6,0 mm no desenho de 2022: medir), ≈ 112 espiras. 112 × 0,6 = 67 mm: as espiras devem estar **encostadas** (mola fechada, provavelmente com pré-tensão).
+- **EI medido ≈ 2.966 N·mm²** (flexão em 3 pontos, CV 9 %): é o dado de referência.
+- EA medido = 414 N (tração), mas o comprimento de referência não está claro: k ≈ 4–5,5 N/mm.
+- O "k teórico ≈ 2,96 N/mm" do TFG tem um erro de conta: a fórmula de Riba dá **0,29 N/mm**. A mola real é ≈ 14× mais rígida que uma mola livre, o que reforça a hipótese de espiras encostadas.
+- O balanço de 90 mm (B6 em GC + RC90) com 11 g flete 8,0 mm, o que bate com o EI usando o comprimento flexível de ≈ 87 mm. O valor de 87 mm não fecha com a peça de 74,6 mm das pranchas: medir.
 
 ## Outros kits (resumo)
 

@@ -4,7 +4,7 @@ Versão 0.5 · 08/10/2026 · Planejamento antes da implementação. Inclui as re
 
 ## 1. Objetivo
 
-Montar em 3D estruturas com as peças reais do Kit Mola, arrastando peças para a cena e encaixando-as umas nas outras, respeitando as regras físicas do kit e o estoque de cada caixa. A partir do modelo, gerar pranchas (capa com lista de peças, plantas por pavimento, quatro elevações). Fora do escopo: análise estrutural (Q09).
+Montar em 3D estruturas com as peças reais do Kit Mola, arrastando peças para a cena e encaixando-as umas nas outras, respeitando as regras físicas do kit e o estoque de cada caixa. A partir do modelo, gerar pranchas (capa com lista de peças, plantas por pavimento, quatro elevações). Análise estrutural: fora da linha 1.x (Q09); é a linha 3.x, planejada na §10, com a física das peças em `docs/fisica-das-pecas.md`.
 
 ## 2. A ideia central: o modelo é um grafo, não um monte de malhas
 
@@ -222,7 +222,7 @@ A **escala gráfica** saiu do carimbo: fica na direita da folha, vertical e sem 
 | 4. Geometria livre | geodésicas e barras fora dos planos ortogonais (E19); mover várias peças juntas | geodésica do manual do Kit 2 |
 | 5. App local + Kits 3/4 | empacotar com Tauri (Q01); cabos, arcos | — |
 
-Análise estrutural: fora do escopo (Q09).
+Análise estrutural: fora da linha 1.x (Q09); plano da linha 3.x na §10.
 
 ## 7b. Versões do programa
 
@@ -244,14 +244,14 @@ Em aberto:
 - **Configurações** (engrenagem; 1.6.0): o menu muda módulo, ângulo mínimo entre molas, ângulo mínimo da mola na GC, passo das inclinadas (o rótulo da barra de baixo acompanha) e o tamanho da chapa; **1.9.0**: a engrenagem abre direto a janela, com as abas Geral, Peças, Medidas gerais, Cabo e as pessoais (no navegador, não no projeto): **Tutorial** (seis passos que se marcam sozinhos), **Aparência** (chapa, fundo, eixos, animações; aplicar recarrega), **Perfil** (nome e equipe na capa das pranchas) e **Idioma** (só português). **Próximo**: inglês e espanhol (separar os textos da interface para tradução); tutorial guiado na própria cena. Os pesos ainda não entram em nenhuma conta (3.x).
   - **Proteção**: limites em cada valor; checagens cruzadas (molas com comprimento positivo, esfera menor que o menor vão, bolinha menor que o passo, GC menor que a chapa) bloqueiam o Aplicar; antes de aplicar, a tela mostra o que muda na estrutura aberta (GC fora da chapa, chapas sobrepostas, ângulos abaixo do novo mínimo); aplicar recarrega o programa com a estrutura salva; se a abertura travar, a seguinte volta ao padrão sozinha (as configurações recusadas ficam guardadas à parte); valores ilegíveis são ignorados com aviso; tela de erro com "Voltar às configurações padrão"; `?padrao` no endereço abre sem as configurações.
 - **Rigidez e movimentos livres** (1.7.1, `src/core/mechanism.ts`): esferas = rótulas; RC90 trava ângulo; RC90 na base engasta; CC/CC90 travam 180°; placas = corpos rígidos; diagonais e cabos só tração; GC fixas. Graus de liberdade pelo posto da matriz de rigidez, com teste finito (descarta as "dobras" que só existem no infinitesimal, como a torção de um pórtico plano com RC90). Duplo clique: 0 = travado, 1 = caminho azul/vermelho (traçado numericamente), 2+ = arraste livre mexendo o mínimo. Resumo: bloco Estabilidade com os graus de liberdade; painel da peça: "Movimento".
-  - Confirmado pela equipe (14/10): a RC90 trava só o ângulo, não a torção (a mola gira em torno do próprio eixo). **16/10 (1.8.0, L10)**: a RC90 trava só a inclinação no plano em que foi posicionada; no perpendicular a mola gira. No modelo cinemático já era assim (distância entre as pontas); o "mover só o nó" deixou de travar o nó e passou a usar o mesmo vínculo. **A confirmar**: a RC90 na base (hoje engasta sozinha) segue a mesma regra, e só duas em lados perpendiculares engastam? A conferir: a CC90 trava também o ângulo entre os dois pares; a GC é rótula (sem RC90 na base, o pilar tomba em qualquer direção, até o limite de 40° com a chapa) — **a equipe vai conferir a GC**.
+  - Confirmado pela equipe (14/10): a RC90 trava só o ângulo, não a torção (a mola gira em torno do próprio eixo). **16/10 (1.8.0, L10)**: a RC90 trava só a inclinação no plano em que foi posicionada; no perpendicular a mola gira. No modelo cinemático já era assim (distância entre as pontas); o "mover só o nó" deixou de travar o nó e passou a usar o mesmo vínculo. **A confirmar**: a RC90 na base (hoje engasta sozinha) segue a mesma regra, e só duas em lados perpendiculares engastam? A conferir: a CC90 trava também o ângulo entre os dois pares; a GC é rótula (sem RC90 na base, o pilar tomba em qualquer direção, até o limite de 40° com a chapa) — **a equipe vai conferir a GC**. **04/11 (TFG da UPC, `fisica-das-pecas.md`)**: o pórtico sem RC90 na base e sem diagonal tomba (GC = rótula, como no programa), e a GC + RC90 funciona como engaste no plano da RC90 (o balanço bate com a fórmula do engaste). Isso reforça "RC90 na base engasta só no plano dela"; falta a equipe confirmar no kit.
   - **Conjuntos** (1.7.2, `moveScopes` em `globalMove.ts`): o que fica fora do conjunto é tratado como preso. Candidatos: anéis de vizinhas a partir da peça (até o primeiro que mexe, e mais um), pavimentos (tudo de uma altura para cima) e a estrutura toda; partes que ficariam soltas vão junto. Ficam os que mexem a peça e mexem um grupo novo (comparação pelo suporte do núcleo da matriz de rigidez; conta linear primeiro, teste finito nos conjuntos de até 24 esferas). Na 1.7.2, Tab ampliava.
   - **Edição por etapas** (1.8.0, E2f): Espaço passa para a próxima etapa (Shift+Espaço volta), guardando a posição; cada etapa aceita vira um bloco rígido (as esferas que mexeram e as vizinhas, mais um anel se as vizinhas ficam numa reta; `shapeGroup` em `globalMove.ts`, `freezeShapes` em `mechanism.ts`) nas etapas seguintes. **Tab** (E2g) percorre as referências do caminho, incluindo as circunferências da esfera de uma mola (`sphereRings` em `edit.ts`).
   - **GC perto da estrutura** (1.7.2, `reach.ts`): círculos na chapa onde uma mola nova (até uma esfera baixa) ou pendurada (desce girando) chega até a GC respeitando G12.
   - Feito na 1.8.3: rótulas que giram em laranja durante o movimento; **G** no arraste livre segue um modo (uma liberdade) por vez, como caminho; diagonal frouxa desenhada com barriga (parábola com o comprimento da diagonal). Próximos: o cabo do Kit 3 frouxo (hoje ele é recontado e fica sempre esticado); levar o estudo para a 3.x (rigidez das molas, enrijecedor, cargas).
 - **Pranchas editáveis** (1.8.0, F1–F12; 1.8.1, F13–F16): carimbo novo, folhas A2/A3/A4/personalizada, Mostrar global e por desenho, inserir desenhos e cortes; na 1.8.1, escala personalizada, Ctrl+Z/Ctrl+Y das pranchas, "Voltar ao automático" explicado, barra lateral Inserir, 4 isométricas, corte nas vistas transversais, lixeira do corte e desenhos renderizados. **A conferir com a equipe**: tamanho do quadro das logos (hoje 36 mm na A3, como antes); o arranjo mexido não acompanha pavimentos novos (hoje: "Voltar ao automático › Desenhos das pranchas"); a chapa preta nas plantas renderizadas pesa na impressão (talvez clarear só na foto). **Próximos**: textos livres inseríveis; corte com profundidade limitada (hoje vai até o fim da estrutura); seção de placas e diagonais cortadas; o desenho que passa da folha avisa; isométrica inserida com tamanho menor de partida.
 - **Biblioteca** (ao lado da engrenagem; 1.6.0): por enquanto "em breve" e os exemplos que vêm com o programa (abrem com um clique). Depois: biblioteca online de modelos enviados pelos usuários (precisa de um servidor e de contas: definir onde hospedar).
-- **Simolar** (botão ao lado de Pranchas): por enquanto "em breve"; é a porta da linha 3.x (deformação, estaticidade, estabilidade).
+- **Simolar** (botão ao lado de Pranchas): por enquanto "em breve"; é a porta da linha 3.x (deformação, estaticidade, estabilidade). Plano reforçado na §10 (04/11), com a física das peças em `docs/fisica-das-pecas.md`.
 - **Kit 3 (1.5.0: cabo simples e enrijecedor)**: Kit 3 no estoque; cabo em dois cliques (esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera, com as ligações e clipes automáticos), pedaço em bolinhas, plano de corte dos rolos no resumo e na capa; enrijecedor clicando na mola B6/B12. **Medidas estimadas pelas fotos** (`kit-mola-pecas.md`): confirmar com o kit em mãos. Próximas montagens de cabo, mapeadas abaixo.
 - **Kit 3: outras montagens de cabo (mapa)** — o que o manual permite e como poderia entrar no programa:
   1. **Clip de múltiplos cabos (M CABLE CLIP C)**: **feito na 1.9.0 (K11)**: clicar com o clip numa esfera com 2+ cabos junta todos numa CABLE C (até 5 por clip).
@@ -288,4 +288,79 @@ Registrar os valores em `A-CONFIRMAR.xlsx`, aba Dimensões.
 10. **Limites do nó**: quantas barras cabem ao redor de uma esfera; menor ângulo possível entre duas barras; quantas RC90 cabem num nó.
 11. **Fotos para modelagem**: cada peça sobre papel milimetrado, câmera paralela à mesa e afastada com zoom (menos distorção), em três vistas (frente, lado, topo).
 12. **Casos de validação**: montar 3 ou 4 estruturas do manual (pórtico, treliça, Vierendeel, grelha) e fotografar de frente, de lado e de cima, com a chapa à vista.
-13. **Opcional, para a análise**: massa de cada peça; B6 em balanço com moedas penduradas na ponta, medindo a flecha → calibra a rigidez.
+13. **Para a análise (3.x)**: os ensaios físicos foram detalhados em `docs/fisica-das-pecas.md` §7 (T0–T11: massas, mola fechada e pré-tensão, força dos ímãs, balanço com peso próprio, rigidez da RC90, flambagem, diagonal, frequência…), com registro em `docs/ensaios-template.csv`. Prioridade: T0, T1, T2 e T3.
+
+## 10. Simulação (linha 3.x) — plano reforçado (04/11/2026)
+
+Base física, com cada número e sua fonte: `docs/fisica-das-pecas.md` (a partir do TFG da UPC de 2026 e das nossas contas). Este plano substitui a frase "levar o estudo para a 3.x" das pendências.
+
+### 10.1 O que o Simolar precisa responder
+
+1. **Fica de pé?** Mecanismo ou não, e com quantos graus de liberdade. Já existe (1.7).
+2. **É iso, hiper ou hipostática?** Com o grau.
+3. **Quanto deforma** com o peso próprio e com cargas em gramas, **em escala real**. O Mola é um modelo de alta deformação: a flecha do programa deve ser a flecha que a equipe vê no kit (±10 %).
+4. **Como cada peça trabalha**: tração, compressão ou flexão (cores), e as reações nas GC.
+5. **O que solta ou dobra primeiro, e com quantos gramas**: flambagem, ímã que solta, ligação que cede, GC que escorrega, cabo frouxo.
+6. **Como balança**: frequências e modos de vibrar, e a resposta a um empurrão.
+
+### 10.2 Modelo mecânico: o grafo vira um pórtico espacial
+
+O grafo (nós, membros, ligações) continua sendo a fonte. A simulação monta, a partir dele, um modelo de cálculo:
+
+| No grafo | No cálculo | Parâmetros (`fisica-das-pecas.md` §8) |
+|---|---|---|
+| Esfera (e GC, e anel) | nó com 3 deslocamentos (rótula) e massa concentrada | `esfera_massa_g` |
+| Ponta de mola | "nó de ponta" com 3 rotações próprias, preso à esfera por rótula | — |
+| Mola (B4, B6, B12) | viga de Euler-Bernoulli 3D **inextensível** (vínculo de distância, como no `mechanism.ts`; ou EA alto) com **EI = 2.966 N·mm²** no comprimento flexível; terminais rígidos | `mola_EI_Nmm2`, desconto do comprimento flexível, massa |
+| RC90 entre molas | mola de rotação entre as duas pontas, **só no eixo normal ao plano dela** (L10) | `rc90_rigidez_Nmm_rad` (começa rígida) |
+| RC90 na base | idem, entre a ponta e o chão: **engaste no plano dela** (duas perpendiculares = engaste completo) | idem |
+| CC / CC90 | continuidade da flexão entre as pontas alinhadas (os dois planos) | `cc_rigidez_Nmm_rad` |
+| GC | 3 deslocamentos presos, rotação livre; reação conferida contra a força da GC na chapa | `gc_chapa_N` |
+| Diagonal e cabo do Kit 3 | barra **só de tração** (sai do cálculo quando ficaria comprimida) | `diagonal_EA_N`, folga |
+| Placa | corpo rígido (6 graus) preso aos 4 cantos | massa |
+| Enrijecedor | mola com EI × `enrijecedor_fator_EI` | — |
+| Cargas | peso próprio (ligado por padrão) e cargas em **gramas** nas esferas (verticais ou de lado: "dedo virtual") | — |
+
+Consequência didática, que o modelo reproduz de graça: numa estrutura só de esferas, as molas só trabalham no eixo; a flexão aparece com carga ao longo da mola (peso próprio) e nas ligações RC90/CC. É exatamente o que o kit ensina.
+
+### 10.3 Etapas
+
+| Versão | Entrega | Critério de pronto (validação) |
+|---|---|---|
+| **3.0 Estaticidade** | Do mesmo conjunto de vínculos do `mechanism.ts`: graus de liberdade (mecanismos) e **estados de autotensão** (vínculos − posto) → "hipostática (n) · isostática · hiperestática (grau r)" no bloco Estabilidade do resumo. Esforços normais por equilíbrio nas treliças isostáticas (peso próprio e cargas) | tripé (3 GC + 3 molas até uma esfera) = isostático; + 4ª GC com mola até a mesma esfera = hiperestático 1; pórtico plano de esferas = hipostático 3 (no espaço), com uma diagonal = 2; treliça do manual com esforços iguais aos da conta à mão |
+| **3.1 Estática linear** | Matriz de rigidez do pórtico espacial (§10.2); peso próprio; cargas em gramas; deformada em escala real (e ampliada, opcional); N e M com cores e diagramas; reações nas GC; lista de esforços | **V1** balanço B6 em GC + RC90 com 11 g → 8,0 mm (±10 %; TFG); **V2** flexão em 3 pontos, vão 110 mm, 84 g → 7–8 mm (TFG); **V3** balanço com uma esfera na ponta = T3 da equipe |
+| **3.2 Não linear e falhas** | Grandes deslocamentos (corrotacional, passos de carga, Newton, reaproveitando o `newtonProject`); diagonais e cabos só tração (conjunto ativo); **ímã solta** quando a tração na ponta passa da força medida, **GC escorrega**, **RC90 cede**: o programa tira a ligação e recalcula (colapso passo a passo, ou só o aviso, conforme a equipe decidir) | V1 e V2 com cargas maiores (o leve amolecimento do TFG); pórtico de T8; ímã soltando no peso de T2 (±15 %) |
+| **3.3 Flambagem** | Por barra: Euler com o comprimento efetivo pelo tipo de ponta (rótula, RC90, GC + RC90). Global: autovalor (K + λ·K_G) → "a estrutura flamba com x g", com o modo animado | B12 rotulada ≈ 100 g e B12 em balanço ≈ 25 g (estimativas, `fisica-das-pecas.md` §5.1), ajustadas pelo T5 |
+| **3.4 Dinâmica** | Matriz de massa (esferas concentradas, molas e placas distribuídas); **modos e frequências** (animação); resposta a um empurrão no tempo (Newmark), com o amortecimento medido | balanço B6 + esfera ≈ 5–6 Hz e pórtico B6 com GC + RC90 ≈ 4,5 Hz (estimativas), ajustados pelo T7 |
+| **3.5 Cabos do Kit 3** | Busca de forma por densidade de forças: redes de cabos, **anel na posição de equilíbrio**, pontes pênseis; formas funiculares com pesos; cabo frouxo de verdade (com barriga) | rede em sela e cobertura suspensa do manual do Kit 3 |
+| **3.6 Calibração e confiança** | Aba "Física" nas Configurações (valores da planilha, sobrescrevíveis com proteção, como as medidas); faixa de incerteza (EI ±10 %) mostrada como "≈"; tabela "quanto confiar" por tipo de estrutura | ensaios T0–T11 da equipe incorporados; pranchas podem levar uma folha "Simulação" (deformada e esforços) |
+
+A ordem segue o que dá mais retorno com menos dado. A 3.0 não precisa de nenhum número físico. A 3.1 precisa só do EI (já medido) e das massas (T0). A 3.2 precisa da força dos ímãs (T2). A 3.4 precisa do T7.
+
+### 10.4 Interface
+
+- **Simolar** liga o modo de simulação: a estrutura montada fica clara e a deformada aparece por cima, em escala real. O peso próprio já vem ligado.
+- **Cargas**: uma ferramenta "peso" (clique numa esfera: 10 g, 20 g… e R gira para o lado) e o **dedo virtual** (arrastar uma esfera mostra quantos gramas de força isso pede), como o empurrão do TFG.
+- **Cores**: tração azul, compressão vermelha, espessura proporcional ao esforço; momento como diagrama nas molas com RC90/CC; reações nas GC como setas.
+- **Rodapé** (o canal de sempre): diz o porquê e o número. Exemplos: "A B12 do eixo 2 flamba com ≈ 95 g (Euler, rotulada nas duas pontas)"; "O ímã da ponta solta com ≈ 80 g".
+- **Resumo**: o bloco Estabilidade ganha estaticidade, a maior flecha, o primeiro modo de falha e a primeira frequência.
+
+### 10.5 Técnica
+
+- Código novo em `src/core/sim/`: `frame.ts` (monta o modelo da §10.2), `solve.ts` (sistema linear), `modes.ts` (autovalores), `nonlinear.ts` (passos de carga). Só lógica, sem React nem Three, com testes em `tests/core/sim/`.
+- **Tamanho**: o Mola tem poucas peças (a Estrutura 01 tem dezenas de esferas, ou seja, poucas centenas de incógnitas). Matriz densa com Cholesky resolve em milissegundos até umas 600 incógnitas; acima disso, armazenamento em perfil (skyline) com reordenação (Cuthill-McKee).
+- Roda num **Web Worker** para não travar a tela. Os resultados ficam em cache pela identidade do modelo, como os outros caches.
+- **Unidades**: o núcleo trabalha em módulos; a simulação converte na entrada para mm, N e g, e de volta na saída.
+- **Testes**: casos analíticos (balanço, biapoiada, treliça isostática, pórtico engastado), os casos do TFG (V1, V2) e os ensaios da equipe.
+- **Planilha**: aba "Física" em `parametros.xlsx` → bloco `physics` no `catalog.json` → Configurações › Física.
+- **Carregamento**: como as pranchas, a simulação carrega sob demanda (`lazy`), para não pesar a abertura.
+
+### 10.6 Riscos e como tratar
+
+| Risco | Tratamento |
+|---|---|
+| EI não é constante (espiras abrindo sob momento grande) | começar com o EI linear do TFG; o T1 e o T3 com 3 cargas dizem quanto amolece; se precisar, EI em duas faixas |
+| Ligações magnéticas são a maior incerteza (o pórtico do TFG flete 6× mais do que o EI explica) | molas de rotação e de escorregamento nas ligações, calibradas pelo T4 e pelo T8; até lá, mostrar "≈" e a faixa |
+| Conflitos de geometria (mola de Ø 4 ou 6 mm; comprimento flexível de 75 ou 87 mm) | T1 resolve; os dois valores ficam na planilha com status |
+| Expectativa de precisão | o próprio kit varia ≈ 10 % (CV do TFG); o programa mostra valores arredondados e "≈" |
+| Mudança de comportamento na montagem (1.x) | nenhuma: a simulação só lê o modelo; não muda as regras de encaixe |
