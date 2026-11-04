@@ -4,7 +4,7 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 
 **Abrir o programa:** https://polibuilding.github.io/simolador/ · funciona no navegador, sem instalar nada.
 
-**Versão atual:** **1.8.2** (linha 1.x, "geométrica"). O que mudou em cada versão está no [CHANGELOG.md](CHANGELOG.md).
+**Versão atual:** **1.8.3** (linha 1.x, "geométrica"). O que mudou em cada versão está no [CHANGELOG.md](CHANGELOG.md).
 
 ## O que dá para fazer
 
@@ -25,6 +25,8 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
   - O caminho fica azul onde pode e vermelho onde não pode.
   - **Espaço** passa para a próxima etapa: só a peça → vizinhas → pavimento → estrutura toda.
   - **Tab** pula para os limites e as posições na horizontal/vertical.
+  - As **rótulas que giram** aparecem em laranja; no arraste livre, **G** segue uma liberdade de cada vez.
+  - Diagonal frouxa aparece com barriga.
 - **Estabilidade** no resumo: quantos graus de liberdade a estrutura tem (0 = rígida).
 - **Editar**: copiar e colar, espelhar, repetir, girar, seleção por retângulo, desfazer e refazer.
 
@@ -62,6 +64,7 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 | Enter | Vale como clique |
 | Espaço | Repete a última peça; mexendo uma peça, passa para a próxima etapa |
 | Tab | Passa pelos pontos e referências |
+| G | Mexendo uma peça livre: segue uma liberdade de cada vez |
 | Q / E | Troca pela peça vizinha do grupo (B4 ⇄ B6 ⇄ B12) |
 | 1 / 2 / 3 | Ligam e desligam a grade, os pontos azuis e os triângulos |
 | 4 / 5 / 6 | Barras nos eixos, em passos ou livres |

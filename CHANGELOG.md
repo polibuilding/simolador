@@ -24,6 +24,13 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 ## 1.8 — Edição por etapas, pranchas editáveis e cabo em cabo
 
+### 1.8.3 — Rigidez à vista e código do mouse reorganizado · 04/11/2026
+- **Rótulas que giram**: com uma peça andando (duplo clique), as esferas e GC em que as molas mudam de ângulo ganham um anel laranja. Dá para ver o que a estrutura dobra para a peça chegar ali.
+- **G no arraste livre**: quando a peça tem 2 ou mais graus de liberdade, G passa a seguir um modo de cada vez (uma liberdade só, num caminho azul/vermelho, com Tab nas referências). Depois do último modo, volta ao livre.
+- **Diagonal frouxa com barriga**: a diagonal cujas pontas ficaram mais perto que o vão dela é desenhada pendendo, com o comprimento dela, em vez de reta.
+- **Barra Livre**: com a peça escolhida por clique na paleta, passar o cursor sobre uma esfera agora começa a barra livre (antes a ligação de dois cliques tomava a esfera e a barra não começava).
+- **Por dentro**: o código do posicionamento com o mouse foi dividido por ferramenta (GC, barras, cabo, mexer, peças comuns, retângulo), e todo o estado de um comando ficou num objeto só, que se zera sozinho na troca de comando. Menos chance dos bugs de "clique que não coloca".
+
 ### 1.8.2 — Mais leve de abrir e mais resistente a erros · 28/10/2026
 - **Abre mais rápido**: as pranchas (desenhos, PDF e DXF) só carregam quando são abertas, e as bibliotecas do 3D ficam em arquivos à parte, que o navegador guarda: numa versão nova, só o código do programa é baixado de novo (cerca de um quarto do que era). A fonte não segura mais a abertura (a página aparece antes e troca a letra quando ela chega).
 - **Mais leve parado**: a cena 3D só desenha quando algo muda (antes desenhava 60 vezes por segundo mesmo parada). O computador esquenta menos e a bateria dura mais.

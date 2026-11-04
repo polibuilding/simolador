@@ -228,7 +228,7 @@ Análise estrutural: fora do escopo (Q09).
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0.0`, `v1.8.2`…).
 
-- **1.x — geométrica** (atual: 1.8.2): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.8.3): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: o módulo extra ajustável.
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
@@ -248,7 +248,7 @@ Em aberto:
   - **Conjuntos** (1.7.2, `moveScopes` em `globalMove.ts`): o que fica fora do conjunto é tratado como preso. Candidatos: anéis de vizinhas a partir da peça (até o primeiro que mexe, e mais um), pavimentos (tudo de uma altura para cima) e a estrutura toda; partes que ficariam soltas vão junto. Ficam os que mexem a peça e mexem um grupo novo (comparação pelo suporte do núcleo da matriz de rigidez; conta linear primeiro, teste finito nos conjuntos de até 24 esferas). Na 1.7.2, Tab ampliava.
   - **Edição por etapas** (1.8.0, E2f): Espaço passa para a próxima etapa (Shift+Espaço volta), guardando a posição; cada etapa aceita vira um bloco rígido (as esferas que mexeram e as vizinhas, mais um anel se as vizinhas ficam numa reta; `shapeGroup` em `globalMove.ts`, `freezeShapes` em `mechanism.ts`) nas etapas seguintes. **Tab** (E2g) percorre as referências do caminho, incluindo as circunferências da esfera de uma mola (`sphereRings` em `edit.ts`).
   - **GC perto da estrutura** (1.7.2, `reach.ts`): círculos na chapa onde uma mola nova (até uma esfera baixa) ou pendurada (desce girando) chega até a GC respeitando G12.
-  - Próximos: escolher qual grau de liberdade seguir no modo livre (Tab entre "modos" do mecanismo); mostrar as rótulas que giram; diagonal/cabo frouxo desenhado com flecha; levar o estudo para a 3.x (rigidez das molas, enrijecedor, cargas).
+  - Feito na 1.8.3: rótulas que giram em laranja durante o movimento; **G** no arraste livre segue um modo (uma liberdade) por vez, como caminho; diagonal frouxa desenhada com barriga (parábola com o comprimento da diagonal). Próximos: o cabo do Kit 3 frouxo (hoje ele é recontado e fica sempre esticado); levar o estudo para a 3.x (rigidez das molas, enrijecedor, cargas).
 - **Pranchas editáveis** (1.8.0, F1–F12; 1.8.1, F13–F16): carimbo novo, folhas A2/A3/A4/personalizada, Mostrar global e por desenho, inserir desenhos e cortes; na 1.8.1, escala personalizada, Ctrl+Z/Ctrl+Y das pranchas, "Voltar ao automático" explicado, barra lateral Inserir, 4 isométricas, corte nas vistas transversais, lixeira do corte e desenhos renderizados. **A conferir com a equipe**: tamanho do quadro das logos (hoje 36 mm na A3, como antes); o arranjo mexido não acompanha pavimentos novos (hoje: "Voltar ao automático › Desenhos das pranchas"); a chapa preta nas plantas renderizadas pesa na impressão (talvez clarear só na foto). **Próximos**: textos livres inseríveis; corte com profundidade limitada (hoje vai até o fim da estrutura); seção de placas e diagonais cortadas; o desenho que passa da folha avisa; isométrica inserida com tamanho menor de partida.
 - **Biblioteca** (ao lado da engrenagem; 1.6.0): por enquanto "em breve" e os exemplos que vêm com o programa (abrem com um clique). Depois: biblioteca online de modelos enviados pelos usuários (precisa de um servidor e de contas: definir onde hospedar).
 - **Simolar** (botão ao lado de Pranchas): por enquanto "em breve"; é a porta da linha 3.x (deformação, estaticidade, estabilidade).

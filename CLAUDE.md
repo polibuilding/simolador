@@ -10,7 +10,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 
 - **No ar:** https://polibuilding.github.io/simolador/
 - **Repositório:** `polibuilding/simolador`, branch `main`. A publicação é por GitHub Actions no GitHub Pages (`.github/workflows/pages.yml`).
-- **Versão atual:** 1.8.2. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
+- **Versão atual:** 1.8.3. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
 - **Usuários:** estudantes de engenharia e arquitetura, que montam e documentam estruturas para a competição.
 
 ## Como trabalhar com a equipe
@@ -166,9 +166,7 @@ O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o as
    - régua de bolinhas 1:1 na prancha.
 
 ### Mecanismo e rigidez (próximos passos)
-- No modo livre, escolher qual grau de liberdade seguir (uma tecla para alternar os "modos" do mecanismo; o Tab agora percorre as referências do caminho).
-- Mostrar na cena as rótulas que giram.
-- Desenhar a diagonal ou o cabo frouxo com flecha.
+- Feito (1.8.3): rótulas que giram em laranja (`turningJoints`), **G** segue um modo por vez no arraste livre (`Mobility.modes`, `dofMode` na ferramenta `moveBody`), diagonal frouxa com barriga (`sagCurve`). Falta: o cabo do Kit 3 frouxo (hoje é recontado e fica sempre esticado).
 - Conferir com a equipe a GC como rótula e a CC90.
 - Levar o estudo para a 3.x: rigidez das molas, enrijecedor como barra rígida, cargas, deformação.
 
