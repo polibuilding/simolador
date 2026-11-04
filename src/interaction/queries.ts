@@ -140,7 +140,7 @@ export function nodeOptionsFor(model: Model, nodeId: string) {
 
 // movimento global (duplo clique): o que o conjunto escolhido deixa a peça fazer (caminho, livre ou travado)
 export function globalFor(model: Model, tool: Extract<Tool, { kind: "moveBody" }>): GlobalMove {
-  return globalOf(model, tool.ref, tool.level);
+  return globalOf(model, tool.ref, tool.level, tool.dofMode ?? 0);
 }
 
 /** Caminho de quem anda pelo azul: a esfera (mover só o nó) ou o conjunto (giro em torno das GC). */
@@ -153,7 +153,7 @@ export function pathFor(model: Model, tool: Tool): { set: NodeMoveSet; start: Ve
   if (tool.kind === "moveBody") {
     const g = globalFor(model, tool);
     if (g.mode !== "path") return null;
-    return { set: g.set, start: g.handle, lift: false, key: `b:${tool.ref.kind}:${tool.ref.id}:${tool.level}` };
+    return { set: g.set, start: g.handle, lift: false, key: `b:${tool.ref.kind}:${tool.ref.id}:${tool.level}:${tool.dofMode ?? 0}` };
   }
   return null;
 }

@@ -13,8 +13,8 @@ export type MoveRef = { kind: "node" | "member" | "plate"; id: string };
 
 export type GlobalMove =
   | { mode: "locked"; reason: string; dof: number }
-  | { mode: "path"; dof: number; handle: Vec3; set: NodeMoveSet; trails: Vec3[][] }
-  | { mode: "free"; dof: number; hand: number; handle: Vec3; drag: (target: Vec3) => NodeMove; reset: () => void };
+  | { mode: "path"; dof: number; handle: Vec3; set: NodeMoveSet; trails: Vec3[][]; modes?: number; modeIndex?: number }
+  | { mode: "free"; dof: number; hand: number; handle: Vec3; drag: (target: Vec3) => NodeMove; reset: () => void; modes: number };
 
 const handNodes = (model: Model, ref: MoveRef): string[] =>
   ref.kind === "node" ? [ref.id] : ref.kind === "member" ? (model.members[ref.id] ? [model.members[ref.id].a, model.members[ref.id].b] : []) : model.plates[ref.id]?.corners ?? [];
@@ -81,7 +81,11 @@ export function checkMoved(cat: Catalog, base: Model, next: Model, moved: Set<st
  * O que acontece ao pegar a peça `ref`: travada, caminho (1 grau de liberdade) ou livre.
  * `free`: só essas esferas podem mexer (um "conjunto" escolhido com o Tab); as outras ficam paradas como se fossem GC.
  */
-export function globalMoveOptions(cat: Catalog, model: Model, ref: MoveRef, free?: Set<string> | null, frozen?: string[][] | null): GlobalMove {
+/**
+ * `dofMode`: no arraste livre (2+ graus de liberdade), 0 = livre; k ≥ 1 = seguir só o k-ésimo modo (vira um caminho
+ * azul/vermelho, como no caso de 1 grau de liberdade). A tecla G troca.
+ */
+export function globalMoveOptions(cat: Catalog, model: Model, ref: MoveRef, free?: Set<string> | null, frozen?: string[][] | null, dofMode = 0): GlobalMove {
   const nodes = handNodes(model, ref).filter((id) => model.nodes[id]);
   if (!nodes.length) return { mode: "locked", reason: "Peça não encontrada.", dof: 0 };
   const comp = mechComponent(cat, model, nodes);
@@ -116,10 +120,12 @@ export function globalMoveOptions(cat: Catalog, model: Model, ref: MoveRef, free
     return { pos: h, model: next, ids: moved, check };
   };
 
-  if (mob.hand >= 2) {
+  const modes = mob.modes ?? [];
+  const pickMode = mob.hand >= 2 && dofMode > 0 && modes.length ? modes[(dofMode - 1) % modes.length] : null;
+  if (mob.hand >= 2 && !pickMode) {
     let last = x0;
     return {
-      mode: "free", dof: mob.dof, hand: mob.hand, handle,
+      mode: "free", dof: mob.dof, hand: mob.hand, handle, modes: modes.length,
       reset: () => void (last = x0),
       drag: (target: Vec3) => {
         // começa do último lugar (mais estável); se ficar longe ou cair numa posição que não vale, tenta do começo
@@ -140,7 +146,7 @@ export function globalMoveOptions(cat: Catalog, model: Model, ref: MoveRef, free
   }
 
   // 1 grau de liberdade: percorre o caminho
-  const path = tracePath(mech, x0, hand, mob.v0);
+  const path = tracePath(mech, x0, hand, pickMode ?? mob.v0);
   const pts = path.samples.map((s) => s.h);
   const cache = new Map<number, NodeMove>();
   const sampleMove = (i: number) => {
@@ -182,7 +188,7 @@ export function globalMoveOptions(cat: Catalog, model: Model, ref: MoveRef, free
     tracked,
     evalParam,
   };
-  return { mode: "path", dof: mob.dof, handle, set, trails };
+  return { mode: "path", dof: mob.dof, handle, set, trails, ...(pickMode ? { modes: modes.length, modeIndex: ((dofMode - 1) % modes.length) + 1 } : {}) };
 }
 
 /* ---------- etapas: o que mexe junto (Espaço amplia) ---------- */
@@ -382,13 +388,13 @@ function computeScopes(cat: Catalog, model: Model, ref: MoveRef, local: boolean)
 }
 
 /** Movimento da peça na etapa `scope` (guardado por modelo: a mesma etapa não recalcula o caminho). */
-export function globalMoveAt(cat: Catalog, model: Model, ref: MoveRef, scope: MoveScope | null): GlobalMove {
+export function globalMoveAt(cat: Catalog, model: Model, ref: MoveRef, scope: MoveScope | null, dofMode = 0): GlobalMove {
   const ids = (s?: Iterable<string> | null) => (s ? [...s].sort().join(",") : "*");
-  const key = `${ref.kind}:${ref.id}:${ids(scope?.free)}:${(scope?.frozen ?? []).map((g) => ids(g)).join("|")}`;
+  const key = `${ref.kind}:${ref.id}:${ids(scope?.free)}:${(scope?.frozen ?? []).map((g) => ids(g)).join("|")}:m${dofMode}`;
   let memo = moveMemo.get(model);
   if (!memo) moveMemo.set(model, (memo = new Map()));
   let g = memo.get(key);
-  if (!g) memo.set(key, (g = globalMoveOptions(cat, model, ref, scope?.free ?? null, scope?.frozen ?? null)));
+  if (!g) memo.set(key, (g = globalMoveOptions(cat, model, ref, scope?.free ?? null, scope?.frozen ?? null, dofMode)));
   return g;
 }
 
@@ -437,6 +443,45 @@ export function structureMobility(cat: Catalog, model: Model): PartMobility[] {
     }
     const mech = buildMech(cat, model, comp);
     out.push({ nodes: comp.size - supports, supports, dof: mobility(mech, positionsOf(model, mech), []).dof });
+  }
+  return out;
+}
+
+/**
+ * Rótulas que giram num movimento: esferas em que o ângulo entre duas molas muda (ou, na GC, a direção de uma mola
+ * muda) entre o modelo de antes e o de depois. É o que a estrutura "dobra" para a peça andar (para mostrar na cena).
+ */
+export function turningJoints(cat: Catalog, base: Model, next: Model, moved: Set<string>, minDeg = 0.5): string[] {
+  const isBar = (code: string) => cat.pieces[code]?.type === "bar";
+  const around = new Set<string>(moved);
+  for (const id of moved) for (const m of membersAt(next, id)) if (isBar(m.code)) (around.add(m.a), around.add(m.b));
+  const dirAt = (m: Model, at: string, mem: { a: string; b: string }) => {
+    const o = mem.a === at ? mem.b : mem.a;
+    const v = sub(m.nodes[o].pos, m.nodes[at].pos);
+    const L = len(v) || 1;
+    return [v[0] / L, v[1] / L, v[2] / L] as Vec3;
+  };
+  const ang = (u: Vec3, v: Vec3) => (Math.acos(Math.max(-1, Math.min(1, dot(u, v)))) * 180) / Math.PI;
+  const out: string[] = [];
+  for (const id of around) {
+    if (!base.nodes[id] || !next.nodes[id]) continue;
+    const bars = membersAt(next, id).filter((m) => isBar(m.code) && base.members[m.id]);
+    let turns = false;
+    if (next.nodes[id].kind === "support") {
+      turns = bars.some((m) => ang(dirAt(base, id, m), dirAt(next, id, m)) > minDeg);
+    } else {
+      for (let i = 0; i < bars.length && !turns; i++) {
+        for (let j = i + 1; j < bars.length; j++) {
+          const a0 = ang(dirAt(base, id, bars[i]), dirAt(base, id, bars[j]));
+          const a1 = ang(dirAt(next, id, bars[i]), dirAt(next, id, bars[j]));
+          if (Math.abs(a1 - a0) > minDeg) {
+            turns = true;
+            break;
+          }
+        }
+      }
+    }
+    if (turns) out.push(id);
   }
   return out;
 }

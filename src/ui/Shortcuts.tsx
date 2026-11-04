@@ -38,6 +38,7 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
     keys: [
       ["Arrastar", "segurar e arrastar uma peça move a estrutura inteira"],
       ["Duplo clique", "a peça anda e a estrutura acompanha o que as ligações deixam: caminho azul (1 grau de liberdade), livre (2 ou mais) ou travada · ligação: outro lugar"],
+      ["G (peça andando livre)", "segue um modo de cada vez (uma liberdade só, num caminho azul); no fim volta ao livre"],
       ["Espaço (peça andando)", "próxima etapa: a posição desta fica e a forma dela trava; mexe só a próxima liberdade (só a peça → vizinhas → pavimento → estrutura toda). Shift+Espaço volta"],
       ["Tab (peça andando)", "referências do caminho: limites azul/vermelho, posições na horizontal/vertical e, na esfera de uma mola, as circunferências (Shift+Tab volta; ← / → também)"],
       ["Delete", "mola com enrijecedor: o primeiro tira o enrijecedor, o segundo apaga a mola"],

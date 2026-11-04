@@ -28,7 +28,7 @@ export type Tool =
    * duplo clique: a peça anda e o resto da estrutura acompanha o que precisar (caminho, livre ou travado).
    * `level`: qual etapa pode mexer (Espaço amplia: só a peça → vizinhas → pavimento → estrutura toda).
    */
-  | { kind: "moveBody"; ref: MoveRef; viaDrag: boolean; level: number }
+  | { kind: "moveBody"; ref: MoveRef; viaDrag: boolean; level: number; dofMode?: number }
   /** colar (ou mover várias peças: `moving.base` = modelo sem elas). R gira, X/Z espelha, ↑/↓ muda a altura */
   | { kind: "paste"; clip: Clip; turns: number; mirrorX: boolean; mirrorZ: boolean; dy: number; viaDrag: false; moving?: { base: Model } };
 
@@ -127,6 +127,8 @@ interface State {
   startMoveBody: () => void;
   /** Tab / Shift+Tab mexendo uma peça: amplia ou reduz o conjunto que mexe junto */
   cycleScope: (dir: 1 | -1) => void;
+  /** G no arraste livre: seguir só um modo (uma liberdade) por vez, e voltar ao livre */
+  cycleDofMode: () => void;
   /** arrastar uma peça: leva a estrutura inteira dela (qualquer peça) */
   startMoveStructure: (viaDrag: boolean) => void;
   /** área de transferência (Ctrl+C) */
@@ -404,6 +406,23 @@ export const useApp = create<State>((set, get) => ({
       return set({ hint: g.mode === "locked" ? g.reason : "Essa peça não mexe com a estrutura no lugar." });
     }
     enterScope(set, get, ref, 0);
+  },
+  cycleDofMode: () => {
+    const s = get();
+    const t = s.tool;
+    if (t.kind !== "moveBody") return set({ hint: "G troca o modo só no arraste livre (duplo clique numa peça com 2 ou mais graus de liberdade)." });
+    const g0 = globalOf(s.history.present, t.ref, t.level, 0);
+    if (g0.mode !== "free" || g0.modes < 2) return set({ hint: "Aqui não há modos para escolher: a peça já anda num caminho só (ou está travada)." });
+    const next = ((t.dofMode ?? 0) + 1) % (g0.modes + 1);
+    const g = globalOf(s.history.present, t.ref, t.level, next);
+    if (g.mode === "free") g.reset();
+    set({
+      tool: { ...t, dofMode: next },
+      ghost: null,
+      hint: next
+        ? `Modo ${next} de ${g0.modes}: a peça segue só essa liberdade (caminho azul/vermelho). G: próximo modo.`
+        : `Livre de novo (${g0.hand} graus de liberdade): arraste para qualquer lado. G: seguir um modo só.`,
+    });
   },
   cycleScope: (dir) => {
     const s = get();
@@ -819,19 +838,27 @@ export function scopesOf(model: Model, ref: MoveRef): MoveScope[] {
 }
 
 /** Movimento da peça no conjunto `level` (o caminho ou o arraste livre daquele conjunto). */
-export function globalOf(model: Model, ref: MoveRef, level: number): GlobalMove {
+export function globalOf(model: Model, ref: MoveRef, level: number, dofMode = 0): GlobalMove {
   const sc = scopesOf(model, ref)[level];
-  return globalMoveAt(catalog, model, ref, sc && sc.kind !== "local" ? sc : null);
+  return globalMoveAt(catalog, model, ref, sc && sc.kind !== "local" ? sc : null, dofMode);
 }
 
 /** "Etapa 2 de 3: pavimento Z ≥ 6 M (Espaço amplia)": o rodapé diz o que está mexendo. */
+/** " Modo 2 de 3 (G troca)." no arraste livre que segue um modo; " G: seguir um modo só." quando há modos para escolher. */
+function modeTag(model: Model, tool: Tool): string {
+  if (tool.kind !== "moveBody") return "";
+  const g0 = globalOf(model, tool.ref, tool.level, 0);
+  if (g0.mode !== "free" || g0.modes < 2) return "";
+  return tool.dofMode ? ` Modo ${tool.dofMode} de ${g0.modes} (G troca).` : " G: seguir um modo só.";
+}
+
 export function scopeTag(model: Model, tool: Tool): string {
   if (tool.kind !== "moveBody" && tool.kind !== "moveNode") return "";
   const ref: MoveRef = tool.kind === "moveBody" ? tool.ref : { kind: "node", id: tool.nodeId };
   const scopes = scopesOf(model, ref);
-  if (scopes.length < 2) return "";
+  if (scopes.length < 2) return modeTag(model, tool);
   const i = tool.kind === "moveBody" ? tool.level : 0;
-  return ` Etapa ${i + 1} de ${scopes.length}: ${scopes[i]?.short ?? "?"} (Espaço amplia, Shift+Espaço volta).`;
+  return ` Etapa ${i + 1} de ${scopes.length}: ${scopes[i]?.short ?? "?"} (Espaço amplia, Shift+Espaço volta).${modeTag(model, tool)}`;
 }
 
 type SetFn = (p: Partial<State>) => void;

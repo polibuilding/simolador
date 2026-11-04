@@ -22,7 +22,36 @@ function basis(at: THREE.Vector3, u: THREE.Vector3, v: THREE.Vector3) {
 
 // ---------- Diagonal (cabo fino com terminais) ----------
 
-export function Cable({ a, b, look = "normal", ...p }: { a: THREE.Vector3; b: THREE.Vector3; look?: Look } & Pickable) {
+/**
+ * Barriga de um cabo frouxo: o cabo (comprimento `nominal`, mm, entre os centros) com as pontas mais perto que isso pende
+ * numa parábola. Flecha f tal que o comprimento do arco ≈ d + 8f²/(3d) = nominal. Devolve os pontos no sistema local do
+ * cabo (eixo Y = da ponta a para a b, origem no meio), já com o lado "para baixo" do mundo; null se estiver esticado.
+ */
+export function sagCurve(a: THREE.Vector3, b: THREE.Vector3, nominal: number, inset: number): THREE.Vector3[] | null {
+  const d = a.distanceTo(b);
+  const slack = nominal - d;
+  if (!(slack > Math.max(0.5, 0.004 * nominal))) return null;
+  const di = Math.max(1, d - 2 * inset);
+  const f = Math.sqrt((3 * di * Math.min(slack, 0.5 * nominal)) / 8);
+  const dir = new THREE.Vector3().subVectors(b, a).normalize();
+  // "para baixo" perpendicular à corda (cabo em pé: para o lado)
+  const down = new THREE.Vector3(0, -1, 0).addScaledVector(dir, dir.y);
+  if (down.lengthSq() < 1e-6) down.set(1, 0, 0).addScaledVector(dir, -dir.x);
+  down.normalize();
+  // para o sistema local do grupo (quaternion que leva Y em `dir`)
+  const inv = new THREE.Quaternion().setFromUnitVectors(Y, dir).invert();
+  const dl = down.applyQuaternion(inv);
+  const pts: THREE.Vector3[] = [];
+  const n = 24;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const y = -di / 2 + di * t;
+    pts.push(new THREE.Vector3(0, y, 0).addScaledVector(dl, 4 * f * t * (1 - t)));
+  }
+  return pts;
+}
+
+export function Cable({ a, b, look = "normal", nominal, ...p }: { a: THREE.Vector3; b: THREE.Vector3; look?: Look; nominal?: number } & Pickable) {
   const term = s.diagonal_terminal_mm;
   const r = Math.max(0.5, s.cabo_diametro_mm / 2);
   const { mid, quat, len } = useMemo(() => {
@@ -37,11 +66,21 @@ export function Cable({ a, b, look = "normal", ...p }: { a: THREE.Vector3; b: TH
   const cap = useMaterial(look, COLORS.cap, 0.8, 0.3);
   const hit = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
   const inner = len - 2 * (SPHERE_R + term);
+  // frouxo (as pontas ficaram mais perto que o comprimento da diagonal): pende com barriga
+  const sag = useMemo(() => {
+    const pts = nominal ? sagCurve(a, b, nominal, SPHERE_R + term) : null;
+    return pts ? new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 32, r, 6, false) : null;
+  }, [a, b, nominal, r, term]);
+  useEffect(() => () => sag?.dispose(), [sag]);
   return (
     <group position={mid} quaternion={quat} {...pickProps(p)}>
-      <mesh material={cable}>
-        <cylinderGeometry args={[r, r, Math.max(1, inner), 8]} />
-      </mesh>
+      {sag ? (
+        <mesh material={cable} geometry={sag} />
+      ) : (
+        <mesh material={cable}>
+          <cylinderGeometry args={[r, r, Math.max(1, inner), 8]} />
+        </mesh>
+      )}
       {[-1, 1].map((sg) => (
         <mesh key={sg} position={[0, sg * (len / 2 - SPHERE_R - term / 2), 0]} rotation={[0, Math.PI / 4, 0]} material={cap}>
           <boxGeometry args={[term, term, term]} />

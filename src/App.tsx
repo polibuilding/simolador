@@ -117,6 +117,9 @@ function useShortcuts() {
         st.redo();
       } else if (!mod && k === "r") {
         st.rotate();
+      } else if (!mod && k === "g" && st.tool.kind === "moveBody") {
+        // G: no arraste livre, segue um modo (uma liberdade) por vez; no fim, volta ao livre
+        st.cycleDofMode();
       } else if (!mod && k === "n" && st.selection?.kind === "node") {
         st.startMoveNode(false);
       } else if (!mod && k === "m" && st.multi.length) {

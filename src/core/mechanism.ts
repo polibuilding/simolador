@@ -567,6 +567,11 @@ export interface Mobility {
   v0?: Float64Array;
   /** esferas que conseguem mexer nesse conjunto (índices do mecanismo) */
   moving?: number[];
+  /**
+   * Um movimento (todas as esferas) para cada liberdade independente da mão, do que mais a mexe ao que menos mexe:
+   * os "modos" que o usuário escolhe seguir no arraste livre (cada um vira um caminho).
+   */
+  modes?: Float64Array[];
 }
 
 /**
@@ -636,7 +641,22 @@ export function mobility(mech: Mech, x: Float64Array, hand: number[], opts: { fi
       if (alive.some((d) => Math.hypot(d[3 * i], d[3 * i + 1], d[3 * i + 2]) > 0.05)) moving.push(i);
     }
   }
-  return { dof: dofKeep.length, hand: best > 0.05 ? Math.max(1, handKeep.length) : 0, v0: best > 0.05 ? v0 : undefined, moving };
+  // modos: movimentos que mexem a mão em direções independentes (Gram-Schmidt na parte da mão)
+  const modes: Float64Array[] = [];
+  if (best > 0.05) {
+    const kept: number[][] = [];
+    const order = moves.map((d, j) => ({ d, h: handVecs[j], m: Math.hypot(...handVecs[j]) })).filter((x) => x.m > 0.05).sort((a, b) => b.m - a.m);
+    for (const { d, h, m } of order) {
+      const v = [...h];
+      for (const k of kept) {
+        const t = v.reduce((s, x, i) => s + x * k[i], 0);
+        for (let i = 0; i < v.length; i++) v[i] -= t * k[i];
+      }
+      const nv = Math.hypot(...v);
+      if (nv > 0.3 * m) (kept.push(v.map((x) => x / nv)), modes.push(d));
+    }
+  }
+  return { dof: dofKeep.length, hand: best > 0.05 ? Math.max(1, handKeep.length) : 0, v0: best > 0.05 ? v0 : undefined, moving, modes };
 }
 
 /**

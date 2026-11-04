@@ -100,3 +100,40 @@ describe("mexer o conjunto", () => {
     expect(len(sub(mm.nodes[id(m, [3, 6, 3])].pos, [3, 6, 3]))).toBeLessThan(1e-6); // o topo do pilar não mexe
   });
 });
+
+describe("modos do arraste livre (G)", () => {
+  it("pórtico sem ligações: a viga tem 3 modos; seguir o 1º vira caminho", async () => {
+    const { globalMoveOptions } = await import("../../src/core/globalMove");
+    const m = portico();
+    const beam = Object.values(m.members).find((b) => m.nodes[b.a].pos[1] === 6 && m.nodes[b.b].pos[1] === 6)!;
+    const g = globalMoveOptions(catalog, m, { kind: "member", id: beam.id });
+    expect(g.mode).toBe("free");
+    if (g.mode !== "free") return;
+    expect(g.modes).toBeGreaterThanOrEqual(2);
+    const p = globalMoveOptions(catalog, m, { kind: "member", id: beam.id }, null, null, 1);
+    expect(p.mode).toBe("path");
+    if (p.mode === "path") {
+      expect(p.modeIndex).toBe(1);
+      expect(p.set.locus?.kind).toBe("path");
+    }
+  });
+});
+
+describe("rótulas que giram", () => {
+  it("o pórtico tombando: as duas GC e as duas esferas de cima giram", async () => {
+    const { globalMoveOptions, turningJoints } = await import("../../src/core/globalMove");
+    let m = portico();
+    m = rc90(m, [3, 6, 3], [0, -1, 0], [1, 0, 0]);
+    m = rc90(m, [9, 6, 3], [0, -1, 0], [-1, 0, 0]);
+    const beam = Object.values(m.members).find((b) => m.nodes[b.a].pos[1] === 6 && m.nodes[b.b].pos[1] === 6)!;
+    const g = globalMoveOptions(catalog, m, { kind: "member", id: beam.id });
+    expect(g.mode).toBe("path");
+    if (g.mode !== "path") return;
+    const pts = (g.set.locus as { pts: Vec3[] }).pts;
+    const mv = g.set.evalAt!(pts[Math.floor(pts.length / 8)])!;
+    const t = turningJoints(catalog, m, mv.model, mv.ids);
+    // tomba em torno da linha das GC: giram as GC (rótulas); os cantos com RC90 não mudam de ângulo
+    expect(t.filter((id) => m.nodes[id].kind === "support").length).toBe(2);
+    expect(t.filter((id) => m.nodes[id].kind === "sphere").length).toBe(0);
+  });
+});

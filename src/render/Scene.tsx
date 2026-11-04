@@ -1,5 +1,5 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, GizmoHelper, GizmoViewport, Lightformer, Line, OrbitControls } from "@react-three/drei";
+import { Billboard, Environment, GizmoHelper, GizmoViewport, Lightformer, Line, OrbitControls } from "@react-three/drei";
 import { GizmoHelper as CubeHelperRaw } from "./gizmo/CubeHelper";
 import { GizmoViewcube as ViewCubeRaw } from "./gizmo/ViewCube";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -11,6 +11,7 @@ import { boardCorners } from "../core/boards";
 import { barGuidesFor, candidatesFor, globalFor, guidesFor, locusStatusFor, nodeOptionsFor, pathFor, Placement, reachFor, ropeRefsFor } from "../interaction/Placement";
 import { ropeEndAt } from "../core/rope";
 import { reachPoint } from "../core/reach";
+import { turningJoints } from "../core/globalMove";
 import { validateSupport } from "../core/rules";
 import { locusCirclePoint, locusSpherePoint } from "../core/edit";
 import { panelOpen, scopesOf, useApp, useDisplayModel, useModel, inclineOn, workingModel } from "../ui/store";
@@ -82,7 +83,7 @@ function ModelGroup({
       )}
       {Object.values(model.members).map((m) =>
         typeOf(m.code) === "cable" ? (
-          <Cable key={m.id} a={pos[m.a]} b={pos[m.b]} look={lookOf(m.id)} {...handlers("member", m.id)} />
+          <Cable key={m.id} a={pos[m.a]} b={pos[m.b]} nominal={diagonalMm(m.code)} look={lookOf(m.id)} {...handlers("member", m.id)} />
         ) : typeOf(m.code) === "rope" ? (
           <Rope key={m.id} a={pos[m.a]} b={pos[m.b]} ends={[ropeEndAt(context, m, m.a), ropeEndAt(context, m, m.b)]} look={lookOf(m.id)} {...handlers("member", m.id)} />
         ) : (
@@ -393,6 +394,39 @@ function ScopeMark() {
       ))}
     </group>
   );
+}
+
+/**
+ * Rótulas que giram: com uma peça andando (duplo clique), as esferas e GC em que as molas mudam de ângulo ganham um
+ * anel laranja no lugar novo. Mostra o que a estrutura dobra para a peça chegar ali.
+ */
+function TurningJoints() {
+  const tool = useApp((s) => s.tool);
+  const ghost = useApp((s) => s.ghost);
+  const present = useApp((s) => s.history.present);
+  const pts = useMemo(() => {
+    if ((tool.kind !== "moveNode" && tool.kind !== "moveBody") || ghost?.kind !== "group") return [];
+    return turningJoints(catalog, present, ghost.model, ghost.ids).map((id) => toWorld(ghost.model.nodes[id].pos));
+  }, [tool, ghost, present]);
+  if (!pts.length) return null;
+  return (
+    <group raycast={() => null}>
+      {pts.map((p, i) => (
+        <Billboard key={i} position={p}>
+          <mesh raycast={() => null} renderOrder={6}>
+            <ringGeometry args={[8.5, 10.5, 32]} />
+            <meshBasicMaterial color={COLORS.guideOrange} transparent opacity={0.95} depthTest={false} side={THREE.DoubleSide} />
+          </mesh>
+        </Billboard>
+      ))}
+    </group>
+  );
+}
+
+/** Comprimento da diagonal entre os centros das esferas (mm), pelo vão nominal dela: a referência do "frouxo". */
+function diagonalMm(code: string): number | undefined {
+  const span = catalog.pieces[code]?.spanM;
+  return span && span.length >= 2 ? Math.hypot(span[0], span[1]) * M : undefined;
 }
 
 /** Halo azul na esfera em destaque: a primeira de uma ligação (dois cliques) ou a que está andando sozinha. */
@@ -892,6 +926,7 @@ export function Scene() {
       <LinkMark />
       <RopeMarks />
       <ScopeMark />
+      <TurningJoints />
       <ReachView />
       <NodeLocusView />
       <Placement />
