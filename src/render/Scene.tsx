@@ -17,7 +17,7 @@ import { locusCirclePoint, locusSpherePoint } from "../core/edit";
 import { panelOpen, scopesOf, useApp, useDisplayModel, useModel, inclineOn, workingModel } from "../ui/store";
 import type { Sel } from "../core/edit";
 import { Bar, GroundConnection, Sphere, type Look } from "./pieces/pieces";
-import { Cable, ContinuousConnector, PlateMesh, RigidConnector, Rope, RopeClip } from "./pieces/more";
+import { Cable, ContinuousConnector, PlateMesh, RigidConnector, Rope, RopeClip, RopeRing } from "./pieces/more";
 import { COLORS, M, PLATE_D, PLATE_W, toWorld } from "./units";
 import { Boards } from "./Boards";
 import { SnapshotHook } from "./snapshot";
@@ -77,6 +77,8 @@ function ModelGroup({
           <GroundConnection key={n.id} position={pos[n.id]} look={lookOf(n.id)} {...handlers("node", n.id)} />
         ) : n.kind === "clip" ? (
           <RopeClip key={n.id} position={pos[n.id]} look={lookOf(n.id)} {...handlers("node", n.id)} />
+        ) : n.kind === "ring" ? (
+          <RopeRing key={n.id} position={pos[n.id]} code={n.ring} look={lookOf(n.id)} {...handlers("node", n.id)} />
         ) : (
           <Sphere key={n.id} position={pos[n.id]} look={lookOf(n.id)} {...handlers("node", n.id)} />
         ),

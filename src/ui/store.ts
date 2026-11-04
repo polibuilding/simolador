@@ -19,7 +19,7 @@ import {
 export type Tool =
   | { kind: "select" }
   /** colocar peça nova; `moving` = peça retirada para mudar de lugar (base = modelo sem ela) */
-  | { kind: "place"; code: string; viaDrag: boolean; moving?: { base: Model } }
+  | { kind: "place"; code: string; viaDrag: boolean; moving?: { base: Model; ringId?: string } }
   /** mover a estrutura conectada a um nó */
   | { kind: "moveGroup"; nodeId: string; turns: number; viaDrag: boolean }
   /** mover só um nó: as barras presas a partes fixas giram em torno da ponta fixa */
@@ -86,6 +86,8 @@ interface State {
   cyclePiece: (dir: 1 | -1, groups: string[][]) => void;
   /** Tab: qual dos pontos sobrepostos perto do cursor vale */
   snapCycle: number;
+  /** altura (módulos) em que o anel de cabo é colocado; ↑/↓ mudam */
+  ringY: number;
   /** referências do Tab no caminho (pontos; na esfera de uma mola, também circunferências) e a escolhida */
   nodeLimits: { pts: Vec3[]; i: number; rings?: ({ kind: "circle"; p: Vec3; h: number; e1: Vec3; e2: Vec3 } | null)[] } | null;
   /** barras inclinadas ligadas (botão na barra de ferramentas ou tecla I) */
@@ -194,6 +196,8 @@ interface State {
   setShiftHeld: (v: boolean) => void;
   setInventory: (inv: InventoryConfig) => void;
   setName: (n: string) => void;
+  /** cabo "sem cortar" (laço): o pedaço inteiro do membro */
+  setUncut: (memberId: string, v: boolean) => void;
   setSheet: (s: SheetMeta) => void;
   /** desfazer e refazer das pranchas (separado do da montagem) */
   sheetPast: SheetMeta[];
@@ -315,6 +319,7 @@ export const useApp = create<State>((set, get) => ({
     set({ hint: `${catalog.pieces[next]?.name ?? next} (Q/E trocam).` });
   },
   snapCycle: 0,
+  ringY: 6,
   nodeLimits: null,
   incline: false,
   barMode: "eixos",
@@ -395,6 +400,8 @@ export const useApp = create<State>((set, get) => ({
     const sel = s.selection;
     if (!sel || sel.kind === "connector") return s.startMove(false);
     const m = s.history.present;
+    // anel de cabo: anda no ar, com os cabos acompanhando (recontados)
+    if (sel.kind === "node" && m.nodes[sel.id]?.kind === "ring") return startRingMove(set, get, sel.id, false);
     // ponto de cabo (K9): anda sozinho na linha do pendural
     if (sel.kind === "node" && m.nodes[sel.id]?.kind === "clip") {
       return set({ tool: { kind: "moveNode", nodeId: sel.id, viaDrag: false }, ghost: null, hint: "O ponto anda na linha do pendural, bolinha a bolinha: o cabo principal acompanha, esticado. Esc cancela." });
@@ -450,6 +457,7 @@ export const useApp = create<State>((set, get) => ({
     const sel = s.selection;
     const m = s.history.present;
     if (!sel) return;
+    if (sel.kind === "node" && m.nodes[sel.id]?.kind === "ring") return startRingMove(set, get, sel.id, viaDrag);
     // a peça pega pela mão: esfera = ela mesma; barra, placa ou ligação = uma esfera dela
     const anchor =
       sel.kind === "node" ? sel.id
@@ -640,6 +648,7 @@ export const useApp = create<State>((set, get) => ({
     const sel = s.selection;
     if (!sel) return;
     const model = s.history.present;
+    if (sel.kind === "node" && model.nodes[sel.id]?.kind === "ring") return startRingMove(set, get, sel.id, viaDrag);
     if (sel.kind === "node") {
       set({ tool: { kind: "moveGroup", nodeId: sel.id, turns: 0, viaDrag }, ghost: null, hint: "Leve a estrutura até o novo lugar. R gira 90°." });
       return;
@@ -728,6 +737,23 @@ export const useApp = create<State>((set, get) => ({
   setShiftHeld: (shiftHeld) => (get().shiftHeld === shiftHeld ? undefined : set({ shiftHeld, rotIndex: 0 })),
   setInventory: (inventory) => set({ inventory }),
   setName: (name) => set({ name }),
+  setUncut: (memberId, v) => {
+    const { history } = get();
+    const m0 = history.present;
+    const mb = m0.members[memberId];
+    if (!mb) return;
+    const chain = mb.chain ?? mb.id;
+    const members = Object.fromEntries(
+      Object.entries(m0.members).map(([k, x]) => {
+        if ((x.chain ?? x.id) !== chain) return [k, x];
+        const y = { ...x };
+        if (v) y.uncut = true;
+        else delete y.uncut;
+        return [k, y];
+      }),
+    );
+    set({ history: push(history, { ...m0, members }), hint: v ? "Sem cortar: o pedaço ocupa um rolo só para ele e a sobra fica presa." : "O cabo volta a ser cortado na medida." });
+  },
   setSheet: (sheet) =>
     set((s) => (sheet === s.sheet ? {} : { sheet, sheetPast: [...s.sheetPast, s.sheet].slice(-SHEET_UNDO), sheetFuture: [] })),
   sheetPast: [],
@@ -885,5 +911,18 @@ function enterScope(set: SetFn, get: () => State, ref: MoveRef, level: number, v
         : g.mode === "path"
           ? `${head}Anda num caminho (1 grau de liberdade): azul pode, vermelho não. Tab: limites e posições na horizontal/vertical.${tail}`
           : `${head}Livre (${g.hand} graus de liberdade): arraste; o resto do conjunto mexe só o que precisar.${tail}`,
+  });
+}
+
+/** Mover um anel de cabo: segue o cursor na altura dele (↑/↓ mudam), e os cabos presos nele são recontados. */
+function startRingMove(set: SetFn, get: () => State, id: string, viaDrag: boolean) {
+  const m = get().history.present;
+  const n = m.nodes[id];
+  if (!n) return;
+  set({
+    tool: { kind: "place", code: n.ring ?? "RING-P", viaDrag, moving: { base: m, ringId: id } },
+    ringY: n.pos[1],
+    ghost: null,
+    hint: "Leve o anel até o novo lugar (↑/↓ mudam a altura); os cabos acompanham. Esc cancela.",
   });
 }

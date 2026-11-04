@@ -6,7 +6,7 @@ import { continuousOutline } from "../../core/shapes";
 import type { Vec3 } from "../../core/model";
 import { COLORS } from "../units";
 import { pickProps, SPHERE_R, useMaterial, type Look, type Pickable } from "./pieces";
-import { ropeSpec, segmentBallOffsets, type RopeEnd } from "../../core/rope";
+import { ropeSpec, segmentBallOffsets, sphereEnd, type RopeEnd } from "../../core/rope";
 import { useEffect, useRef } from "react";
 
 const s = catalog.settings;
@@ -117,7 +117,7 @@ export function Rope({ a, b, ends = ["sphere", "sphere"], look = "normal", ...p 
       first: -L / 2 + (offs[0] ?? 0),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [a, b, sp.pitch, sp.end, sp.tap, ea, eb]);
+  }, [a, b, sp.pitch, sp.end, sp.tap, sp.multi, sp.ringP, sp.ringM, ea, eb]);
   const steel = useMaterial(look, "#aeb5bb", 0.9, 0.25);
   const dark = useMaterial(look, "#7c858c", 0.85, 0.3);
   const hit = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
@@ -149,6 +149,17 @@ export function Rope({ a, b, ends = ["sphere", "sphere"], look = "normal", ...p 
             </mesh>
           );
         }
+        if (end === "ring-p" || end === "ring-m") {
+          // anel: só o clip de cabo, preso no anel
+          const r0 = (end === "ring-m" ? sp.ringM : sp.ringP) - clip;
+          return (
+            <mesh key={sg} position={[0, sg * (len / 2 - r0 - clip / 2 + 0.5), 0]} material={dark}>
+              <boxGeometry args={[2.6, clip - 1.5, 2.6]} />
+            </mesh>
+          );
+        }
+        // clip de múltiplos cabos: um pouco maior que o simples
+        const clipLen = end === "multi" ? sp.multi - SPHERE_R - conn : clip;
         // da superfície da esfera para dentro do cabo
         const at = (d: number) => sg * (len / 2 - SPHERE_R - d);
         return (
@@ -161,21 +172,38 @@ export function Rope({ a, b, ends = ["sphere", "sphere"], look = "normal", ...p 
             <mesh position={[0, at(conn - ringR), 0]} rotation={[0, 0, Math.PI / 2]} material={steel}>
               <torusGeometry args={[ringR, 0.35, 6, 14]} />
             </mesh>
-            {/* clip de cabo (CABLE CLIP C) */}
-            <mesh position={[0, at(conn + clip / 2 - 1), 0]} material={dark}>
-              <boxGeometry args={[2.6, clip - 1.5, 2.6]} />
+            {/* clip de cabo (CABLE CLIP C) ou de múltiplos cabos (M CABLE CLIP C, mais largo) */}
+            <mesh position={[0, at(conn + clipLen / 2 - 1), 0]} material={dark}>
+              <boxGeometry args={[end === "multi" ? 3.4 : 2.6, clipLen - 1.5, end === "multi" ? 3.4 : 2.6]} />
             </mesh>
           </group>
         );
       })}
       <mesh material={hit}>
-        <cylinderGeometry args={[3.5, 3.5, Math.max(1, len - (ea === "sphere" ? SPHERE_R : 0) - (eb === "sphere" ? SPHERE_R : 0)), 6]} />
+        <cylinderGeometry args={[3.5, 3.5, Math.max(1, len - (sphereEnd(ea) ? SPHERE_R : 0) - (sphereEnd(eb) ? SPHERE_R : 0)), 6]} />
       </mesh>
     </group>
   );
 }
 
 /** Ponto de cabo (K7): o CABLE CLIP C que prende a bolinha do cabo principal pelo furo do meio. */
+/** Anel de cabo (CABLE R) no ar: um aro de aço, pequeno (RING-P) ou médio (RING-M), virado para a câmera. */
+export function RopeRing({ position, code, look = "normal", ...p }: { position: THREE.Vector3; code?: string; look?: Look } & Pickable) {
+  const mat = useMaterial(look, "#9aa3aa", 0.95, 0.2);
+  const hit = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
+  const d = Number((catalog.pieces[code ?? "RING-P"]?.geometry as { lengthMm?: number } | undefined)?.lengthMm ?? 10);
+  return (
+    <group position={position} {...pickProps(p)}>
+      <mesh material={mat} castShadow rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[d / 2, 0.9, 10, 28]} />
+      </mesh>
+      <mesh material={hit}>
+        <sphereGeometry args={[Math.max(6, d / 2 + 2), 10, 8]} />
+      </mesh>
+    </group>
+  );
+}
+
 export function RopeClip({ position, look = "normal", ...p }: { position: THREE.Vector3; look?: Look } & Pickable) {
   const mat = useMaterial(look, "#5d666d", 0.85, 0.3);
   const hit = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);

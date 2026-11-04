@@ -190,6 +190,29 @@ function Selected() {
     const plates = Object.values(model.plates).filter((p) => p.corners.includes(n.id));
     const group = componentOf(model, n.id).size;
     const gc = n.kind === "support";
+    if (n.kind === "ring") {
+      // K10: anel de cabo no ar (só recebe cabos)
+      const ropes = members.filter((m) => catalog.pieces[m.code]?.type === "rope");
+      const medio = n.ring === "RING-M";
+      return (
+        <>
+          <h2>Anel de cabo {medio ? "médio" : "pequeno"} <span className="code-chip">{n.ring ?? "RING-P"}</span></h2>
+          <Section title="Posição e geometria">
+            <dl>
+              <Row k="Posição" v={posText(n.pos)} />
+              <Row k="Cabos" v={ropes.length ? `${ropes.length} (cada um com um CABLE CLIP C no anel)` : "nenhum ainda: ligue cabos nele com o CABLE"} />
+            </dl>
+          </Section>
+          <Section title="Ligações">
+            <dl>
+              <Row k="Mover" v="duplo clique ou arraste: o anel anda no ar (↑/↓ mudam a altura) e os cabos acompanham" />
+              <Row k="Forma" v="na 1.x os cabos ficam esticados até o anel; a forma de equilíbrio (com cargas) fica para a 3.x" />
+            </dl>
+          </Section>
+          <Actions removeLabel="Remover anel e os cabos presos nele" />
+        </>
+      );
+    }
     if (n.kind === "clip") {
       // K7: ponto de cabo (bolinha do cabo principal com o clip do pendural)
       const chains = ropeChains(catalog, model);
@@ -230,6 +253,11 @@ function Selected() {
         <Section title="Ligações">
           <dl>
             <Row k="Molas e diagonais" v={`${members.length ? countText(members.map((m) => m.code)) : "nenhuma"}`} />
+            {(() => {
+              const ropes = members.filter((m) => catalog.pieces[m.code]?.type === "rope").length;
+              if (ropes < 2 && !n.mclip) return null;
+              return <Row k="Cabos" v={n.mclip ? `${ropes} num clip de múltiplos cabos (${Math.ceil(ropes / 5)} CABLE C)` : `${ropes}, cada um com a sua CABLE C (o clip múltiplo junta até 5)`} />;
+            })()}
             {conns.length > 0 && <Row k="Ligações" v={countText(conns.map((c) => c.code))} />}
             {plates.length > 0 && <Row k="Placas" v={countText(plates.map((p) => p.code))} />}
             <Row k="Estrutura" v={`${group} ${group === 1 ? "nó" : "nós"} ligados`} />
@@ -256,7 +284,8 @@ function Selected() {
       const simple = !!ch && ch.members.length === 1 && ch.ends.every((e) => e === "sphere");
       const info = simple ? ropeInfo(catalog, A, B) : null;
       const cut = ch ? ropePlan(catalog, model).cuts.findIndex((c) => c.id === ch.id) : -1;
-      const endText = (e: string) => (e === "sphere" ? "esfera · CABLE C · CABLE CLIP C" : "CABLE CLIP C no outro cabo");
+      const endText = (e: string) =>
+        e === "sphere" ? "esfera · CABLE C · CABLE CLIP C" : e === "multi" ? "esfera · CABLE C · M CABLE CLIP C" : e === "ring-p" || e === "ring-m" ? "anel · CABLE CLIP C" : "CABLE CLIP C no outro cabo";
       const tap = ch && ch.ends.includes("tap");
       return (
         <>
@@ -268,7 +297,7 @@ function Selected() {
               {info && <Row k="Esticador (CABLE C)" v={`absorve ${fmt(info.slackMm)} mm`} />}
               {ch && ch.members.length > 1 && <Row k="Trechos" v={`${ch.members.length} (retos entre os pontos de cabo, esticados)`} />}
               {ch?.points.map((pt, i) => <Row key={pt.node} k={`Pendural ${i + 1}`} v={`na bolinha ${pt.ball} · ${posText(model.nodes[pt.node].pos)}`} />)}
-              {cut >= 0 && <Row k="No plano de corte" v={`pedaço ${cut + 1}`} />}
+              {cut >= 0 && <Row k="No plano de corte" v={`pedaço ${cut + 1}${ch?.uncut ? " (sem cortar: ocupa um rolo)" : ""}`} />}
               <Row k="Direção" v={directionText(A, B)} />
               <Row k="De" v={posText(A)} />
               <Row k="Até" v={posText(B)} />
@@ -280,6 +309,12 @@ function Selected() {
               <Row k={`Na ponta ${posText(A)}`} v={atEnd(m.a).length ? countText(atEnd(m.a)) : "só este cabo"} />
               <Row k={`Na ponta ${posText(B)}`} v={atEnd(m.b).length ? countText(atEnd(m.b)) : "só este cabo"} />
             </dl>
+          </Section>
+          <Section title="Corte">
+            <label className="check-row">
+              <input type="checkbox" checked={!!ch?.uncut} onChange={(e) => useApp.getState().setUncut(m.id, e.target.checked)} />
+              <span>Sem cortar (laço): o clip prende a bolinha da medida e o resto do rolo fica preso, sobrando</span>
+            </label>
           </Section>
           <Actions removeLabel="Remover cabo" />
         </>
@@ -549,15 +584,21 @@ export function RopeSummary() {
           </>
         )}
       </p>
+      {plan.splices > 0 && (
+        <p className="rope-roll-title">
+          {plan.splices} {plan.splices === 1 ? "emenda" : "emendas"}: o pedaço que não cabe inteiro numa sobra é dividido, e as partes se unem com um CABLE CLIP C.
+        </p>
+      )}
       {plan.rolls.map((r, i) => (
         <div key={i} className="rope-roll">
           <p className="rope-roll-title">
-            Rolo {i + 1}: cortar {r.length} {r.length === 1 ? "pedaço" : "pedaços"} · sobram {ballsPerRoll(sp) - r.reduce((n, c) => n + c.balls, 0)} bolinhas
+            Rolo {i + 1}: {r.some((c) => c.uncut) ? "sem cortar" : `cortar ${r.length} ${r.length === 1 ? "pedaço" : "pedaços"} · sobram ${ballsPerRoll(sp) - r.reduce((n, c) => n + c.balls, 0)} bolinhas`}
           </p>
           <ol>
-            {r.map((c) => (
-              <li key={c.id} value={order.get(c.id)}>
-                {ropeText(c.balls, c.cutMm)}
+            {r.map((c, k) => (
+              <li key={`${c.id}-${c.part ?? 0}-${k}`} value={order.get(c.id)}>
+                {c.uncut ? `${ropeText(c.balls, c.cutMm)} · sem cortar (o resto do rolo fica preso)` : ropeText(c.balls, c.cutMm)}
+                {c.part ? ` · parte ${c.part} de ${c.of} (emenda)` : ""}
               </li>
             ))}
           </ol>
@@ -617,7 +658,7 @@ function MultiSelected() {
     if (s.kind === "node") {
       const n = model.nodes[s.id];
       if (!n) continue;
-      const k = n.kind === "support" ? "GC" : n.kind === "clip" ? "CLIP-C" : "C";
+      const k = n.kind === "support" ? "GC" : n.kind === "clip" ? "CLIP-C" : n.kind === "ring" ? n.ring ?? "RING-P" : "C";
       count[k] = (count[k] ?? 0) + 1;
       nodeIds.add(n.id);
     } else if (s.kind === "member") {
@@ -724,7 +765,7 @@ export function SelectionTag() {
   if (multi) text = `${multi} peças selecionadas`;
   else if (sel?.kind === "node") {
     const n = model.nodes[sel.id];
-    if (n) text = `${n.kind === "support" ? "GC" : n.kind === "clip" ? "Ponto de cabo" : "Esfera (C)"} · ${posText(n.pos)}`;
+    if (n) text = `${n.kind === "support" ? "GC" : n.kind === "clip" ? "Ponto de cabo" : n.kind === "ring" ? "Anel de cabo" : "Esfera (C)"} · ${posText(n.pos)}`;
   } else if (sel) {
     const code = sel.kind === "member" ? model.members[sel.id]?.code : sel.kind === "plate" ? model.plates[sel.id]?.code : model.connectors[sel.id]?.code;
     const name = code ? catalog.pieces[code]?.name : undefined;

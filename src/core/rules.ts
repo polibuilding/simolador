@@ -4,7 +4,7 @@ import type { Catalog } from "./catalog";
 import { available, remaining, type InventoryConfig } from "./inventory";
 import { boardAt, frameRadAt } from "./boards";
 import { pointSegDist, polygonsCross, rc90Outline, segmentHitsPolygon, segSegDist } from "./geom";
-import { kit3Usage, ropeEndAt, ropeInfo, ropeMinMm, ropePlan, ROPE, ROPE_CLIP, ROPE_CONN, stiffenerFor, ballsPerRoll, ropeSpec, type RopeEnd } from "./rope";
+import { kit3Usage, nodeEnd, ropeEndAt, ropeInfo, ropeMinMm, ropePlan, ROPE, ROPE_CLIP, ROPE_CONN, ROPE_MCLIP, stiffenerFor, ballsPerRoll, ropeSpec, type RopeEnd } from "./rope";
 import {
   DIR_TOL, EPS, UP, type Model, boardsOf, type Vec3, type Member, add, chainOf, cross, dot, findNodeAt, len, membersAt,
   directionFrom, memberAlong, norm, plateKey, rotYRad, samePos, scale, sub,
@@ -312,6 +312,7 @@ export function validateMember(
   const cable = piece.type === "cable";
   // K7: o ponto de cabo só recebe cabos
   if (from.kind === "clip" || findNodeAt(model, toPos)?.kind === "clip") return result(["O ponto de cabo só recebe cabos."]);
+  if (from.kind === "ring" || findNodeAt(model, toPos)?.kind === "ring") return result(["O anel de cabo só recebe cabos."]);
 
   const v = sub(toPos, from.pos);
   const L = len(v);
@@ -452,6 +453,7 @@ export function validatePlate(cat: Catalog, inv: InventoryConfig, model: Model, 
   if (!piece || piece.type !== "plate") return result([`${code} não é placa.`]);
   const nodes = g.corners.map((c) => findNodeAt(model, c));
   if (nodes.some((n) => !n)) errors.push("A placa precisa de uma esfera em cada um dos 4 cantos."); // P1
+  if (nodes.some((n) => n && (n.kind === "clip" || n.kind === "ring"))) errors.push("A placa precisa de esferas nos cantos (anel e ponto de cabo só recebem cabos).");
   if (g.corners.some((c) => c[1] < -EPS)) errors.push("A placa iria para baixo da chapa.");
   if (onGround(...g.corners)) errors.push("Nada pode ficar deitado na chapa."); // G6
   if (nodes.every(Boolean)) {
@@ -524,6 +526,7 @@ export function validateConnector(cat: Catalog, inv: InventoryConfig, model: Mod
   const errors: string[] = [];
   const n = model.nodes[spec.node];
   if (!n) return result(["Escolha uma esfera."]);
+  if (n.kind === "clip" || n.kind === "ring") return result(["As ligações vão nas esferas (anel e ponto de cabo só recebem cabos)."]);
   const existing = Object.values(model.connectors).filter((c) => c.node === spec.node);
   const barAlong = (d: Vec3) => !!memberAlong(model, spec.node, d, isBarM(cat));
   if (spec.code === "RC90") {
@@ -675,7 +678,7 @@ export function validateRope(cat: Catalog, inv: InventoryConfig, model: Model, a
     }
   }
   if (A.kind === "clip" && B.kind === "clip" && [...passing(aId)].some((c) => passing(bId).has(c))) return result(["As duas pontas ficariam no mesmo cabo."]);
-  const ends: [RopeEnd, RopeEnd] = [A.kind === "clip" ? "tap" : "sphere", B.kind === "clip" ? "tap" : "sphere"];
+  const ends: [RopeEnd, RopeEnd] = [nodeEnd(model, aId), nodeEnd(model, bId)];
   const fmt = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
   // K1: comprimento mínimo (as duas ligações de cabo e os clipes já ocupam um tanto)
   const info = ropeInfo(cat, A.pos, B.pos, ends);
@@ -688,7 +691,7 @@ export function validateRope(cat: Catalog, inv: InventoryConfig, model: Model, a
   const minA = Number(s.cabo_angulo_minimo_graus ?? 20);
   const d = norm(sub(B.pos, A.pos));
   for (const [id, dir] of [[aId, d], [bId, scale(d, -1)]] as const) {
-    if (model.nodes[id].kind === "clip") continue;
+    if (model.nodes[id].kind === "clip" || model.nodes[id].kind === "ring") continue; // clip e anel prendem em qualquer ângulo
     for (const m of membersAt(model, id)) {
       const ang = angleDeg(directionFrom(model, m, id), dir);
       if (ang < minA - 0.5) {
@@ -713,13 +716,14 @@ export function validateRope(cat: Catalog, inv: InventoryConfig, model: Model, a
     else {
       const plan = ropePlan(cat, after);
       const cap = ballsPerRoll(ropeSpec(cat));
-      if (info.balls > cap) errors.push(`Esse cabo pede ${info.balls} bolinhas; um rolo inteiro tem ${cap}.`);
+      // maior que um rolo: só com emenda (vários rolos)
+      if (info.balls > cap && rolls < 2) errors.push(`Esse cabo pede ${info.balls} bolinhas; um rolo inteiro tem ${cap} (com emenda, precisa de mais rolos).`);
       else if (plan.rolls.length > rolls) {
         errors.push(`Acabou o cabo: esse pedaço (${info.balls} bolinhas) não cabe no que sobrou ${rolls > 1 ? `dos ${rolls} rolos` : "do rolo"}.`);
       }
     }
     const use = kit3Usage(cat, after);
-    for (const code of [ROPE_CONN, ROPE_CLIP]) {
+    for (const code of [ROPE_CONN, ROPE_CLIP, ROPE_MCLIP]) {
       const have = available(cat, inv, code);
       if ((use[code] ?? 0) > have) errors.push(`Acabaram as ${cat.pieces[code]?.name ?? code} do estoque (${have} nos kits escolhidos).`);
     }
@@ -737,4 +741,20 @@ export function validateStiffener(cat: Catalog, inv: InventoryConfig, model: Mod
   if (m.stiff) return { ...result([]), code, remove: true };
   const errors = inv.unlimited ? [] : remaining(cat, inv, model, code) < 1 ? [`Acabaram os enrijecedores ${code} do estoque.`] : [];
   return { ...result(errors), code };
+}
+
+/**
+ * K10: anel de cabo (CABLE R) no ar. Fica acima da chapa, longe das esferas e de outros anéis (folga de uma esfera), e
+ * conta no estoque (RING-P ou RING-M).
+ */
+export function validateRing(cat: Catalog, inv: InventoryConfig, model: Model, pos: Vec3, code: string, ignore?: string): Check {
+  const s = cat.settings;
+  const errors: string[] = [];
+  if (pos[1] < 1 - EPS) errors.push("O anel fica no ar: pelo menos 1 módulo acima da chapa.");
+  const minD = s.esfera_diametro_mm / s.modulo_mm;
+  if (Object.values(model.nodes).some((n) => n.id !== ignore && len(sub(n.pos, pos)) < minD)) errors.push("Encostaria numa esfera ou em outro anel.");
+  const hit = sphereOnMember(cat, model, pos);
+  if (hit) errors.push(hit);
+  if (!ignore) errors.push(...stockErrors(cat, inv, model, code));
+  return result(errors);
 }

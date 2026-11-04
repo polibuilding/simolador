@@ -433,7 +433,7 @@ export function structureMobility(cat: Catalog, model: Model): PartMobility[] {
   const seen = new Set<string>();
   const out: PartMobility[] = [];
   for (const n of Object.values(model.nodes)) {
-    if (seen.has(n.id) || n.kind === "support" || n.kind === "clip") continue; // ponto de cabo: só cabos (não seguram a forma)
+    if (seen.has(n.id) || n.kind === "support" || n.kind === "clip" || n.kind === "ring") continue; // ponto de cabo e anel: só cabos (não seguram a forma)
     const comp = mechComponent(cat, model, [n.id]);
     for (const id of comp) if (model.nodes[id].kind !== "support") seen.add(id);
     const supports = [...comp].filter((id) => model.nodes[id].kind === "support").length;

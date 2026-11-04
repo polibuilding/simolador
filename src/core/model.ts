@@ -4,7 +4,7 @@
 
 export type Vec3 = [number, number, number];
 
-export type NodeKind = "sphere" | "support" | "clip";
+export type NodeKind = "sphere" | "support" | "clip" | "ring";
 
 export interface MolaNode {
   id: string;
@@ -12,9 +12,15 @@ export interface MolaNode {
    * sphere = esfera C; support = ligação de base GC (esfera embutida);
    * clip = ponto de cabo (Kit 3): uma bolinha de um cabo, presa pelo furo do meio de um CABLE CLIP C, onde sai outro
    * cabo (pendural). Só recebe cabos.
+   * ring = anel de cabo (CABLE R, Kit 3): um ponto no ar onde chegam vários cabos (redes, coberturas suspensas). Só
+   * recebe cabos; `ring` diz qual anel (RING-P pequeno, RING-M médio).
    */
   kind: NodeKind;
   pos: Vec3;
+  /** anel de cabo: RING-P ou RING-M */
+  ring?: string;
+  /** esfera ou GC com os cabos num clip de múltiplos cabos (M CABLE CLIP C: até 5 cabos numa só CABLE C) */
+  mclip?: boolean;
 }
 
 /** Barra (B4, B6, B12), diagonal (D4x6, D6x6, D6x12) ou cabo (CABLE, Kit 3) entre dois nós. */
@@ -30,6 +36,8 @@ export interface Member {
    * original). Sem `chain`, o pedaço é o próprio membro.
    */
   chain?: string;
+  /** cabo "sem cortar": o clip prende a bolinha da medida e o resto do rolo fica preso, sobrando (laço) */
+  uncut?: boolean;
 }
 
 /** Pedaço de cabo a que o membro pertence. */
@@ -423,4 +431,10 @@ export function transformNodes(model: Model, ids: Set<string>, pivot: Vec3, turn
     };
   }
   return { ...model, nodes, connectors };
+}
+
+/** Anel de cabo (CABLE R) no ar, em `pos` (módulos). */
+export function addRing(model: Model, pos: Vec3, code: string): { model: Model; id: string } {
+  const id = newId(model, "n");
+  return { id, model: { ...model, nextId: model.nextId + 1, nodes: { ...model.nodes, [id]: { id, kind: "ring", pos: round4(pos), ring: code } } } };
 }

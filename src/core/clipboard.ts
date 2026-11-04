@@ -10,7 +10,7 @@ import {
 import { validateConnector, validateMember, validateMovedModel, validatePlate, validateRope, validateSupport, type Check, type PlateGeom } from "./rules";
 
 export interface Clip {
-  nodes: { key: string; kind: NodeKind; rel: Vec3 }[];
+  nodes: { key: string; kind: NodeKind; rel: Vec3; ring?: string }[];
   members: { code: string; a: string; b: string; stiff?: boolean; chain?: string }[];
   plates: { code: string; corners: [string, string, string, string] }[];
   connectors: { code: string; node: string; dirs: Vec3[]; base?: boolean; side?: Vec3 }[];
@@ -58,7 +58,7 @@ export function makeClip(model: Model, sels: Sel[]): Clip | null {
   const hi = [0, 1, 2].map((k) => Math.max(...ps.map((p) => p[k])));
   const anchor: Vec3 = [Math.round((lo[0] + hi[0]) / 2), lo[1], Math.round((lo[2] + hi[2]) / 2)];
   return {
-    nodes: [...nodeIds].map((id) => ({ key: id, kind: model.nodes[id].kind, rel: round4(sub(model.nodes[id].pos, anchor)) })),
+    nodes: [...nodeIds].map((id) => ({ key: id, kind: model.nodes[id].kind, rel: round4(sub(model.nodes[id].pos, anchor)), ...(model.nodes[id].ring ? { ring: model.nodes[id].ring } : {}) })),
     members: [...memberIds].map((id) => {
       const m = model.members[id];
       return { code: m.code, a: m.a, b: m.b, ...(m.stiff ? { stiff: true } : {}), ...(m.chain ? { chain: m.chain } : {}) };
@@ -122,8 +122,8 @@ export function pasteClip(cat: Catalog, inv: InventoryConfig, model: Model, clip
     }
     const nid = id("n");
     // GC só no nível da chapa; fora dele vira esfera
-    const kind = n.kind === "clip" ? "clip" : n.kind === "support" && Math.abs(pos[1]) < 1e-6 ? "support" : "sphere";
-    m.nodes[nid] = { id: nid, kind, pos };
+    const kind = n.kind === "clip" || n.kind === "ring" ? n.kind : n.kind === "support" && Math.abs(pos[1]) < 1e-6 ? "support" : "sphere";
+    m.nodes[nid] = { id: nid, kind, pos, ...(kind === "ring" ? { ring: n.ring ?? "RING-P" } : {}) };
     map.set(n.key, nid);
     newNodes.add(nid);
   }

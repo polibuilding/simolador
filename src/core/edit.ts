@@ -19,7 +19,7 @@ export function codeOf(model: Model, sel: Sel): string | null {
   if (sel.kind === "plate") return model.plates[sel.id]?.code ?? null;
   if (sel.kind === "connector") return model.connectors[sel.id]?.code ?? null;
   const n = model.nodes[sel.id];
-  return n ? (n.kind === "support" ? "GC" : n.kind === "clip" ? "CLIP-C" : "C") : null;
+  return n ? (n.kind === "support" ? "GC" : n.kind === "clip" ? "CLIP-C" : n.kind === "ring" ? n.ring ?? "RING-P" : "C") : null;
 }
 
 export function removeSelection(model: Model, sel: Sel): Model {

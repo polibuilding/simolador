@@ -1,11 +1,12 @@
 // Kit 3: cabo (esferas e bolinhas de outros cabos) e enrijecedor.
 import { catalog } from "../../core/catalog";
-import { len, sub, type Model, type Vec3 } from "../../core/model";
-import { validateRope, validateStiffener } from "../../core/rules";
-import { ropeBalls, ropeChainOf, ropeInfo, ropeLink, ropeText, type RopeBall, type RopeEnd, type RopePick, type RopeRef } from "../../core/rope";
+import { addRing, len, sub, toDisp, type Model, type Vec3 } from "../../core/model";
+import { validateRing, validateRope, validateStiffener } from "../../core/rules";
+import { available } from "../../core/inventory";
+import { kit3Usage, MCLIP_MAX, moveRingTo, nodeEnd, ROPE_MCLIP, ropeBalls, ropeChainOf, ropeInfo, ropeLink, ropeText, type RopeBall, type RopePick, type RopeRef } from "../../core/rope";
 import { type Candidate } from "../../core/snapping";
 import { useApp } from "../../ui/store";
-import { toWorld } from "../../render/units";
+import { BASE_Y, M, toWorld } from "../../render/units";
 import type { Ctx } from "../ctx";
 import * as Q from "../queries";
 import { sphereUnder } from "./bars";
@@ -82,8 +83,7 @@ export function ropeStep(ctx: Ctx, ev: PointerEvent, rect: DOMRect, model: Model
   const r = ropeLink(model, code, a, b);
   const base: Model = { ...r.model, members: Object.fromEntries(Object.entries(r.model.members).filter(([k]) => k !== r.id)) };
   const check = validateRope(catalog, inv, base, r.a, r.b);
-  const end = (id: string) => (r.model.nodes[id].kind === "clip" ? "tap" : "sphere") as RopeEnd;
-  const info = ropeInfo(catalog, r.model.nodes[r.a].pos, r.model.nodes[r.b].pos, [end(r.a), end(r.b)]);
+  const info = ropeInfo(catalog, r.model.nodes[r.a].pos, r.model.nodes[r.b].pos, [nodeEnd(r.model, r.a), nodeEnd(r.model, r.b)]);
   cmd.linkGhost = { moved: 0 };
   const where = hit ? ` preso na ${ballText(hit)}` : fromBall ? " preso no outro cabo" : "";
   const text = check.ok && info ? `${r.clips.length ? "Pendural" : "Cabo"} de ${ropeText(info.balls, info.cutMm)}${where}. Clique para colocar.` : check.errors[0];
@@ -121,5 +121,72 @@ export function stiffStep(ctx: Ctx, ev: PointerEvent, rect: DOMRect, model: Mode
   st.setGhost(
     { kind: "group", model: next, ids: new Set(), part, keep: true, check: { ok: r.ok, errors: r.errors, warnings: [] } },
     r.ok ? (r.remove ? `Clique para tirar o enrijecedor desta ${m.code}.` : `Clique para pôr o enrijecedor ${r.code} nesta ${m.code}.`) : r.errors[0],
+  );
+}
+
+/** Anel de cabo (CABLE R): fica no ar, na altura escolhida (↑/↓), seguindo o cursor na grade; depois recebe cabos. */
+export function ringStep(ctx: Ctx, ev: PointerEvent, rect: DOMRect, model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"]) {
+  const st = useApp.getState();
+  const y = st.ringY;
+  const hit = ctx.planeHit(ev, rect, BASE_Y + y * M);
+  if (!hit) return st.setGhost(null, "Aponte para onde vai o anel (↑/↓ mudam a altura).");
+  const r = (v: number) => (st.snap ? Math.round(v) : Math.round(v * 100) / 100);
+  const pos: Vec3 = [r(hit.x / M), y, r(hit.z / M)];
+  const ringId = st.tool.kind === "place" ? st.tool.moving?.ringId : undefined;
+  if (ringId && model.nodes[ringId]) {
+    // mover um anel: os cabos presos nele acompanham (cada um conferido sem ele mesmo no modelo)
+    const next = moveRingTo(model, ringId, pos);
+    const errors = [...validateRing(catalog, inv, next, pos, code, ringId).errors];
+    for (const m of Object.values(next.members)) {
+      if (catalog.pieces[m.code]?.type !== "rope" || (m.a !== ringId && m.b !== ringId)) continue;
+      const others: Model = { ...next, members: Object.fromEntries(Object.entries(next.members).filter(([k]) => k !== m.id)) };
+      const ck = validateRope(catalog, { ...inv, unlimited: true }, others, m.a, m.b);
+      if (!ck.ok) {
+        errors.push(ck.errors[0]);
+        break;
+      }
+    }
+    const check = { ok: !errors.length, errors, warnings: [] };
+    return st.setGhost({ kind: "group", model: next, ids: new Set([ringId]), check }, check.ok ? `Clique para deixar o anel aqui (altura ${y} M; ↑/↓ mudam). Os cabos acompanham.` : `${errors[0]} ↑/↓ mudam a altura.`);
+  }
+  const check = validateRing(catalog, inv, model, pos, code);
+  const { model: next, id } = addRing(model, pos, code);
+  const where = `(${toDisp(pos).map((v) => +v.toFixed(2)).join("; ")})`;
+  st.setGhost(
+    { kind: "group", model: next, ids: new Set([id]), keep: true, check },
+    check.ok
+      ? `Anel ${code === "RING-M" ? "médio" : "pequeno"} em ${where}. ↑/↓ muda a altura (Shift: 6 M). Depois, ligue cabos nele com o CABLE.`
+      : `${check.errors[0]} ↑/↓ muda a altura.`,
+  );
+}
+
+/**
+ * Clip de múltiplos cabos (M CABLE CLIP C): clique numa esfera (ou GC) com 2 ou mais cabos para juntá-los numa CABLE C
+ * só (até 5 por clip); clique de novo para separar.
+ */
+export function mclipStep(ctx: Ctx, ev: PointerEvent, rect: DOMRect, model: Model, inv: ReturnType<typeof useApp.getState>["inventory"]) {
+  const st = useApp.getState();
+  const on = sphereUnder(ctx, ev, rect, model, true);
+  const n = on ? model.nodes[on] : null;
+  ctx.markHover(n && n.kind !== "ring" ? on : null);
+  if (!n || n.kind === "ring" || n.kind === "clip") return st.setGhost(null, "Clique numa esfera com 2 ou mais cabos para juntá-los num clip de múltiplos cabos (até 5 por clip).");
+  const ropes = Object.values(model.members).filter((m) => catalog.pieces[m.code]?.type === "rope" && (m.a === n.id || m.b === n.id));
+  const next: Model = { ...model, nodes: { ...model.nodes, [n.id]: { ...n, ...(n.mclip ? {} : { mclip: true }) } } };
+  if (n.mclip) delete next.nodes[n.id].mclip;
+  const errors: string[] = [];
+  if (!n.mclip && ropes.length < 2) errors.push(`Essa esfera tem ${ropes.length === 1 ? "só um cabo" : "nenhum cabo"}: o clip múltiplo junta 2 ou mais.`);
+  if (!n.mclip && !inv.unlimited) {
+    const need = kit3Usage(catalog, next)[ROPE_MCLIP] ?? 0;
+    const have = available(catalog, inv, ROPE_MCLIP);
+    if (need > have) errors.push(`Acabaram os clips de múltiplos cabos (M CABLE CLIP C): ${have} nos kits escolhidos.`);
+  }
+  const groups = Math.ceil(ropes.length / MCLIP_MAX);
+  st.setGhost(
+    { kind: "group", model: next, ids: new Set([n.id]), keep: true, check: { ok: !errors.length, errors, warnings: [] } },
+    errors.length
+      ? errors[0]
+      : n.mclip
+        ? `Clique para separar: cada um dos ${ropes.length} cabos volta a ter a sua CABLE C e o seu clip.`
+        : `Clique: os ${ropes.length} cabos desta esfera num clip múltiplo (usa ${groups} CABLE C em vez de ${ropes.length}${groups > 1 ? `; até ${MCLIP_MAX} por clip` : ""}).`,
   );
 }

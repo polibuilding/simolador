@@ -31,7 +31,8 @@ export function available(cat: Catalog, inv: InventoryConfig, code: string): num
 export function usage(model: Model, cat: Catalog = defaultCatalog): Record<string, number> {
   const u: Record<string, number> = {};
   const inc = (k: string, n = 1) => (u[k] = (u[k] ?? 0) + n);
-  for (const n of Object.values(model.nodes)) if (n.kind !== "clip") inc(n.kind === "support" ? "GC" : "C"); // ponto de cabo: clip, em kit3Usage
+  // ponto de cabo: clip, em kit3Usage; anel: o código dele (RING-P ou RING-M)
+  for (const n of Object.values(model.nodes)) if (n.kind !== "clip") inc(n.kind === "support" ? "GC" : n.kind === "ring" ? n.ring ?? "RING-P" : "C");
   for (const m of Object.values(model.members)) if (!isRopeCode(cat, m.code)) inc(m.code);
   for (const p of Object.values(model.plates)) inc(p.code);
   for (const c of Object.values(model.connectors)) inc(c.code);

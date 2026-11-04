@@ -14,7 +14,8 @@ export const GROUPS: { title: string; codes: string[] }[] = [
   { title: "Placas", codes: ["P6x6", "P6x12"] },
   { title: "Ligações", codes: ["RC90", "CC", "CC90"] },
   // Kit 3: o cabo (dois cliques: esfera e esfera) e o enrijecedor (clique na mola); ligações e clipes de cabo entram sozinhos
-  { title: "Cabos", codes: ["CABLE", STIFF_TOOL] },
+  // anéis (pontos no ar só para cabos) e o clip de múltiplos cabos (clique numa esfera com 2 ou mais cabos)
+  { title: "Cabos", codes: ["CABLE", "RING-P", "RING-M", "MCLIP-C", STIFF_TOOL] },
 ];
 
 /** códigos de estoque por trás de uma entrada da paleta (o enrijecedor junta BS6 e BS12) */
@@ -37,6 +38,26 @@ export function Icon({ code }: { code: string }) {
   }
   const p = catalog.pieces[code];
   if (!p) return null;
+  if (code === "RING-P" || code === "RING-M") {
+    // anel com cabos chegando de vários lados
+    const r = code === "RING-M" ? 5 : 3.6;
+    return (
+      <svg viewBox="0 0 48 24" aria-hidden>
+        {[[8, 4], [40, 5], [10, 21], [39, 20]].map(([x, y], i) => <path key={i} d={`M${x} ${y} L24 12`} className="i-cable" />)}
+        <circle cx="24" cy="12" r={r} className="i-ring" />
+      </svg>
+    );
+  }
+  if (code === "MCLIP-C") {
+    // vários cabos saindo de uma esfera por um clip só
+    return (
+      <svg viewBox="0 0 48 24" aria-hidden>
+        {[-8, -3, 2, 7].map((dy, i) => <path key={i} d={`M17 12 L42 ${12 + dy * 1.1}`} className="i-cable" />)}
+        <rect x="14" y="9.5" width="6" height="5" rx="1" className="i-cap" />
+        <circle cx="9" cy="12" r="5" className="i-steel" />
+      </svg>
+    );
+  }
   if (p.type === "rope") {
     // corrente de bolinhas, levemente caída, com as ligações de cabo nas pontas
     const pts = Array.from({ length: 9 }, (_, i) => {

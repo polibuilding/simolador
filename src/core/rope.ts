@@ -17,6 +17,9 @@ import { add, chainOf, len, membersAt, scale, splitRope, sub } from "./model";
 export const ROPE = "CABLE";
 export const ROPE_CONN = "CABLE-C";
 export const ROPE_CLIP = "CLIP-C";
+export const ROPE_MCLIP = "MCLIP-C";
+/** cabos que cabem num clip de múltiplos cabos */
+export const MCLIP_MAX = 5;
 
 export const isRopeCode = (cat: Catalog, code: string) => cat.pieces[code]?.type === "rope";
 
@@ -33,7 +36,18 @@ export interface RopeSpec {
   adjust: number;
   /** pendural: da bolinha do cabo principal (no ponto de cabo) até a primeira bolinha do pendural (mm) */
   tap: number;
+  /** ponta numa esfera com clip de múltiplos cabos: raio + CABLE C + M CABLE CLIP C (mm) */
+  multi: number;
+  /** ponta num anel: do centro do anel até a primeira bolinha (meio anel + CABLE CLIP C), pequeno e médio (mm) */
+  ringP: number;
+  ringM: number;
 }
+
+/** comprimento (mm) de uma peça do Kit 3 pelo catálogo, com um padrão se faltar */
+const piece = (cat: Catalog, code: string, d: number) => {
+  const v = Number((cat.pieces[code]?.geometry as { lengthMm?: number } | undefined)?.lengthMm);
+  return Number.isFinite(v) && v > 0 ? v : d;
+};
 
 export function ropeSpec(cat: Catalog): RopeSpec {
   const s = cat.settings;
@@ -48,22 +62,40 @@ export function ropeSpec(cat: Catalog): RopeSpec {
     end: s.esfera_diametro_mm / 2 + n("cabo_ligacao_mm", 16) + n("cabo_clip_mm", 9),
     adjust: Number(s.cabo_ajuste_mm ?? 0) || 0,
     tap: n("cabo_pendural_mm", 5),
+    multi: s.esfera_diametro_mm / 2 + n("cabo_ligacao_mm", 16) + piece(cat, "MCLIP-C", 11),
+    ringP: piece(cat, "RING-P", 10) / 2 + n("cabo_clip_mm", 9),
+    ringM: piece(cat, "RING-M", 15) / 2 + n("cabo_clip_mm", 9),
   };
 }
 
 /**
- * Ponta de um trecho de cabo num nó: "sphere" (esfera ou GC: CABLE C + clip), "pass" (o cabo passa pelo ponto de
- * cabo; a bolinha fica no ponto) ou "tap" (pendural preso no ponto de cabo).
+ * Ponta de um trecho de cabo num nó: "sphere" (esfera ou GC: CABLE C + clip), "multi" (esfera com clip de múltiplos
+ * cabos), "pass" (o cabo passa pelo ponto de cabo; a bolinha fica no ponto), "tap" (pendural preso no ponto de cabo)
+ * ou "ring-p" / "ring-m" (anel de cabo pequeno ou médio: só o clip).
  */
-export type RopeEnd = "sphere" | "pass" | "tap";
+export type RopeEnd = "sphere" | "multi" | "pass" | "tap" | "ring-p" | "ring-m";
+
+/** Ponta que um nó dá a um cabo novo (antes de ligar). */
+export function nodeEnd(model: Model, nodeId: string): RopeEnd {
+  const n = model.nodes[nodeId];
+  if (!n) return "sphere";
+  if (n.kind === "clip") return "tap";
+  if (n.kind === "ring") return n.ring === "RING-M" ? "ring-m" : "ring-p";
+  return n.mclip ? "multi" : "sphere";
+}
 
 export function ropeEndAt(model: Model, m: Member, nodeId: string): RopeEnd {
-  if (model.nodes[nodeId]?.kind !== "clip") return "sphere";
+  if (model.nodes[nodeId]?.kind !== "clip") return nodeEnd(model, nodeId);
   return membersAt(model, nodeId).some((o) => o.id !== m.id && chainOf(o) === chainOf(m)) ? "pass" : "tap";
 }
 
 /** Quanto a ponta ocupa antes da primeira bolinha (mm). */
-export const endMm = (sp: RopeSpec, e: RopeEnd) => (e === "sphere" ? sp.end : e === "tap" ? sp.tap : 0);
+export const endMm = (sp: RopeSpec, e: RopeEnd) =>
+  e === "sphere" ? sp.end : e === "multi" ? sp.multi : e === "tap" ? sp.tap : e === "ring-p" ? sp.ringP : e === "ring-m" ? sp.ringM : 0;
+/** ponta presa numa esfera ou GC (com CABLE C) */
+export const sphereEnd = (e: RopeEnd) => e === "sphere" || e === "multi";
+/** ponta presa num anel */
+export const ringEnd = (e: RopeEnd) => e === "ring-p" || e === "ring-m";
 
 /**
  * Bolinhas de um trecho de `Lmm` (centro a centro dos nós): distância de cada uma até a ponta `a` (mm). Num ponto de
@@ -75,7 +107,8 @@ export function segmentBallOffsets(sp: RopeSpec, Lmm: number, ea: RopeEnd, eb: R
   if (room < -1e-9) return [];
   const n = Math.floor(Math.max(0, room) / sp.pitch + 1e-9) + 1;
   const slack = Math.max(0, room) - (n - 1) * sp.pitch;
-  const start = ea === "pass" ? a0 : eb === "pass" ? a0 + slack : ea === "tap" ? a0 : eb === "tap" ? a0 + slack : a0 + slack / 2;
+  // a sobra fica no esticador da CABLE C: nas duas pontas em esferas, dividida; numa só, toda nela
+  const start = ea === "pass" ? a0 : eb === "pass" ? a0 + slack : sphereEnd(ea) && sphereEnd(eb) ? a0 + slack / 2 : sphereEnd(ea) ? a0 + slack : a0;
   return Array.from({ length: n }, (_, i) => start + i * sp.pitch);
 }
 
@@ -95,6 +128,8 @@ export interface RopeChain {
   cutMm: number;
   /** pontos de cabo por onde o pedaço passa, com a bolinha (1 = a da primeira ponta) */
   points: { node: string; ball: number }[];
+  /** sem cortar (laço): o resto do rolo fica preso */
+  uncut?: boolean;
 }
 
 /** Pedaços de cabo do modelo (cada um com seus trechos em ordem). */
@@ -135,7 +170,8 @@ export function ropeChains(cat: Catalog, model: Model): RopeChain[] {
       d += segMm[i - 1];
       points.push({ node: nodes[i], ball: Math.round(d / sp.pitch) + 1 });
     }
-    out.push({ id, code: first.code, members, nodes, ends, chainMm, balls, cutMm: balls * sp.pitch, points });
+    const uncut = members.some((k) => model.members[k].uncut);
+    out.push({ id, code: first.code, members, nodes, ends, chainMm, balls, cutMm: balls * sp.pitch, points, ...(uncut ? { uncut } : {}) });
   }
   return out;
 }
@@ -214,6 +250,11 @@ export interface RopeCut {
   id: string;
   balls: number;
   cutMm: number;
+  /** cabo "sem cortar": ocupa um rolo inteiro (a sobra fica presa, num laço) */
+  uncut?: boolean;
+  /** pedaço de um cabo emendado: parte i de n (as partes se unem com CABLE CLIP C) */
+  part?: number;
+  of?: number;
 }
 
 export interface RopePlan {
@@ -222,24 +263,80 @@ export interface RopePlan {
   rolls: RopeCut[][];
   balls: number;
   mm: number;
+  /** emendas (cada uma usa um CABLE CLIP C, que une dois pedaços em linha) */
+  splices: number;
 }
 
-/** Pedaços de cabo do modelo e como tirá-los dos rolos. `extra`: um pedaço a mais (cabo sendo colocado). */
+/** menor pedaço que vale emendar (bolinhas) */
+const MIN_PIECE = 4;
+
+/**
+ * Pedaços de cabo do modelo e como tirá-los dos rolos. `extra`: um pedaço a mais (cabo sendo colocado).
+ * Plano: maiores primeiro, cada um no primeiro rolo onde couber. Se não cabe em nenhum, mas cabe somando as sobras
+ * dos rolos já abertos, é **emendado** (pedaços unidos por CABLE CLIP C) em vez de abrir outro rolo; maior que um rolo
+ * inteiro, sempre emenda. Cabo "sem cortar" ocupa um rolo só para ele.
+ */
 export function ropePlan(cat: Catalog, model: Model, extra?: RopeCut): RopePlan {
   const sp = ropeSpec(cat);
   const cuts: RopeCut[] = [];
   // um corte por pedaço (o cabo principal de uma ponte pênsil é um pedaço só, com os pendurais presos nele)
-  for (const ch of ropeChains(cat, model)) if (ch.balls) cuts.push({ id: ch.id, balls: ch.balls, cutMm: ch.cutMm });
+  for (const ch of ropeChains(cat, model)) if (ch.balls) cuts.push({ id: ch.id, balls: ch.balls, cutMm: ch.cutMm, ...(ch.uncut ? { uncut: true } : {}) });
   if (extra) cuts.push(extra);
   const cap = ballsPerRoll(sp);
   const rolls: RopeCut[][] = [];
   const free: number[] = [];
-  for (const c of [...cuts].sort((x, y) => y.balls - x.balls)) {
+  let splices = 0;
+  const piece = (c: RopeCut, balls: number, i: number, n: number): RopeCut => ({ ...c, balls, cutMm: balls * sp.pitch, ...(n > 1 ? { part: i, of: n } : {}) });
+  const ordered = [...cuts].sort((x, y) => Number(!!y.uncut) - Number(!!x.uncut) || y.balls - x.balls);
+  for (const c of ordered) {
+    if (c.uncut) {
+      // sem cortar: um rolo inteiro (a sobra fica presa)
+      rolls.push([c]);
+      free.push(0);
+      continue;
+    }
     const i = free.findIndex((f) => f >= c.balls);
-    if (i >= 0) (rolls[i].push(c), (free[i] -= c.balls));
-    else (rolls.push([c]), free.push(cap - c.balls));
+    if (i >= 0) {
+      rolls[i].push(c);
+      free[i] -= c.balls;
+      continue;
+    }
+    // não cabe inteiro em nenhum rolo aberto: emenda nas sobras (as maiores primeiro), se elas bastam
+    const spare = free.map((f, k) => ({ f, k })).filter((x) => x.f >= MIN_PIECE).sort((a, b) => b.f - a.f);
+    const total = spare.reduce((s, x) => s + x.f, 0);
+    const parts: { k: number; balls: number }[] = [];
+    if (total >= c.balls) {
+      let left = c.balls;
+      for (const x of spare) {
+        if (left <= 0) break;
+        const take = Math.min(x.f, left);
+        // o resto não pode ficar curto demais para um pedaço
+        const after = left - take;
+        const use = after > 0 && after < MIN_PIECE ? take - (MIN_PIECE - after) : take;
+        if (use < MIN_PIECE) continue;
+        parts.push({ k: x.k, balls: use });
+        left -= use;
+      }
+      if (left > 0) parts.length = 0;
+    }
+    if (!parts.length) {
+      // rolos novos (emenda só se for maior que um rolo inteiro)
+      let left = c.balls;
+      while (left > 0) {
+        const take = Math.min(cap, left);
+        rolls.push([]);
+        free.push(cap);
+        parts.push({ k: rolls.length - 1, balls: take });
+        left -= take;
+      }
+    }
+    parts.forEach((p, j) => {
+      rolls[p.k].push(piece(c, p.balls, j + 1, parts.length));
+      free[p.k] -= p.balls;
+    });
+    splices += parts.length - 1;
   }
-  return { cuts, rolls, balls: cuts.reduce((s, c) => s + c.balls, 0), mm: cuts.reduce((s, c) => s + c.cutMm, 0) };
+  return { cuts, rolls, balls: cuts.reduce((s, c) => s + c.balls, 0), mm: cuts.reduce((s, c) => s + c.cutMm, 0), splices };
 }
 
 /** Onde fica uma ponta de um cabo novo: num nó (esfera, GC ou ponto de cabo) ou numa bolinha de um cabo. */
@@ -312,7 +409,7 @@ export function ropeRefs(cat: Catalog, model: Model, from?: Vec3): RopeRef[] {
         const d = Math.hypot(b.pos[0] - n.pos[0], b.pos[2] - n.pos[2]);
         if (Math.abs(b.pos[1] - n.pos[1]) > 0.5 && (!best || d < best.d)) best = { b, d };
       }
-      if (best && best.d < tolPlan) add1(best.b, "green", `na vertical ${n.kind === "support" ? "da GC" : "da esfera"} ${fmt(n.pos)}`);
+      if (best && best.d < tolPlan) add1(best.b, "green", `na vertical ${n.kind === "support" ? "da GC" : n.kind === "ring" ? "do anel" : "da esfera"} ${fmt(n.pos)}`);
     }
     const mid = balls.find((b) => b.ball === Math.ceil(ch.balls / 2));
     if (mid) add1(mid, "yellow", `meio do cabo (bolinha ${mid.ball} de ${ch.balls})`);
@@ -334,8 +431,9 @@ export function stiffenerFor(cat: Catalog, code: string): string | null {
 
 /**
  * Peças que entram sozinhas com os cabos e os enrijecedores (para o estoque e o resumo): cada ponta numa esfera usa
- * uma CABLE C e um CABLE CLIP C; cada ponto de cabo, um CABLE CLIP C (prende a bolinha do cabo principal e a do
- * pendural).
+ * uma CABLE C e um CABLE CLIP C (numa esfera com clip múltiplo, até 5 cabos dividem uma CABLE C e um M CABLE CLIP C);
+ * cada ponta num anel, um CABLE CLIP C; cada ponto de cabo, um CABLE CLIP C (prende a bolinha do cabo principal e a
+ * do pendural); cada emenda, um CABLE CLIP C.
  */
 export function kit3Usage(cat: Catalog, model: Model): Record<string, number> {
   const u: Record<string, number> = {};
@@ -350,11 +448,27 @@ export function kit3Usage(cat: Catalog, model: Model): Record<string, number> {
   }
   if (ropes) {
     const chains = ropeChains(cat, model);
-    const sphereEnds = chains.reduce((s, c) => s + c.ends.filter((e) => e === "sphere").length, 0);
+    // pontas em esferas: cada uma usa CABLE C + CABLE CLIP C; numa esfera com clip múltiplo, os cabos dividem
+    // CABLE C + M CABLE CLIP C (até 5 por clip)
+    const multiAt = new Map<string, number>();
+    let single = 0;
+    let ringEnds = 0;
+    for (const c of chains) {
+      c.ends.forEach((e, k) => {
+        const node = c.nodes[k === 0 ? 0 : c.nodes.length - 1];
+        if (e === "sphere") single++;
+        else if (e === "multi") multiAt.set(node, (multiAt.get(node) ?? 0) + 1);
+        else if (ringEnd(e)) ringEnds++;
+      });
+    }
+    const groups = [...multiAt.values()].reduce((s, n) => s + Math.ceil(n / MCLIP_MAX), 0);
     const clips = Object.values(model.nodes).filter((n) => n.kind === "clip").length;
-    inc(ROPE_CONN, sphereEnds);
-    inc(ROPE_CLIP, sphereEnds + clips);
-    inc(ROPE, ropePlan(cat, model).rolls.length);
+    const plan = ropePlan(cat, model);
+    inc(ROPE_CONN, single + groups);
+    if (groups) inc(ROPE_MCLIP, groups);
+    // clips: pontas simples, pontas em anel, pontos de cabo e emendas
+    inc(ROPE_CLIP, single + ringEnds + clips + plan.splices);
+    inc(ROPE, plan.rolls.length);
   }
   return u;
 }
@@ -372,3 +486,9 @@ export function ropeStock(cat: Catalog, inv: InventoryConfig, availableRolls: nu
 
 /** Código da ferramenta "Enrijecedor" na paleta (escolhe BS6 ou BS12 pela mola clicada). */
 export const STIFF_TOOL = "BS";
+
+/** Anel movido para `pos`: o modelo novo (os cabos presos nele são recontados pela distância). */
+export function moveRingTo(model: Model, ringId: string, pos: Vec3): Model {
+  const n = model.nodes[ringId];
+  return { ...model, nodes: { ...model.nodes, [ringId]: { ...n, pos: [Math.round(pos[0] * 1e4) / 1e4 + 0, Math.round(pos[1] * 1e4) / 1e4 + 0, Math.round(pos[2] * 1e4) / 1e4 + 0] } } };
+}

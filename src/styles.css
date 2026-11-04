@@ -1009,3 +1009,10 @@ dl { margin: 0 0 16px; }
   position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
   background: #e9ecea; color: #5b6360; font-size: 14px; letter-spacing: 0.02em;
 }
+
+/* paleta: anel de cabo (aro vazado) */
+.i-ring { fill: none; stroke: #8b949b; stroke-width: 1.8; }
+
+/* painel: caixa de marcar com texto ao lado */
+.check-row { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; line-height: 1.35; color: #47514e; cursor: pointer; }
+.check-row input { margin-top: 2px; }

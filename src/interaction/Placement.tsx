@@ -19,7 +19,7 @@ import { freshCmd, makeCtx } from "./ctx";
 import { AXES_PX, CLICK_PX, DRAG_PX, GIZMO_PX, guidesFor } from "./queries";
 import { pickSupport, reachStep } from "./steps/support";
 import { freeBar, linkStep, sphereUnder, triangleStep } from "./steps/bars";
-import { ropeStep, stiffStep } from "./steps/rope";
+import { mclipStep, ringStep, ropeStep, stiffStep } from "./steps/rope";
 import { boxSelect } from "./steps/box";
 import { moveStep } from "./steps/move";
 import { spotStep } from "./steps/place";
@@ -99,6 +99,8 @@ export function Placement() {
 
       // ---- Kit 3: enrijecedor (clique numa mola) e cabo (clique numa esfera e depois em outra) ----
       if (code === STIFF_TOOL) return stiffStep(ctx, ev, rect, model, inv);
+      if (code === "RING-P" || code === "RING-M") return ringStep(ctx, ev, rect, model, code, inv);
+      if (code === "MCLIP-C") return mclipStep(ctx, ev, rect, model, inv);
       if (catalog.pieces[code]?.type === "rope") return void ropeStep(ctx, ev, rect, model, code, inv);
 
       // ---- ligação de base ----
@@ -303,7 +305,7 @@ export function Placement() {
         cmd.freeHold = s.history !== p.history && lastEv ? { x: lastEv.clientX, y: lastEv.clientY } : null;
       }
       if (Object.keys(patch).length) useApp.setState(patch);
-      if (lastEv && (s.linkFrom !== p.linkFrom || s.ropeBall !== p.ropeBall || s.rotIndex !== p.rotIndex || s.barMode !== p.barMode || (toolChanged && s.tool.kind === "paste") || s.snapCycle !== p.snapCycle || s.guides !== p.guides || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap)) {
+      if (lastEv && (s.linkFrom !== p.linkFrom || s.ropeBall !== p.ropeBall || s.rotIndex !== p.rotIndex || s.barMode !== p.barMode || (toolChanged && s.tool.kind === "paste") || s.snapCycle !== p.snapCycle || s.guides !== p.guides || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap || s.ringY !== p.ringY)) {
         safeUpdate(lastEv);
       }
     });

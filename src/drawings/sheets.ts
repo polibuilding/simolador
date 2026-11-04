@@ -4,7 +4,7 @@
 // e mudar desenhos de prancha. O arranjo mexido fica no carimbo do projeto (SheetMeta.layouts), por tamanho de folha.
 import type { Catalog } from "../core/catalog";
 import type { InventoryConfig } from "../core/inventory";
-import { ropePlan } from "../core/rope";
+import { ballsPerRoll, ropePlan, ropeSpec } from "../core/rope";
 import { minKits, usage } from "../core/inventory";
 import { boardsOf, type Model, type Vec3 } from "../core/model";
 import { boardCorners, fromBoardLocal } from "../core/boards";
@@ -1051,6 +1051,70 @@ export interface BuiltSheets {
 }
 
 /** Monta todas as folhas. */
+/**
+ * Plano de corte do cabo com a **régua de bolinhas em tamanho real (1:1)**: para cada pedaço, uma régua do comprimento
+ * dele, com uma marca por bolinha e o número a cada 10, quebrando em linhas na largura da folha. Impresso sem
+ * ajustar à página, dá para cortar o cabo encostando a corrente na folha. Uma folha a mais quando a régua não cabe.
+ */
+function ropeRulerPages(input: SheetInput): { title: string; prims: Prim[]; entries: string[]; scales: number[] }[] {
+  const { model, cat } = input;
+  const plan = ropePlan(cat, model);
+  if (!plan.cuts.length) return [];
+  const pitch = ropeSpec(cat).pitch;
+  const order = new Map(plan.cuts.map((c, i) => [c.id, i + 1]));
+  const pages: { title: string; prims: Prim[]; entries: string[]; scales: number[] }[] = [];
+  const W = AREA.x1 - AREA.x0 - 4;
+  const perRow = Math.max(10, Math.floor(W / pitch));
+  let page: Prim[] = [];
+  let y = AREA.y0 + 6;
+  const newPage = () => {
+    if (page.length) pages.push({ title: "PLANO DE CORTE DO CABO · RÉGUA 1:1", prims: page, entries: ["PLANO DE CORTE DO CABO", "RÉGUA 1:1"], scales: [1] });
+    page = [txt([AREA.x0, AREA.y0 + 2], "PLANO DE CORTE DO CABO · RÉGUA DE BOLINHAS EM TAMANHO REAL (imprima em 100%, sem ajustar à página)", 3, { bold: true })];
+    y = AREA.y0 + 10;
+  };
+  newPage();
+  plan.rolls.forEach((roll, ri) => {
+    if (y + 12 > AREA.y1) newPage();
+    const left = ballsPerRoll(ropeSpec(cat)) - roll.reduce((n, c) => n + c.balls, 0);
+    page.push(txt([AREA.x0, y], `Rolo ${ri + 1}: ${roll.some((c) => c.uncut) ? "sem cortar" : `${roll.length} ${roll.length === 1 ? "pedaço" : "pedaços"} · sobram ${left} bolinhas`}`, 2.8, { bold: true }));
+    y += 5;
+    for (const c of roll) {
+      const rows = Math.ceil(c.balls / perRow);
+      if (y + 6 + rows * 8 > AREA.y1) newPage();
+      const name = `Pedaço ${order.get(c.id)}${c.part ? ` · parte ${c.part} de ${c.of} (emenda)` : ""}${c.uncut ? " · sem cortar" : ""}: ${c.balls} bolinhas · ${(c.cutMm / 10).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} cm`;
+      page.push(txt([AREA.x0 + 2, y], name, 2.4));
+      y += 3.5;
+      for (let r = 0; r < rows; r++) {
+        const n0 = r * perRow;
+        const n = Math.min(perRow, c.balls - n0);
+        const x0 = AREA.x0 + 2;
+        const x1 = x0 + (n - 1) * pitch;
+        const yl = y + 2;
+        page.push({ t: "line", a: [x0, yl], b: [Math.max(x0 + 0.01, x1), yl], stroke: "#000", pen: PEN.thin, layer: "MOLA-TEXTO" });
+        for (let k = 0; k < n; k++) {
+          const ball = n0 + k + 1;
+          const x = x0 + k * pitch;
+          const ten = ball % 10 === 0 || ball === 1 || ball === c.balls;
+          page.push({ t: "line", a: [x, yl - (ten ? 2 : 1)], b: [x, yl + (ten ? 2 : 1)], stroke: "#000", pen: ten ? PEN.part : PEN.thin, layer: "MOLA-TEXTO" });
+          if (ten) page.push(txt([x, yl + 4.6], String(ball), 1.8, { anchor: "middle" }));
+        }
+        y += 8;
+      }
+      y += 2;
+    }
+    y += 2;
+  });
+  if (y + 8 < AREA.y1) {
+    // conferência da escala: 100 mm impressos têm de medir 100 mm
+    const x0 = AREA.x0 + 2;
+    page.push({ t: "line", a: [x0, y + 2], b: [x0 + 100, y + 2], stroke: "#000", pen: PEN.part, layer: "MOLA-TEXTO" });
+    for (const x of [x0, x0 + 100]) page.push({ t: "line", a: [x, y], b: [x, y + 4], stroke: "#000", pen: PEN.part, layer: "MOLA-TEXTO" });
+    page.push(txt([x0 + 103, y + 3], "100 mm: confira com uma régua antes de cortar", 2.2));
+  }
+  newPage();
+  return pages;
+}
+
 export function buildSheets(input: SheetInput): BuiltSheets {
   setPaper(input.meta);
   const n = computeScale(input);
@@ -1059,6 +1123,7 @@ export function buildSheets(input: SheetInput): BuiltSheets {
   const layout = saved ?? autoLayout(ctx);
   const pages: { title: string; prims: Prim[]; entries: string[]; scales: number[] }[] = [];
   pages.push({ title: "Capa", prims: coverDrawing(input, n), entries: ["ISOMÉTRICA", "LISTA DE PEÇAS"], scales: [] });
+  const ruler = ropeRulerPages(input);
   const views: ViewInfo[] = [];
   for (let p = 0; p < layout.pages; p++) {
     const page = { title: "", prims: [] as Prim[], entries: [] as string[], scales: [] as number[] };
@@ -1085,6 +1150,8 @@ export function buildSheets(input: SheetInput): BuiltSheets {
     page.title = page.entries.join(" · ") || "Prancha vazia";
     pages.push(page);
   }
+  // plano de corte do cabo com a régua 1:1 (no fim, depois dos desenhos)
+  pages.push(...ruler);
   const total = pages.length;
   // blocos arrastados na tela (por tamanho de folha)
   const moved = input.meta.blocks ?? {};

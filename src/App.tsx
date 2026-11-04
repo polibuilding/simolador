@@ -103,6 +103,11 @@ function useShortcuts() {
         const step = e.shiftKey ? 6 : e.altKey || mod ? 0.25 : 1;
         const d: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
         st.nudgeBoards(d[e.key]);
+      } else if (st.tool.kind === "place" && (st.tool.code === "RING-P" || st.tool.code === "RING-M") && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+        // anel de cabo: ↑/↓ mudam a altura (1 módulo; Shift: 6), de 1 a 60
+        e.preventDefault();
+        const dy = (e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 6 : 1);
+        useApp.setState({ ringY: Math.max(1, Math.min(60, st.ringY + dy)) });
       } else if (st.tool.kind === "paste" && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
         e.preventDefault();
         st.pasteAdjust({ dy: (e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 6 : 1) });
