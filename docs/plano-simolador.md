@@ -228,7 +228,7 @@ Análise estrutural: fora do escopo (Q09).
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0.0`, `v1.8.2`…).
 
-- **1.x — geométrica** (atual: 1.8.3): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.9.0): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: o módulo extra ajustável.
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
@@ -241,7 +241,7 @@ Decisões registradas (A-CONFIRMAR, aba Decisões): navegador agora, app local d
 Em aberto:
 - ~~CC90~~: resolvido. Kit 2 tem 12 RC90 (forma 3), 12 CC (forma 1) e 12 CC90 (forma 2, sobreposta à CC). Total de 145 confirmado.
 - **Medidas da CC e da CC90**: necessárias para desenhá-las (o programa usa um formato provisório até lá). **Lembrete pedido pela equipe (13/10): ajeitar as peças CC e CC90.**
-- **Configurações** (engrenagem; 1.6.0): o menu muda módulo, ângulo mínimo entre molas, ângulo mínimo da mola na GC, passo das inclinadas (o rótulo da barra de baixo acompanha) e o tamanho da chapa; "Configurações avançadas" abre a janela com abas (Peças: medidas e pesos; Medidas gerais; Cabo e enrijecedor; Geral; e, em breve, Tutorial, Aparência, Idioma e Perfil). **Próximo passo**: pensar o menu maior; quando estiver pronto, a engrenagem abre direto nele. Os pesos ainda não entram em nenhuma conta (3.x).
+- **Configurações** (engrenagem; 1.6.0): o menu muda módulo, ângulo mínimo entre molas, ângulo mínimo da mola na GC, passo das inclinadas (o rótulo da barra de baixo acompanha) e o tamanho da chapa; **1.9.0**: a engrenagem abre direto a janela, com as abas Geral, Peças, Medidas gerais, Cabo e as pessoais (no navegador, não no projeto): **Tutorial** (seis passos que se marcam sozinhos), **Aparência** (chapa, fundo, eixos, animações; aplicar recarrega), **Perfil** (nome e equipe na capa das pranchas) e **Idioma** (só português). **Próximo**: inglês e espanhol (separar os textos da interface para tradução); tutorial guiado na própria cena. Os pesos ainda não entram em nenhuma conta (3.x).
   - **Proteção**: limites em cada valor; checagens cruzadas (molas com comprimento positivo, esfera menor que o menor vão, bolinha menor que o passo, GC menor que a chapa) bloqueiam o Aplicar; antes de aplicar, a tela mostra o que muda na estrutura aberta (GC fora da chapa, chapas sobrepostas, ângulos abaixo do novo mínimo); aplicar recarrega o programa com a estrutura salva; se a abertura travar, a seguinte volta ao padrão sozinha (as configurações recusadas ficam guardadas à parte); valores ilegíveis são ignorados com aviso; tela de erro com "Voltar às configurações padrão"; `?padrao` no endereço abre sem as configurações.
 - **Rigidez e movimentos livres** (1.7.1, `src/core/mechanism.ts`): esferas = rótulas; RC90 trava ângulo; RC90 na base engasta; CC/CC90 travam 180°; placas = corpos rígidos; diagonais e cabos só tração; GC fixas. Graus de liberdade pelo posto da matriz de rigidez, com teste finito (descarta as "dobras" que só existem no infinitesimal, como a torção de um pórtico plano com RC90). Duplo clique: 0 = travado, 1 = caminho azul/vermelho (traçado numericamente), 2+ = arraste livre mexendo o mínimo. Resumo: bloco Estabilidade com os graus de liberdade; painel da peça: "Movimento".
   - Confirmado pela equipe (14/10): a RC90 trava só o ângulo, não a torção (a mola gira em torno do próprio eixo). **16/10 (1.8.0, L10)**: a RC90 trava só a inclinação no plano em que foi posicionada; no perpendicular a mola gira. No modelo cinemático já era assim (distância entre as pontas); o "mover só o nó" deixou de travar o nó e passou a usar o mesmo vínculo. **A confirmar**: a RC90 na base (hoje engasta sozinha) segue a mesma regra, e só duas em lados perpendiculares engastam? A conferir: a CC90 trava também o ângulo entre os dois pares; a GC é rótula (sem RC90 na base, o pilar tomba em qualquer direção, até o limite de 40° com a chapa) — **a equipe vai conferir a GC**.
@@ -254,15 +254,15 @@ Em aberto:
 - **Simolar** (botão ao lado de Pranchas): por enquanto "em breve"; é a porta da linha 3.x (deformação, estaticidade, estabilidade).
 - **Kit 3 (1.5.0: cabo simples e enrijecedor)**: Kit 3 no estoque; cabo em dois cliques (esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera, com as ligações e clipes automáticos), pedaço em bolinhas, plano de corte dos rolos no resumo e na capa; enrijecedor clicando na mola B6/B12. **Medidas estimadas pelas fotos** (`kit-mola-pecas.md`): confirmar com o kit em mãos. Próximas montagens de cabo, mapeadas abaixo.
 - **Kit 3: outras montagens de cabo (mapa)** — o que o manual permite e como poderia entrar no programa:
-  1. **Clip de múltiplos cabos (M CABLE CLIP C)**: até 5 cabos numa só CABLE C (leque saindo de uma esfera). No programa: ao ligar um cabo numa esfera que já tem cabo saindo quase na mesma direção, oferecer juntar no mesmo clip múltiplo (economiza CABLE C; conta MCLIP-C).
-  2. **Anéis (CABLE R pequeno e médio)**: vários cabos chegando radialmente num ponto no ar (redes de cabos, cobertura suspensa, tensegridade). No programa: um novo tipo de nó, "anel", que não é esfera e só recebe cabos; posição de equilíbrio calculada (3.x) ou definida pelo usuário (1.x).
-  3. **Emenda linear (dois cabos num CABLE CLIP C)**: cabos maiores que um pedaço, ou reaproveitar sobras. No programa: o plano de corte pode propor emendas quando um cabo não cabe no que sobrou de um rolo.
+  1. **Clip de múltiplos cabos (M CABLE CLIP C)**: **feito na 1.9.0 (K11)**: clicar com o clip numa esfera com 2+ cabos junta todos numa CABLE C (até 5 por clip).
+  2. **Anéis (CABLE R pequeno e médio)**: **feito na 1.9.0 (K10)**: nó "anel" no ar, posição definida pelo usuário (altura com ↑/↓), só recebe cabos. Na 3.x: posição de equilíbrio calculada.
+  3. **Emenda linear (dois cabos num CABLE CLIP C)**: **feito na 1.9.0 (K12)**: o plano de corte emenda sobras quando o pedaço não cabe.
   4. **Cabo perpendicular ou inclinado a outro cabo (clip no meio)**: pendurais de ponte pênsil, cabos que saem de um cabo principal. **Primeira versão na 1.8.1 (K7–K9)**: a ponta do cabo novo pode ser uma bolinha de outro cabo (ponto de cabo), com referências verde/amarela e o ponto descendo bolinha a bolinha. A conferir com a equipe e com o kit em mãos.
-  5. **Laço e furo central do clip**: o clip prende qualquer bolinha, não só a da ponta; dá para fazer laços e não cortar o cabo na medida exata. No programa: opção "sem cortar" (o resto do cabo sobra para fora) no plano de corte.
-  6. **Cruz de cabos (dois clips sobrepostos + pino, não incluso)**: ligação fixa em cruz entre cabos.
+  5. **Laço e furo central do clip**: o clip prende qualquer bolinha, não só a da ponta; dá para fazer laços e não cortar o cabo na medida exata. **Feito na 1.9.0 (K13)**: opção "Sem cortar" no painel do cabo.
+  6. **Cruz de cabos (dois clips sobrepostos + pino, não incluso)**: ligação fixa em cruz entre cabos. **Pendente**: o pino não vem no kit; falta decidir com a equipe se entra (e como contar no estoque).
   7. **Cabo frouxo / forma funicular**: cabo mais longo que a distância, com flecha (catenária, formas funiculares com pesos). Fica para 2.x/3.x (forma depende das cargas).
   8. **Enrijecedor**: confirmar se convive com RC90 e CC na mesma mola; na 3.x, a mola enrijecida vira barra rígida no cálculo.
-  9. **Régua de bolinhas na prancha**: imprimir em 1:1 a lista de cortes com uma régua de bolinhas, como a do manual, para cortar o cabo direto da folha.
+  9. **Régua de bolinhas na prancha**: imprimir em 1:1 a lista de cortes com uma régua de bolinhas, como a do manual, para cortar o cabo direto da folha. **Feito na 1.9.0 (K14)**.
 - **Responsáveis por frente** (Q08).
 - **Repositório**: nome e dono no GitHub.
 

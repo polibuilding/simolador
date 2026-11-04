@@ -22,6 +22,23 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 ---
 
+## 1.9 — Montagens de cabo e configurações pessoais
+
+### 1.9.0 — Anéis, clip múltiplo, emendas, régua 1:1 e menu de configurações · 04/11/2026
+- **Anel de cabo** (CABLE R pequeno e médio): um ponto no ar onde vários cabos se encontram, para redes, coberturas suspensas e tensegridade. Escolha o anel na paleta (grupo Cabos), ajuste a altura com ↑/↓ e clique; depois ligue os cabos nele. O anel só recebe cabos. Com duplo clique, ele anda na horizontal e os cabos são recontados.
+- **Clip de múltiplos cabos** (M CABLE CLIP C): numa esfera com dois ou mais cabos, clique com o clip múltiplo e os cabos passam a sair de uma CABLE C só (até 5 por clip). Economiza CABLE C; o estoque conta o clip.
+- **Emenda**: um cabo maior que o que sobrou num rolo agora sai em dois pedaços emendados por um CABLE CLIP C (cada pedaço com pelo menos 4 bolinhas), reaproveitando as sobras. Cabo maior que um rolo inteiro também dá, se houver rolos.
+- **Cabo sem cortar** (laço): no painel do cabo, "Sem cortar" deixa o resto do rolo sobrando para fora. O plano de corte reserva o rolo para ele.
+- **Régua de bolinhas 1:1 nas pranchas**: quando há cabo, entra a prancha "Plano de corte do cabo", com cada pedaço desenhado em tamanho real, bolinha a bolinha, e uma linha de 100 mm para conferir a impressão (imprima sem "ajustar à página").
+- **Configurações num lugar só**: a engrenagem abre direto a janela, com as abas de antes (Geral, Peças, Medidas gerais, Cabo) e quatro novas:
+  - **Tutorial**: seis primeiros passos, que se marcam sozinhos quando aparecem na estrutura, com botões que já pegam a peça certa;
+  - **Aparência**: cor da chapa (preta, grafite, clara), fundo da cena, eixos no canto e animações;
+  - **Perfil**: nome e equipe, que saem na capa das pranchas ("Gerado pelo siMOLAdor por …");
+  - **Idioma**: português. Inglês e espanhol ainda não (os textos precisam ser separados para tradução).
+- Aparência, perfil e tutorial ficam no navegador de cada um; não mudam o projeto.
+
+---
+
 ## 1.8 — Edição por etapas, pranchas editáveis e cabo em cabo
 
 ### 1.8.3 — Rigidez à vista e código do mouse reorganizado · 04/11/2026

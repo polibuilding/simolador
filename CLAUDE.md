@@ -10,7 +10,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 
 - **No ar:** https://polibuilding.github.io/simolador/
 - **Repositório:** `polibuilding/simolador`, branch `main`. A publicação é por GitHub Actions no GitHub Pages (`.github/workflows/pages.yml`).
-- **Versão atual:** 1.8.3. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
+- **Versão atual:** 1.9.0. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
 - **Usuários:** estudantes de engenharia e arquitetura, que montam e documentam estruturas para a competição.
 
 ## Como trabalhar com a equipe
@@ -49,7 +49,7 @@ TypeScript, React 18, Three.js via React Three Fiber + drei, Zustand, Vite, Vite
 | `src/core/` | Lógica pura e testável, sem React nem Three |
 | `src/render/` | Cena 3D (`Scene.tsx`) e desenho das peças (`pieces/`) |
 | `src/interaction/` | Posicionamento com o mouse. `Placement.tsx`: eventos (mouse, Enter), o despacho por ferramenta, guardas e limpeza. `ctx.ts`: câmera, tela e o estado de **um comando** (`Cmd`). `queries.ts`: consultas com cache (candidatas, guias, caminhos, referências do Tab). `steps/`: cada ferramenta (`support` GC, `bars` barras livres, triângulos e ligação, `rope` cabo e enrijecedor, `move` caminho, arraste livre, mover e colar, `place` peças comuns, `box` retângulo). É a parte mais delicada. |
-| `src/ui/` | Interface: `store.ts` (estado), `PropertiesPanel.tsx` (resumo e painel da peça), `Palette.tsx`, `Dock.tsx` (barra de baixo), `Toolbar.tsx`, `Config.tsx`, `Shortcuts.tsx`, `SheetsView.tsx` |
+| `src/ui/` | Interface: `store.ts` (estado), `PropertiesPanel.tsx` (resumo e painel da peça), `Palette.tsx`, `Dock.tsx` (barra de baixo), `Toolbar.tsx`, `Config.tsx` (janela da engrenagem, com as abas pessoais), `prefs.ts` (aparência, perfil e tutorial no localStorage), `Shortcuts.tsx`, `SheetsView.tsx` |
 | `src/drawings/` | Pranchas: vistas, folhas e exportação PDF/DXF/SVG |
 | `src/App.tsx` | Atalhos de teclado (`useShortcuts`) |
 | `tests/core/` | Testes do núcleo |
@@ -151,19 +151,14 @@ O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o as
 ## Pendências e próximas implementações
 
 ### Lembretes fixos (mencionar ao fim de cada entrega)
-1. **Menu maior de configurações:** pensar as abas Tutorial, Aparência, Idioma e Perfil. Quando estiver pronto, a engrenagem abre direto nele.
+1. **Idiomas:** a aba Idioma (1.9.0) só tem português. Inglês e espanhol pedem separar os textos da interface para tradução.
 2. **Corrigir as peças CC e CC90:** o formato é provisório até a equipe medir.
-3. **Confirmar as medidas do Kit 3** com o kit em mãos.
+3. **Confirmar as medidas do Kit 3** com o kit em mãos (e as regras K10–K14 da 1.9.0: anel, clip múltiplo, emenda, sem cortar).
 4. **Biblioteca online** de modelos dos usuários: precisa de servidor e contas, e é preciso definir onde hospedar. Hoje a Biblioteca só abre os exemplos.
-5. **Próximas montagens com cabo:** o mapa completo está em `plano-simolador.md` §8:
-   - clip múltiplo;
-   - anéis (novo tipo de nó só para cabos);
-   - emenda;
-   - cabo saindo do meio de outro;
-   - laço sem cortar;
-   - cruz de cabos;
+5. **Próximas montagens com cabo:** o mapa está em `plano-simolador.md` §8. Feito na 1.9.0: clip múltiplo, anéis, emenda, laço sem cortar, régua 1:1. Falta:
+   - cruz de cabos (o pino não vem no kit: decidir com a equipe);
    - cabo frouxo/funicular (2.x/3.x);
-   - régua de bolinhas 1:1 na prancha.
+   - posição de equilíbrio do anel (3.x).
 
 ### Mecanismo e rigidez (próximos passos)
 - Feito (1.8.3): rótulas que giram em laranja (`turningJoints`), **G** segue um modo por vez no arraste livre (`Mobility.modes`, `dofMode` na ferramenta `moveBody`), diagonal frouxa com barriga (`sagCurve`). Falta: o cabo do Kit 3 frouxo (hoje é recontado e fica sempre esticado).

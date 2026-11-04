@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
 import { minKits, usage } from "../core/inventory";
-import { ConfigPanel, LibraryPanel } from "./Config";
+import { LibraryPanel } from "./Config";
 import { useApp, useModel } from "./store";
 
 /** "2× K1 + 1× K2" */
@@ -183,11 +183,6 @@ function SimPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-function ConfigMenu({ onClose }: { onClose: () => void }) {
-  const ref = useDismiss(onClose);
-  return <ConfigPanel onClose={onClose} dismissRef={ref} />;
-}
-
 function LibraryMenu({ onClose }: { onClose: () => void }) {
   const ref = useDismiss(onClose);
   return <LibraryPanel onClose={onClose} dismissRef={ref} />;
@@ -201,12 +196,10 @@ export function Toolbar() {
   const { setName, undo, redo, setSheetsOpen, newProject, load, serialize } = useApp.getState();
   const fileRef = useRef<HTMLInputElement>(null);
   const [stockOpen, setStockOpen] = useState(false);
-  const [configOpen, setConfigOpen] = useState(false);
   const [simOpen, setSimOpen] = useState(false);
   const [libOpen, setLibOpen] = useState(false);
   const closeLib = useCallback(() => setLibOpen(false), []);
   const closeStock = useCallback(() => setStockOpen(false), []);
-  const closeConfig = useCallback(() => setConfigOpen(false), []);
   const closeSim = useCallback(() => setSimOpen(false), []);
   const [error, setError] = useState<string | null>(null);
   const model = useModel();
@@ -243,12 +236,9 @@ export function Toolbar() {
           <button className="icon ghost" onClick={doOpen} title="Abrir .mola (Ctrl+O)" aria-label="Abrir"><Icon d={Ico.open} /></button>
           <button className="icon ghost" onClick={doSave} title="Salvar .mola (Ctrl+S)" aria-label="Salvar"><Icon d={Ico.save} /></button>
         </span>
-        <div className="menu">
-          <button className="icon ghost" onClick={() => setConfigOpen((o) => !o)} aria-expanded={configOpen} title="Configurações" aria-label="Configurações">
-            <Icon d={Ico.gear} />
-          </button>
-          {configOpen && <ConfigMenu onClose={closeConfig} />}
-        </div>
+        <button className="icon ghost" onClick={() => useApp.setState({ settingsOpen: true, settingsTab: "geral" })} title="Configurações" aria-label="Configurações">
+          <Icon d={Ico.gear} />
+        </button>
         <div className="menu">
           <button className="icon ghost lib-btn" onClick={() => setLibOpen((o) => !o)} aria-expanded={libOpen} title="Biblioteca de modelos (em breve; por enquanto, os exemplos)" aria-label="Biblioteca">
             <Icon d={Ico.library} />

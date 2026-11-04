@@ -21,6 +21,10 @@ import { Cable, ContinuousConnector, PlateMesh, RigidConnector, Rope, RopeClip, 
 import { COLORS, M, PLATE_D, PLATE_W, toWorld } from "./units";
 import { Boards } from "./Boards";
 import { SnapshotHook } from "./snapshot";
+import { BACKGROUNDS, readAppearance } from "../ui/prefs";
+
+/** aparência escolhida nas configurações (lida na abertura; Aplicar recarrega) */
+const APPEARANCE = readAppearance();
 
 const typeOf = (code: string) => catalog.pieces[code]?.type;
 
@@ -691,7 +695,7 @@ export const PROPS_W = 272;
 /** largura da paleta de peças (por cima da cena, à esquerda), em px */
 export const PALETTE_W = 210;
 /** duração da troca paleta ⇄ menu pequeno (igual à transição do CSS) */
-const SLIDE_MS = 260;
+const SLIDE_MS = APPEARANCE.motion ? 260 : 0;
 
 /** Número que vai até o alvo suavemente (ease-out), para acompanhar a paleta abrindo e fechando. */
 function useEased(target: number, ms = SLIDE_MS) {
@@ -890,7 +894,7 @@ export function Scene() {
       }}
       gl={{ preserveDrawingBuffer: true }}
     >
-      <color attach="background" args={["#eef1f0"]} />
+      <color attach="background" args={[BACKGROUNDS[APPEARANCE.background]]} />
       <SnapshotHook />
       <ambientLight intensity={render ? 0.35 : 0.55} />
       {/* modo simples: sem reflexos do estúdio; uma luz de céu/chão deixa as peças legíveis */}
@@ -949,7 +953,7 @@ export function Scene() {
         </group>
       </CubeHelper>
       {/* referência de eixos no canto inferior esquerdo; clicar num eixo olha por ele */}
-      <AxisGizmo />
+      {APPEARANCE.axes && <AxisGizmo />}
       <PaletteShift />
       <Projection />
       <KeyCamera />

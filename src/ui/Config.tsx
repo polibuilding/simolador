@@ -8,6 +8,7 @@ import {
 } from "../core/config";
 import { configImpact } from "./configImpact";
 import { useApp, useModel } from "./store";
+import { DEFAULT_APPEARANCE, readAppearance, readProfile, readTutorial, resetTutorial, saveAppearance, saveProfile, type Appearance, type Profile } from "./prefs";
 import { GROUPS, paletteName } from "./Palette";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
@@ -157,46 +158,18 @@ function Problems({ d }: { d: ReturnType<typeof useDraft> }) {
   );
 }
 
-/** Menu da engrenagem: os parâmetros mais usados. */
-export function ConfigPanel({ onClose, dismissRef }: { onClose: () => void; dismissRef: React.RefObject<HTMLDivElement> }) {
-  const d = useDraft();
-  const anyMine = !isEmptyOverrides(configState.overrides);
-  return (
-    <div ref={dismissRef} className="popover left cfg-pop" role="dialog" aria-label="Configurações">
-      <p className="popover-title">Configurações</p>
-      {BASIC_FIELDS.map((f) => <FieldRow key={f.key} f={f} d={d} />)}
-      <Problems d={d} />
-      <div className="cfg-actions">
-        <button
-          className="ghost"
-          onClick={() => d.setDraft(() => {
-            const n = clone(d.draft);
-            for (const f of BASIC_FIELDS) delete n.settings[f.key];
-            return n;
-          })}
-          title="Volta estes valores aos da planilha (data/parametros.xlsx)"
-        >
-          Padrão
-        </button>
-        <button className="primary" disabled={!d.changed || d.errors.length > 0} onClick={() => saveAndReload(d.final)}>
-          Aplicar
-        </button>
-      </div>
-      <p className="cfg-foot">Aplicar recarrega o programa: a estrutura fica salva; o desfazer recomeça.{anyMine ? " Há configurações suas valendo." : ""}</p>
-      <button className="cfg-adv" onClick={() => (onClose(), useApp.setState({ settingsOpen: true }))}>
-        Configurações avançadas <span aria-hidden>›</span>
-      </button>
-    </div>
-  );
-}
-
 const TABS = [
+  { id: "geral", label: "Geral", hint: "Módulo, ângulos, chapa" },
   { id: "pecas", label: "Peças", hint: "Medidas e pesos" },
   { id: "medidas", label: "Medidas gerais", hint: "Esfera, mola, GC, RC90" },
   { id: "cabo", label: "Cabo e enrijecedor", hint: "Kit 3" },
-  { id: "geral", label: "Geral", hint: "Módulo, ângulos, chapa" },
 ] as const;
-const SOON = ["Tutorial", "Aparência", "Idioma", "Perfil"];
+const PERSONAL = [
+  { id: "tutorial", label: "Tutorial", hint: "Primeiros passos" },
+  { id: "aparencia", label: "Aparência", hint: "Chapa, fundo, eixos" },
+  { id: "perfil", label: "Perfil", hint: "Nome e equipe" },
+  { id: "idioma", label: "Idioma", hint: "Português" },
+] as const;
 
 /** Janela das configurações avançadas, com abas laterais (no estilo da lista de atalhos). */
 export function AdvancedConfig() {
@@ -207,7 +180,7 @@ export function AdvancedConfig() {
 
 function AdvancedInner() {
   const close = () => useApp.setState({ settingsOpen: false });
-  const [tab, setTab] = useState<string>("pecas");
+  const [tab, setTab] = useState<string>(useApp.getState().settingsTab ?? "geral");
   const d = useDraft();
   useEffect(() => {
     const key = (e: KeyboardEvent) => e.key === "Escape" && (e.stopPropagation(), close());
@@ -217,7 +190,7 @@ function AdvancedInner() {
   const order = [...new Set([...GROUPS.flatMap((g) => g.codes), ...Object.keys(baseCatalog.pieces)])].filter((c) => baseCatalog.pieces[c]);
   return (
     <div className="shortcuts-backdrop" onClick={close}>
-      <section className="shortcuts cfg-adv-win" role="dialog" aria-label="Configurações avançadas" onClick={(e) => e.stopPropagation()}>
+      <section className="shortcuts cfg-adv-win" role="dialog" aria-label="Configurações" onClick={(e) => e.stopPropagation()}>
         <header>
           <h2>Configurações</h2>
           <button onClick={close} aria-label="Fechar">×</button>
@@ -231,10 +204,10 @@ function AdvancedInner() {
               </button>
             ))}
             <span className="cfg-tabs-sep" />
-            {SOON.map((t) => (
-              <button key={t} className={`soon${tab === t ? " on" : ""}`} onClick={() => setTab(t)}>
-                {t}
-                <small>em breve</small>
+            {PERSONAL.map((t) => (
+              <button key={t.id} className={tab === t.id ? "on" : ""} onClick={() => setTab(t.id)}>
+                {t.label}
+                <small>{t.hint}</small>
               </button>
             ))}
           </nav>
@@ -277,20 +250,13 @@ function AdvancedInner() {
                 </table>
               </>
             )}
-            {SOON.includes(tab) && (
-              <div className="cfg-soon">
-                <p className="soon">Em breve</p>
-                <p>
-                  {tab === "Tutorial" && "Um passo a passo dentro do programa: montar o pórtico, ligar esferas, usar o cabo e gerar as pranchas."}
-                  {tab === "Aparência" && "Tema claro e escuro, cores das peças e dos pontos de encaixe, tamanho dos textos."}
-                  {tab === "Idioma" && "Português, inglês e espanhol (o manual do Mola é bilíngue)."}
-                  {tab === "Perfil" && "Nome, equipe e a assinatura que sai no carimbo das pranchas; os modelos que você enviou para a biblioteca."}
-                </p>
-              </div>
-            )}
+            {tab === "tutorial" && <TutorialTab onDo={close} />}
+            {tab === "aparencia" && <AppearanceTab />}
+            {tab === "perfil" && <ProfileTab />}
+            {tab === "idioma" && <LanguageTab />}
           </div>
         </div>
-        <footer className="cfg-adv-foot">
+        {!PERSONAL.some((t) => t.id === tab) && <footer className="cfg-adv-foot">
           <Problems d={d} />
           <div className="cfg-actions">
             <button className="ghost" onClick={() => d.setDraft(emptyOverrides())} title="Tudo como na planilha (data/parametros.xlsx)">
@@ -302,7 +268,7 @@ function AdvancedInner() {
               Aplicar
             </button>
           </div>
-        </footer>
+        </footer>}
       </section>
     </div>
   );
@@ -348,6 +314,114 @@ export function LibraryPanel({ dismissRef, onClose }: { dismissRef: React.RefObj
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+// ---------- abas pessoais: tutorial, aparência, perfil, idioma (ficam no navegador, não no projeto) ----------
+
+/** Tutorial: os primeiros passos, marcados sozinhos quando a estrutura mostra que foram feitos. */
+function TutorialTab({ onDo }: { onDo: () => void }) {
+  const model = useApp((s) => s.history.present);
+  const [flags, setFlags] = useState(readTutorial);
+  const nodes = Object.values(model.nodes);
+  const bars = Object.values(model.members).filter((m) => baseCatalog.pieces[m.code]?.type === "bar");
+  const vertical = bars.some((m) => Math.abs(model.nodes[m.a].pos[1] - model.nodes[m.b].pos[1]) > 1e-6);
+  const beam = bars.some((m) => model.nodes[m.a].pos[1] > 0 && Math.abs(model.nodes[m.a].pos[1] - model.nodes[m.b].pos[1]) < 1e-6);
+  const arm = (code: string) => () => (onDo(), useApp.getState().arm(code));
+  const steps: { id: string; title: string; text: string; done: boolean; action?: { label: string; run: () => void } }[] = [
+    { id: "gc", title: "Ligação de base", text: "Escolha a GC na paleta e clique na chapa. Os pontos verdes mostram a grade.", done: nodes.some((n) => n.kind === "support"), action: { label: "Pegar a GC", run: arm("GC") } },
+    { id: "pilar", title: "Pilar", text: "Com a B6 na mão, passe o cursor sobre a esfera da GC: a barra sobe. Clique para encaixar.", done: vertical, action: { label: "Pegar a B6", run: arm("B6") } },
+    { id: "viga", title: "Viga entre dois pilares", text: "Faça um segundo pilar a 6 módulos e ligue as duas esferas de cima: clique numa e depois na outra.", done: beam, action: { label: "Pegar a B6", run: arm("B6") } },
+    { id: "rigidez", title: "Ver o que mexe", text: "Dê duplo clique na viga: o caminho azul mostra para onde o pórtico tomba. Espaço amplia o que mexe junto; G segue uma liberdade por vez.", done: !!flags.rigidez },
+    { id: "cabo", title: "Cabo (Kit 3)", text: "Com o CABLE na mão, clique numa esfera e depois em outra: o pedaço sai em bolinhas, com o plano de corte.", done: Object.values(model.members).some((m) => baseCatalog.pieces[m.code]?.type === "rope"), action: { label: "Pegar o cabo", run: arm("CABLE") } },
+    { id: "pranchas", title: "Pranchas", text: "Abra Pranchas (no alto, à direita): capa, plantas, vistas, cortes e o PDF.", done: !!flags.pranchas, action: { label: "Abrir as pranchas", run: () => (onDo(), useApp.getState().setSheetsOpen(true)) } },
+  ];
+  const done = steps.filter((s) => s.done).length;
+  return (
+    <div className="cfg-tutorial">
+      <p className="cfg-lead">Primeiros passos: {done} de {steps.length} feitos. Cada passo se marca sozinho quando aparece na estrutura.</p>
+      <ol>
+        {steps.map((s) => (
+          <li key={s.id} className={s.done ? "done" : ""}>
+            <b>{s.done ? "✓ " : ""}{s.title}</b>
+            <span>{s.text}</span>
+            {s.action && !s.done && <button className="ghost" onClick={s.action.run}>{s.action.label}</button>}
+          </li>
+        ))}
+      </ol>
+      <div className="cfg-actions">
+        <button className="ghost" onClick={() => (resetTutorial(), setFlags({}))}>Recomeçar o tutorial</button>
+      </div>
+    </div>
+  );
+}
+
+/** Aparência: cor da chapa, fundo, eixos e animações. Vale ao recarregar. */
+let appearanceDraft: Appearance | null = null; // a escolha não aplicada sobrevive à troca de aba
+function AppearanceTab() {
+  const [a, setDraft] = useState<Appearance>(() => appearanceDraft ?? readAppearance());
+  const setA = (v: Appearance) => setDraft((appearanceDraft = v));
+  const saved = readAppearance();
+  const changed = JSON.stringify(a) !== JSON.stringify(saved);
+  const opt = <K extends keyof Appearance>(k: K, label: string, values: [Appearance[K], string][]) => (
+    <div className="cfg-row">
+      <span className="cfg-label">{label}</span>
+      <span className="segmented">
+        {values.map(([v, t]) => (
+          <button key={String(v)} className={a[k] === v ? "on" : ""} onClick={() => setA({ ...a, [k]: v })}>{t}</button>
+        ))}
+      </span>
+    </div>
+  );
+  return (
+    <div className="cfg-appearance">
+      <p className="cfg-lead">Como a cena aparece só para você (fica neste navegador; não muda o projeto).</p>
+      {opt("plate", "Chapa", [["preta", "Preta"], ["grafite", "Grafite"], ["clara", "Clara"]])}
+      {opt("background", "Fundo da cena", [["claro", "Claro"], ["cinza", "Cinza"]])}
+      {opt("axes", "Eixos X, Y, Z no canto", [[true, "Mostrar"], [false, "Esconder"]])}
+      {opt("motion", "Animações dos painéis", [[true, "Com"], [false, "Sem"]])}
+      <div className="cfg-actions">
+        <button className="ghost" onClick={() => setA(DEFAULT_APPEARANCE)}>Padrão</button>
+        <span className="cfg-grow" />
+        <button className="primary" disabled={!changed} onClick={() => (saveAppearance(a), window.location.reload())}>Aplicar (recarrega)</button>
+      </div>
+    </div>
+  );
+}
+
+/** Perfil: nome e equipe, que saem na capa das pranchas ("Gerado pelo siMOLAdor por …"). */
+function ProfileTab() {
+  const [p, setP] = useState<Profile>(readProfile);
+  const set = (k: keyof Profile) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const next = { ...p, [k]: e.target.value.slice(0, 60) };
+    setP(next);
+    saveProfile(next);
+  };
+  return (
+    <div className="cfg-profile">
+      <p className="cfg-lead">Fica neste navegador. Aparece na capa das pranchas, ao lado da data.</p>
+      <label className="cfg-row"><span className="cfg-label">Nome</span><input value={p.name} onChange={set("name")} placeholder="Seu nome" /></label>
+      <label className="cfg-row"><span className="cfg-label">Equipe</span><input value={p.team} onChange={set("team")} placeholder="Ex.: Poli Mola" /></label>
+      <p className="cfg-foot">Os modelos enviados para a biblioteca online vão aparecer aqui quando ela existir.</p>
+    </div>
+  );
+}
+
+/** Idioma: hoje só português (os textos ainda não estão separados para tradução). */
+function LanguageTab() {
+  return (
+    <div className="cfg-language">
+      <p className="cfg-lead">O programa está em português.</p>
+      <div className="cfg-row">
+        <span className="cfg-label">Idioma</span>
+        <span className="segmented">
+          <button className="on">Português</button>
+          <button disabled title="Em preparação">English</button>
+          <button disabled title="Em preparação">Español</button>
+        </span>
+      </div>
+      <p className="cfg-foot">Inglês e espanhol (o manual do Mola é bilíngue) dependem de separar os textos da interface para tradução: está nas próximas etapas.</p>
     </div>
   );
 }

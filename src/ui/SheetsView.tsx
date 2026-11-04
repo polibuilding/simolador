@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
 import { buildSheets, levelsOf, newViewCell, newViewFrame, type SheetInput, type ViewSpec } from "../drawings/sheets";
+import { profileLine, readProfile } from "./prefs";
 import { sheetToSvg, sheetsToDxf, sheetsToPdf } from "../drawings/export";
 import type { SheetLayout, SheetMeta, SheetPaper, SheetShow, SheetView } from "../core/serialization";
 import { CUSTOM_MAX, CUSTOM_MIN, type Pt } from "../drawings/prims";
@@ -133,7 +134,8 @@ export function SheetsView() {
       alive = false;
     };
   }, []);
-  const input: SheetInput = useMemo(() => ({ cat: catalog, model, inventory, name, meta }), [model, inventory, name, meta]);
+  const author = useMemo(() => profileLine(readProfile()), []);
+  const input: SheetInput = useMemo(() => ({ cat: catalog, model, inventory, name, meta, author }), [model, inventory, name, meta]);
   // fotos dos desenhos renderizados, por pedido; a estrutura mudou: tira de novo
   const [renders, setRenders] = useState<Record<string, string | null>>({});
   useEffect(() => setRenders({}), [model]);
@@ -480,7 +482,7 @@ export function SheetsView() {
             disabled={empty}
             onClick={() => {
               // DXF não leva imagem: a capa vai com a isométrica em linhas
-              const vector = buildSheets({ cat: catalog, model, inventory, name, meta }).sheets;
+              const vector = buildSheets({ cat: catalog, model, inventory, name, meta, author }).sheets;
               save(new Blob([sheetsToDxf(vector)], { type: "application/dxf" }), `${fileBase(name)}-pranchas.dxf`);
             }}
             title="Todas as folhas lado a lado, em mm de papel, com camadas MOLA-*"

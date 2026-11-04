@@ -4,7 +4,7 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 
 **Abrir o programa:** https://polibuilding.github.io/simolador/ · funciona no navegador, sem instalar nada.
 
-**Versão atual:** **1.8.3** (linha 1.x, "geométrica"). O que mudou em cada versão está no [CHANGELOG.md](CHANGELOG.md).
+**Versão atual:** **1.9.0** (linha 1.x, "geométrica"). O que mudou em cada versão está no [CHANGELOG.md](CHANGELOG.md).
 
 ## O que dá para fazer
 
@@ -13,7 +13,7 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 - **Encaixe guiado**: pontos verdes mostram onde a peça entra. Os pontos azuis ficam a um vão de barra. Os amarelos e laranja fecham triângulos e pirâmides com um clique.
 - **Ligar duas esferas**: com uma mola na mão, clique numa esfera e depois em outra. Se a distância não bate, a segunda esfera anda até a mola caber.
 - **Barras em qualquer direção**: nos eixos, em passos de 15° ou livres (treliças 3D, telhados).
-- **Cabos (Kit 3)**: o cabo entra em dois cliques, contado em bolinhas, com plano de corte dos rolos. Também dá para prender cabo em cabo (pendurais).
+- **Cabos (Kit 3)**: o cabo entra em dois cliques, contado em bolinhas, com plano de corte dos rolos. Também dá para prender cabo em cabo (pendurais), usar **anéis** no ar, juntar cabos num **clip múltiplo**, emendar sobras e deixar cabo **sem cortar**. As pranchas trazem a **régua de bolinhas 1:1** para cortar o cabo direto da folha.
 - **Regras reais do kit**: comprimentos, ângulo mínimo de 40° entre molas, mola na GC a pelo menos 40° da chapa, folgas, cruzamentos, ligações nos cantos certos e estoque. Quando algo é bloqueado, o rodapé diz por quê.
 - **Várias chapas**: chapas lado a lado, giradas ou afastadas, com estruturas ligadas entre elas.
 - **GC perto da estrutura**: círculos na chapa mostram onde uma mola chega até a nova GC.
@@ -40,7 +40,7 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 ### Arquivos e configurações
 - Projetos em arquivos `.mola`, com salvamento automático no navegador.
 - Estoque configurável por kit. No modo sem limite, o programa diz quantos kits a estrutura pede, no mínimo.
-- **Configurações** (engrenagem): módulo, ângulos mínimos, passo das inclinadas, tamanho da chapa, e medidas e pesos das peças. São protegidas contra valores que quebram o programa; `?padrao` no endereço abre sem elas.
+- **Configurações** (engrenagem): tutorial dos primeiros passos, aparência (cor da chapa, fundo, eixos), perfil (nome e equipe na capa das pranchas), módulo, ângulos mínimos, passo das inclinadas, tamanho da chapa, e medidas e pesos das peças. São protegidas contra valores que quebram o programa; `?padrao` no endereço abre sem elas.
 - **Exemplos** (Biblioteca): pórtico simples, torre triangular e a Estrutura 01 do Desafio 2022.
 
 ## Primeiros passos
@@ -98,10 +98,10 @@ Nunca edite os `.json` à mão.
 - como a RC90 trava na base;
 - como a CC90 trava.
 
-**Cabos:** clip múltiplo, anéis, emenda, laço sem cortar, cruz de cabos e régua de bolinhas 1:1 na prancha.
+**Cabos:** cruz de cabos (depende de um pino que não vem no kit) e cabo frouxo.
 
 **Outras frentes:**
-- **Configurações:** o menu maior, com Tutorial, Aparência, Idioma e Perfil.
+- **Idiomas:** inglês e espanhol.
 - **Biblioteca online:** modelos enviados pelos usuários.
 - **Geometria livre:** geodésicas e barras fora dos planos X, Y e Z.
 - **App local:** o programa instalado no computador.

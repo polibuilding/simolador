@@ -1,5 +1,6 @@
 // Estado da aplicação (zustand). O modelo vive dentro de um histórico para desfazer/refazer.
 import { create } from "zustand";
+import { markTutorial } from "./prefs";
 import { catalog } from "../core/catalog";
 import { codeOf, moveGroup, nodeMoveNearest, nodeMoveOptions, removeMany, removeSelection, rotateSelection, selAfter, type Sel } from "../core/edit";
 import { globalMoveAt, globalMoveOptions, moveScopes, type GlobalMove, type MoveRef, type MoveScope } from "../core/globalMove";
@@ -81,6 +82,8 @@ interface State {
   helpOpen: boolean;
   /** janela das configurações avançadas */
   settingsOpen: boolean;
+  /** aba que a janela de configurações abre */
+  settingsTab?: string;
   setHelpOpen: (on: boolean) => void;
   /** Q/E: peça anterior/seguinte do mesmo grupo da paleta */
   cyclePiece: (dir: 1 | -1, groups: string[][]) => void;
@@ -396,6 +399,7 @@ export const useApp = create<State>((set, get) => ({
     set({ tool: { kind: "moveNode", nodeId: sel.id, viaDrag }, ghost: null, hint: "Leve a esfera pelo caminho: azul pode, vermelho não. Tab percorre as referências; Espaço amplia o que mexe junto; Esc cancela." });
   },
   startMoveBody: () => {
+    markTutorial("rigidez");
     const s = get();
     const sel = s.selection;
     if (!sel || sel.kind === "connector") return s.startMove(false);
@@ -775,7 +779,8 @@ export const useApp = create<State>((set, get) => ({
   setCamera: (view) => set((s) => ({ camera: { view, n: s.camera.n + 1 } })),
   // abrir as pranchas limpa seleção e destaque (a foto da capa sai sem cores de seleção)
   setSheetsOpen: (sheetsOpen) =>
-    set(sheetsOpen ? { sheetsOpen, tool: { kind: "select" }, ghost: null, selection: null, multi: [], hoverId: null, hoverBoard: null } : { sheetsOpen, sheetBoards: null }),
+    (sheetsOpen && markTutorial("pranchas"),
+    set(sheetsOpen ? { sheetsOpen, tool: { kind: "select" }, ghost: null, selection: null, multi: [], hoverId: null, hoverBoard: null } : { sheetsOpen, sheetBoards: null })),
   newProject: () =>
     set((s) => ({ history: push(s.history, emptyModel()), selection: null, ghost: null, name: "Estrutura 01", tool: { kind: "select" }, sheet: sheetPrefs(s.sheet), sheetPast: [], sheetFuture: [] })),
 

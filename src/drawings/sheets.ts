@@ -20,6 +20,8 @@ export interface SheetInput {
   /** carimbo: título, folha, escala, o que mostrar, arranjo e cortes */
   meta: SheetMeta;
   date?: Date;
+  /** quem gerou (aba Perfil das configurações): sai no rodapé da capa */
+  author?: string;
   /** foto isométrica renderizada para a capa; sem ela, a capa usa o desenho em linhas */
   isoImage?: { url: string; aspect: number } | null;
   /** logos do carimbo (Mola e equipe), lado a lado no canto inferior esquerdo; sem elas, o hexágono */
@@ -996,7 +998,7 @@ function coverDrawing(input: SheetInput, n: number): Prim[] {
   }
   out.push(...tagged(tab, "capa:tabela"));
   const d = input.date ?? new Date();
-  out.push(txt([px, AREA.y1 - 2], `Gerado pelo siMOLAdor em ${d.toLocaleDateString("pt-BR")}`, 2 * fs, { fill: "#555" }));
+  out.push(txt([px, AREA.y1 - 2], `Gerado pelo siMOLAdor${input.author ? ` por ${input.author}` : ""} em ${d.toLocaleDateString("pt-BR")}`, 2 * fs, { fill: "#555" }));
   return out;
 }
 
