@@ -31,3 +31,4 @@ v1.8.1 143f4e4ffe6798d30241b7cc08ae3bd26935d965 Pranchas mais completas e cabo p
 v1.8.2 6fa53d5a776271c0e5863e88a2e7c4339cd3c69e Mais leve de abrir e mais resistente a erros
 v1.8.3 a0efad5014d767d0dc29a8f91f0d26b51869b809 Rigidez à vista e código do mouse reorganizado
 v1.9.0 cb8737f Montagens de cabo e configurações pessoais
+v1.10.0 d003e58 Arquivos de verdade, uso sem internet e aviso de versão nova
