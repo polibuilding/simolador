@@ -55,7 +55,7 @@ TypeScript, React 18, Three.js via React Three Fiber + drei, Zustand, Vite, Vite
 | `tests/core/` | Testes do núcleo |
 | `data/parametros.xlsx` | Fonte de **todas** as medidas e quantidades |
 | `examples/` | Pórtico simples e Estrutura 01 do Desafio 2022 |
-| `docs/` | `plano-simolador.md` (§10: plano da simulação 3.x), `regras-de-encaixe.md`, `kit-mola-pecas.md`, `fisica-das-pecas.md` (massas, rigidez, ímãs, flambagem e dinâmica das peças e ligações, com fonte e status), `ensaios-template.csv` |
+| `docs/` | `plano-simolador.md` (§10: plano da simulação 3.x), `regras-de-encaixe.md`, `kit-mola-pecas.md`, `fisica-das-pecas.md` (massas, rigidez, ímãs, flambagem e dinâmica das peças e ligações, com fonte e status: TFG da UPC 2026 e dissertação de Oliveira 2008), `casos-de-validacao.md` (o que a simulação 3.x tem de reproduzir), `ensaios-template.csv` |
 
 ### Arquivos de `src/core/`
 
@@ -104,7 +104,7 @@ Em `mechanism.ts` e `globalMove.ts`, cada ligação vira um vínculo:
 | Diagonal e cabo | Só tração (`ties`) |
 | GC | Fixa |
 
-A **GC como rótula** está **a conferir pela equipe**. O TFG da UPC (jan. 2026, ver `docs/fisica-das-pecas.md`) já mostra o pórtico sem RC90 na base tombando (GC = rótula) e a GC + RC90 funcionando como engaste no plano da RC90.
+A **GC como rótula** está **a conferir pela equipe**. O TFG da UPC (jan. 2026, ver `docs/fisica-das-pecas.md`) já mostra o pórtico sem RC90 na base tombando (GC = rótula) e a GC + RC90 funcionando como engaste no plano da RC90. A dissertação de Oliveira (UFOP, 2008, a origem do kit) mostra o mesmo em vários ensaios. Ela mostra também que a RC90 deixa reto um trecho da mola (modelar como trecho rígido + mola de rotação) e que a CC deixa a viga contínua sem passar momento para a coluna.
 
 - **Graus de liberdade:** saem do núcleo da matriz de rigidez, mais um teste finito (`newtonProject`) que descarta dobras que só existem no infinitesimal.
 - **Duplo clique:** com 0 graus a peça fica travada e o rodapé diz o que trava. Com 1, ela anda num caminho traçado por `tracePath`, azul onde pode e vermelho onde não pode. Com 2 ou mais, o arraste é livre (`dragTo` mexe o mínimo).
@@ -112,7 +112,7 @@ A **GC como rótula** está **a conferir pela equipe**. O TFG da UPC (jan. 2026,
 - **Tab** (e também ← / →) percorre as referências do caminho: limites azul/vermelho e posições na horizontal/vertical. Na esfera de uma mola, também as circunferências (`sphereRings`), e a esfera desliza na escolhida.
 - **Corpos rígidos** (`Mech.rigids`): os 3 primeiros pontos ficam fora de uma reta (`rigidOf`), e `planar` liga a linha de planicidade (placas).
 - **No resumo:** o bloco "Estabilidade" mostra os graus de liberdade por parte.
-- **Pensado para a 3.x:** esse modelo é a base da simulação. O plano está em `plano-simolador.md` §10 (estaticidade → estática linear → não linear e falhas → flambagem → dinâmica → cabos), e os números físicos (EI da mola = 2.966 N·mm² medido; massas, ímãs e ligações a medir) estão em `docs/fisica-das-pecas.md`, sempre com fonte e status.
+- **Pensado para a 3.x:** esse modelo é a base da simulação. O plano está em `plano-simolador.md` §10 (estaticidade → estática linear → não linear e falhas → flambagem → dinâmica → cabos), e os números físicos (EI da mola = 2.966 N·mm² medido; massas, ímãs e ligações a medir) estão em `docs/fisica-das-pecas.md`, sempre com fonte e status. A simulação simula o **kit** (o ímã que solta), não o prédio real, e é validada pelos casos de `docs/casos-de-validacao.md`.
 
 ## Kits e peças
 
@@ -146,7 +146,7 @@ O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o as
 5. Faça o commit em português, com uma mensagem que diga **o que mudou** (nunca só "Atualizações" ou "Correção"), depois `git pull --rebase origin main && git push`.
 6. Acrescente `vX.Y.Z <hash> <título>` em `.github/versoes.txt`, faça o commit "Etiqueta vX.Y.Z" e o push. Depois crie e envie a etiqueta à mão: `git tag -a vX.Y.Z <hash> -m "siMOLAdor X.Y.Z — <título>" && git push origin vX.Y.Z`. (A publicação não consegue criar etiquetas: o token das Actions não tem a permissão "workflows".)
 7. Acompanhe com `gh run watch` até o Pages terminar.
-8. Os documentos `CHANGELOG.md`, `docs/plano-simolador.md`, `docs/regras-de-encaixe.md`, `docs/kit-mola-pecas.md` e `docs/fisica-das-pecas.md` têm cópia no Drive da equipe: `I:\Meu Drive\Poli Building [GERAL]\02. Equipes\2026\Poli Mola\siMOLAdor\` (dados em `data\`). Copie para lá depois de mudar. Também há uma cópia num projeto do Claude chamado "SiMOLAdor".
+8. Os documentos `CHANGELOG.md`, `docs/plano-simolador.md`, `docs/regras-de-encaixe.md`, `docs/kit-mola-pecas.md`, `docs/fisica-das-pecas.md` e `docs/casos-de-validacao.md` têm cópia no Drive da equipe: `I:\Meu Drive\Poli Building [GERAL]\02. Equipes\2026\Poli Mola\siMOLAdor\` (dados em `data\`). Copie para lá depois de mudar. Também há uma cópia num projeto do Claude chamado "SiMOLAdor".
 
 ## Pendências e próximas implementações
 

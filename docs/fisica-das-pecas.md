@@ -1,6 +1,6 @@
 # Física das peças e ligações do Kit Mola
 
-Versão 1.0 · 04/11/2026. Base de dados física para a linha **3.x** (simulação). Reúne o que se sabe sobre massa, rigidez, resistência e comportamento dinâmico de cada peça e de cada ligação, com a fonte e o grau de confiança de cada número. Dimensões geométricas: `kit-mola-pecas.md`. Plano da simulação: `plano-simolador.md` §10. Regras de montagem: `regras-de-encaixe.md`.
+Versão 1.1 · 04/11/2026 (1.1: dissertação de Oliveira, 2008). Base de dados física para a linha **3.x** (simulação). Reúne o que se sabe sobre massa, rigidez, resistência e comportamento dinâmico de cada peça e de cada ligação, com a fonte e o grau de confiança de cada número. Dimensões geométricas: `kit-mola-pecas.md`. Plano da simulação: `plano-simolador.md` §10. Regras de montagem: `regras-de-encaixe.md`.
 
 **Status dos valores** (o mesmo da planilha `parametros.xlsx`):
 
@@ -12,6 +12,7 @@ Versão 1.0 · 04/11/2026. Base de dados física para a linha **3.x** (simulaç�
 **Fontes:**
 
 - **[TFG]** Marc Garcia Bautista, *Estudi qualitatiu i quantitatiu de la resposta estructural del model físic (kit Mola)*, TFG, ETSEIB-UPC, jan. 2026 (orientador Josep Maria Pons Poblet). O PDF foi enviado pela equipe em 04/11/2026 e também está publicado no UPCommons.
+- **[Oliveira]** Márcio Sequeira de Oliveira, *Modelo estrutural qualitativo para pré-avaliação do comportamento de estruturas metálicas*, dissertação de mestrado, UFOP (Escola de Minas), ago. 2008 (orientadora Arlene Maria Sarmanho Freitas). Apresenta a **Maquete Estrutural**, antecessora do Mola, criada pelo próprio autor, que é o criador do Mola (patente requerida no INPI, MU 8602813-8). A versão em português está no site da Mola; o PDF foi enviado pela equipe em 04/11/2026.
 - **[2022]** As pranchas do Desafio Poli-USP 2022.
 - **[nós]** As contas deste documento.
 
@@ -36,6 +37,30 @@ Versão 1.0 · 04/11/2026. Base de dados física para a linha **3.x** (simulaç�
    - as frequências e o amortecimento.
 
    Esses são os ensaios da §7. Quase todos dá para fazer em casa, com o kit, uma régua, moedas e o celular.
+
+## 1b. O que muda com a dissertação de Oliveira, 2008 (resumo)
+
+A dissertação descreve a Maquete Estrutural de 2008, que virou o Mola. Ela **não tem nenhum número de rigidez ou de força**: compara só a **forma** da deformada do modelo com a do SAP2000 (carga de 1 kN e seção qualquer, porque só a forma interessava). Mesmo assim, traz muito para o programa:
+
+1. **As regras de comprimento das peças estão confirmadas por outra fonte.** Na Tabela 3.1 de 2008, as molas 3, 4, 6 e 12 têm 30, 45, 74 e 162 mm, e a esfera tem 14 mm. Isso dá um módulo de **14,67 mm**, e barra = n·M − diâmetro da esfera. A nossa regra das pranchas de 2022 (n × 14,87 − 14,6) dá 30,0 / 44,9 / 74,6 / 163,8 mm. As placas (38, 53, 82, 170 mm) e as diagonais D4x6, D6x6 e D6x12 (94, 110 e 186 mm, contra 93, 112 e 185 mm pela regra) também batem, dentro de 1–2 mm. A diferença de 1,4 % no módulo (14,67 × 14,87) e na esfera (14 × 15 mm) pode ser evolução do produto ou do desenho: o T1 resolve.
+2. **O modelo de ligações do programa é o mesmo do criador do kit:**
+   - esfera = rótula;
+   - **GC sozinha = rótula** e **GC + RC90 = engaste** (ensaios 1–15, 22–25);
+   - RC90 entre molas = nó rígido;
+   - **CC = viga contínua sem passar momento para a coluna** (ensaios 19 e 21);
+   - placa = diafragma rígido (espaciais 4 e 8; núcleo rígido do Estudo 3);
+   - diagonal = tirante que "apresenta pouca resistência à compressão".
+
+   A dúvida "GC é rótula?" fica respondida por duas fontes independentes (Oliveira 2008 e o TFG de 2026).
+3. **A RC90 trava um trecho da mola, não só a ponta.** Em quase todos os ensaios com engaste, a deformada real se afasta da teórica perto da RC90: a peça, "em função da sua dimensão", deixa reto o trecho da mola que ela cobre. O efeito é maior entre mola e GC do que entre duas molas, e cresce com a carga. Para a simulação, a ponta de mola com RC90 tem um **trecho rígido** (≈ o cateto da RC90, 18 mm) e, provavelmente, uma **mola de rotação**. As contas (§2b.4) mostram que o balanço do TFG só fecha com as duas coisas juntas, ou com o comprimento flexível que o TFG supôs.
+4. **As diagonais de 2008 eram "molas com a parte central retilínea"**: um fio reto com uma molinha em cada ponta. Por isso a diagonal **não é um tirante rígido**: ela estica um pouco nas molinhas. As fotos do TFG mostram molinhas parecidas nas pontas das diagonais do Mola atual. A rigidez da diagonal (T6) passa a ser importante.
+5. **A GC prende na chapa por ímã** ("peça metálica cilíndrica… com ímãs na parte inferior que fazem o contato com a fundação, chapa metálica"). Então a GC pode **escorregar ou levantar**, e isso é um modo de falha.
+6. **As esferas pesam muito em relação às outras peças** (conclusão 8.1): "pode ser um fator limitador", por aumentar o peso próprio. Isso confirma o item 4 acima. Em 2008, as placas eram de **MDF de 6 mm** (≈ 29 g a P6x6 e ≈ 60 g a P6x12, se ainda forem assim) e as ligações rígida e contínua eram de MDF com 3 ímãs.
+7. **"A resistência… está ligada à força magnética dos ímãs; o modo de colapso do modelo não corresponde à situação real"** (8.1). O Simolar deve deixar claro que **prevê o que acontece no kit**: o ímã que solta, a GC que escorrega. Não prevê como o prédio de verdade falharia.
+8. **Efeitos de segunda ordem (P-Δ e P-δ) aparecem no kit** (Estudo 3, prédio de 3 pavimentos todo engastado). Uma treliça plana longa **perde a estabilidade lateral só com o peso próprio** (Estudo 2). Por isso a 3.x precisa de análise não linear e de flambagem global em 3D, não só de Euler por barra. A dissertação cita ainda um critério de "estrutura contraventada" (ECCS: o contraventamento reduz a flexibilidade lateral em ≥ 80 %) que o programa pode calcular.
+9. **Estruturas planas precisam de travamento fora do plano.** Nos ensaios de pórtico, Oliveira prendeu dois tirantes do topo até a chapa "para manter a estrutura no mesmo plano" (Fig. 4.2). O programa já acusa isso: um pórtico plano de esferas tem 3 graus de liberdade no espaço.
+10. **A dissertação pedia o siMOLAdor.** Nas sugestões de trabalhos futuros (8.2): "desenvolvimento de um software para auxiliar na quantificação das peças e na montagem…, fornecendo lista de peças, planta, vistas, cortes e perspectivas da estrutura modelada". É a linha 1.x. Outra sugestão, "avaliar… as modificações necessárias para ter-se um modelo reduzido", ou seja, quantitativo, é a linha 3.x.
+11. **Bateria de validação pronta**: são 29 ensaios planos, 14 espaciais e 3 estudos, com apoios, ligações e cargas descritos. Viraram os casos qualitativos da simulação em `casos-de-validacao.md`.
 
 ---
 
@@ -109,6 +134,83 @@ O ensaio T1 confirma isso em minutos: olhar a mola contra a luz, puxar com a mã
 
 ---
 
+## 2b. Leitura da dissertação de Oliveira (2008)
+
+### 2b.1 O que foi feito
+
+- **Objeto**: a Maquete Estrutural, em estágio de 2008. Ela tem pilares e vigas de mola, contraventamentos e tirantes, lajes e paredes de MDF, cabos (fio ou correntinha), arcos de mola curva, esferas, ligação rígida, ligação contínua e ligação de base. Todas as ligações são magnéticas.
+- **Método** (cap. 4): montar, fotografar de frente com tripé e fundo preto, aplicar a carga **com o dedo** e fotografar a deformada. Depois, modelar no SAP2000 com seção tubular qualquer e carga de 1 kN, e sobrepor as imagens no Photoshop. **Nenhum deslocamento foi medido**: a comparação é só de forma ("os eixos deformados coincidem / não coincidem").
+- **Ensaios**:
+  - 29 planos: colunas 1–4, vigas 5–8, pórticos 9–17, viga contínua 18–21, arcos 22–25, treliças 26–29;
+  - 14 espaciais: pórticos espaciais 1–8, galpão 9–13, treliça espacial 14;
+  - 3 estudos: influência das ligações numa residência, com 6 configurações; arranjo e estabilidade lateral de treliças, com 4 arranjos; e efeitos de segunda ordem num prédio de 3 pavimentos, com 3 configurações;
+  - 10 edificações reais remontadas (cap. 7): London Eye, Domo do Milênio, Forth Bridge, passarela estaiada, Renault Centre…
+- **Escala de referência**: as molas 3, 4, 6 e 12 "representariam, a princípio, 3, 4, 6 e 12 metros" de uma estrutura metálica real (1 M ≈ 1 m), pela modulação das peças de aço e pelo limite de 12 m do transporte. No exemplo do SAP (Fig. 4.6), porém, o pórtico de 88 × 176 mm virou 3 × 6 m (1 M ≈ 0,5 m). A própria dissertação diz que a relação "não precisa ser seguida obrigatoriamente".
+
+### 2b.2 Peças de 2008 × regras atuais
+
+| Peça (2008) | Medida em 2008 | Regra atual (pranchas 2022) | Diferença |
+|---|---|---|---|
+| Esfera | Ø 14 mm | Ø 15 mm | +1 mm |
+| Mola 3 / 4 / 6 / 12 | 30 / 45 / 74 / 162 mm | B3 / B4 / B6 / B12 = 30,0 / 44,9 / 74,6 / 163,8 mm | ≤ 1,8 mm |
+| Módulo implícito ((peça + esfera)/n) | 14,67 mm (os quatro dão 14,67–14,75) | 14,87 mm | −1,4 % |
+| Diagonal 4x6 / 6x6 / 6x12 (peça inteira) | 94 / 110 / 186 mm | 93,0 / 112,0 / 185,3 mm (cabo + 2 terminais) | ±2 mm |
+| Diagonais "longas" 3x12 / 4x12 (não existem hoje) | 174 / 177 mm | 169,7 / 173,9 mm | 2008 eram 3–4 mm mais longas |
+| Placas 3, 4, 6, 12 (lado) | 38, 53, 82, 170 mm | 37,3 / 52,2 / 81,9 / 171,1 mm | ≤ 1 mm |
+| Espessura das placas | **6 mm (MDF)** | 4 mm (estimado) | conferir |
+| Ligação rígida e contínua | MDF com 3 ímãs | RC90 e CC de plástico com ímãs | material mudou |
+| Ligação de base | peça metálica cilíndrica com ímãs embaixo, sobre chapa metálica | GC | mesma função |
+| Cabo | fio fino ou correntinha; liga por "mola com ímã embutido e gancho"; havia esticador (Fig. 3.17) | CABLE (corrente de bolinhas), CABLE C (mola com ímã e anel), esticador | mesma ideia do Kit 3 |
+| Arcos | ½ e ¼ de circunferência | arco A6x6 do Kit 4 | não está no programa |
+| Diagonais e placas da série 3 e 12x12 | 3x3…12x12; placas 3x3…12x12 | não existem nos Kits 1–3 | — |
+
+Conclusão: a geometria do Mola é a da Maquete de 2008, com pequenos ajustes. As regras `barra = n·M − desconto` e `placa = n·M − desconto` estão certas, e o desconto da barra é praticamente o diâmetro da esfera.
+
+### 2b.3 O que os ensaios mostram (comportamento)
+
+| Grupo | O que acontece no kit | Consequência para o modelo |
+|---|---|---|
+| Coluna e viga só com esferas (ensaios 1, 5) | deformada igual à teórica de ponta a ponta | esfera = rótula perfeita, mola = viga de EI constante |
+| Coluna e viga com GC + RC90 (2–4, 6–8) | parecida, mas **reta perto da RC90**; o erro cresce com a carga | trecho rígido na RC90 (§2b.4) |
+| Pórtico com GC + RC90 e topo em esferas (9, 10) | coincide; o momento não passa para a viga | confirma RC90 na base e esfera no topo |
+| Pórtico com GC sozinha e RC90 nos cantos (11, 12, 15) | coincide; as colunas giram na base (Fig. 5.12) | **GC = rótula** |
+| RC90 entre duas molas (11, 12, 15) | erro pequeno, só com carga muito alta | RC90 entre molas ≈ rígida; o trecho rígido incomoda menos |
+| Viga contínua com CC (19, 21) | a carga passa para o vão vizinho (o outro vão sobe) **sem momento na coluna** | CC liga as rotações das duas vigas; a coluna continua rotulada. "Existe um limite de carregamento… ligado à força magnética" |
+| Arcos (22–25) | dois quartos de arco + CC = um arco contínuo | CC também vale em peças curvas (2.x) |
+| Treliças (26–29) | sem o tirante, os nós de baixo abrem; com ele, "nenhuma deformação visível" | barras axiais são muito mais rígidas que a flexão: treliça ≈ indeformável na tela |
+| Pórtico espacial com laje (4, 8) | a laje distribui a carga para o outro plano | placa = diafragma rígido |
+| Galpão (9–13) | X só nas paredes trava a parede, mas não a cobertura; X na cobertura trava tudo | contraventamento só onde há diagonal; nada "por proximidade" |
+| Estudo 3 (prédio de 3 pav.) | todo engastado: deslocamento grande, P-Δ e P-δ visíveis; com X ou núcleo de placas: imperceptível | não linear geométrico necessário; classificar deslocável × indeslocável |
+| Estudo 2 (treliças) | viga simples com **uma esfera + um ímã** no meio: flecha grande; treliça plana longa perde estabilidade lateral **só com o peso próprio**; multiplanar não | peso próprio e flambagem lateral (global) |
+
+### 2b.4 O trecho rígido da RC90 e o balanço do TFG
+
+Duas leituras explicam os 8,0 mm do balanço do TFG (B6, 11 g na ponta, EI = 2.966 N·mm²):
+
+| Hipótese | Modelo | Flecha calculada | O que falta |
+|---|---|---|---|
+| **H1** (TFG) | engaste perfeito, comprimento flexível 87 mm | 8,0 mm ✓ | explicar por que quase toda a mola flete, se a RC90 cobre 18 mm dela |
+| **H2** (Oliveira) | trecho rígido de 7,5 (raio da esfera) + 18,3 mm (RC90) na base e 11,5 mm na ponta (terminal + raio); flexível ≈ 52 mm | 3,1 mm com engaste perfeito | para chegar a 8,0 mm, a RC90/GC precisa ceder: **mola de rotação ≈ 90 N·mm/rad (≈ 1,5 N·mm por grau)** |
+
+A H2 combina com as fotos de 2008 (a mola sai reta da RC90) e com a observação de que "a imprecisão aumenta com a carga". Uma ligação magnética que cede faz exatamente isso. Se ela estiver certa, o momento na RC90 com 11 g já é ≈ 7 N·mm, e a RC90 deve escorregar com algumas dezenas de gramas. **O T4 e o T12 decidem**: foto do balanço (onde a mola começa a curvar?) e flecha com 3 cargas.
+
+Para a simulação, o modelo preparado para as duas hipóteses é o mesmo: **trecho rígido de comprimento `rc90_trecho_rigido_mm` + mola de rotação `rc90_rigidez_Nmm_rad`**. A H1 é o caso particular com trecho 0 e mola infinita.
+
+### 2b.5 As molas de 2008 tinham espiras abertas?
+
+Nas fotos de 2008 (Figs. 3.14, 3.24), as molas paradas parecem ter **folga entre as espiras**. O texto as chama de "molas de tração e compressão". Na flexão (Fig. 3.12d), as espiras se aproximam no lado comprimido e se afastam no tracionado.
+
+Isso **não contradiz** a hipótese da §2.4 para o Mola atual: o produto pode ter mudado de mola, e uma mola fechada também abre do lado tracionado. Mas **reforça a importância do T1**: olhar a B6 atual contra a luz. Se houver folga, a mola encurta na compressão, e o EI alto do TFG precisa de outra explicação (o ensaio deveria ser repetido). As contas de flecha do TFG com EI ≈ 3.000 (balanço de 11 g → 8 mm, que é visível na foto) mostram que o EI do Mola atual é dessa ordem, seja qual for a explicação.
+
+### 2b.6 Limites da dissertação
+
+- **Não há números**: nenhuma força, deslocamento ou rigidez. É uma validação de **forma**, com carga aplicada à mão.
+- As peças são as de 2008 (MDF, esfera de 14 mm), parecidas com o Mola, mas não iguais.
+- A comparação espacial foi feita sem sobreposição, só "a olho", porque a perspectiva do SAP2000 distorce.
+- O que se tira para o programa é **qualitativo**: quais ligações transmitem o quê, onde a deformada difere da teoria e quais fenômenos o kit mostra. Isso define os testes de "forma certa" da simulação (`casos-de-validacao.md`).
+
+---
+
 ## 3. Propriedades por peça
 
 Notação: c/c = centro a centro das esferas; L_f = comprimento flexível (só a espiral).
@@ -117,16 +219,18 @@ Notação: c/c = centro a centro das esferas; L_f = comprimento flexível (só a
 
 | Grandeza | Valor | Fonte | Status |
 |---|---|---|---|
-| Diâmetro | 15,0 mm | [2022] | desenho |
+| Diâmetro | 15,0 mm (14 mm em 2008) | [2022]; [Oliveira] Tab. 3.1 | desenho |
 | Material | aço (é atraída pelos ímãs) | site | confirmado |
 | Massa | **≈ 13,9 g** se for aço maciço | [nós] | estimado: pesar 10 (T0) |
-| Papel mecânico | **rótula**: as peças giram em volta dela; transmite força, não momento (a não ser com RC90, CC ou CC90) | [TFG] Fig. 11; 1.7.1 | confirmado |
+| Papel mecânico | **rótula**: as peças giram em volta dela; transmite força, não momento (a não ser com RC90, CC ou CC90) | [TFG] Fig. 11; [Oliveira] ensaios 1, 5, 9; 1.7.1 | confirmado (duas fontes) |
+| Peso relativo | "elevado quando comparado ao peso de outros elementos"; pode limitar a montagem | [Oliveira] 8.1 | confirmado |
 
 ### 3.2 Barras B4, B6, B12 (molas)
 
 | Grandeza | B4 | B6 | B12 | Fonte | Status |
 |---|---|---|---|---|---|
 | Centro a centro | 59,5 mm | 89,2 mm | 178,4 mm | [2022] | desenho |
+| Peça em 2008 | 45 mm | 74 mm | 162 mm | [Oliveira] Tab. 3.1 | confirma a regra (±2 mm) |
 | Peça (com terminais) | 44,9 mm | 74,6 mm | 163,8 mm | [2022] | desenho (B6 medida ≈ 75) |
 | Espiras (se encostadas) | ≈ 61 | ≈ 111 (TFG: 112) | ≈ 260 | [nós] | estimado |
 | Massa do fio | ≈ 1,5 g | ≈ 2,6 g | ≈ 6,2 g | [nós], aço | estimado; **somar os terminais** (pesar: T0) |
@@ -149,8 +253,10 @@ Notação: c/c = centro a centro das esferas; L_f = comprimento flexível (só a
 |---|---|---|---|
 | Cabo entre terminais | 82,6 / 101,6 / 174,9 mm | [2022] | desenho |
 | Diâmetro do cabo | ≈ 1 mm | — | estimado |
-| Trabalha | **só à tração** | manual; [TFG] Fig. 12 | confirmado |
-| Rigidez axial | o fio de aço é muito rígido; quem cede é o terminal e o contato do ímã | — | a medir (T6) |
+| Peça inteira em 2008 (D4x6 / D6x6 / D6x12) | 94 / 110 / 186 mm | [Oliveira] Tab. 3.1 | confirma a regra (±2 mm) |
+| Construção | fio reto com **molinha em cada ponta** ("molas com a parte central retilínea") | [Oliveira] 3.4; fotos do [TFG] | provável também no Mola atual |
+| Trabalha | **só à tração**: "pouca resistência à compressão" | manual; [TFG] Fig. 12; [Oliveira] 3.4 | confirmado |
+| Rigidez axial | o fio é rígido; **quem estica são as molinhas das pontas** (e o contato do ímã) | [Oliveira] | a medir (T6): importante para pórticos contraventados |
 | Folga montada | quanto sobra no vão nominal (esticada ou frouxa) | — | a medir (já no `medicoes-template.csv`) |
 | Massa | ? | — | a medir (T0) |
 
@@ -159,17 +265,19 @@ Notação: c/c = centro a centro das esferas; L_f = comprimento flexível (só a
 | Grandeza | Valor | Fonte | Status |
 |---|---|---|---|
 | Lados | 81,9 × 81,9 / 171,1 × 81,9 mm | [2022] | desenho |
-| Espessura | ≈ 4 mm | — | estimado |
-| Material, massa | ? | — | a medir (T0) |
-| Papel | **corpo rígido** preso às 4 esferas pelos ímãs; no próprio plano funciona como **contraventamento** (diafragma), até o ímã escorregar | 1.7.1 | hipótese de trabalho |
+| Espessura | ≈ 4 mm (6 mm em 2008) | [Oliveira] Tab. 3.1 | estimado: medir |
+| Material, massa | MDF em 2008: ≈ 29 g (P6x6) e ≈ 60 g (P6x12), se ainda for assim | [Oliveira]; [nós] | a medir (T0) |
+| Papel | **corpo rígido** preso **direto nas 4 esferas** pelos ímãs; no próprio plano funciona como **diafragma** (laje) ou **núcleo rígido** (parede) | [Oliveira] espaciais 4, 8 e Estudo 3; 1.7.1 | confirmado (forma) |
+| Limite | a carga da laje vai direto para as esferas: não dá para ver a laje "carregar a viga" | [Oliveira] 8.1 | — |
 
 ### 3.5 Ligação de base GC e chapa G
 
 | Grandeza | Valor | Fonte | Status |
 |---|---|---|---|
 | GC: Ø × altura; centro da esfera | 44 × 10,5 mm; 7,5 mm acima da chapa | [2022] | desenho |
-| Papel | **rótula fixa**: a posição fica presa e a rotação é livre | [TFG] Fig. 11 | **confirmado pelo TFG** (a equipe ainda confere no kit) |
-| Como prende na chapa | ímã? encaixe? | — | a medir (T2): força para arrancar e para escorregar |
+| Papel | **rótula fixa**: a posição fica presa e a rotação é livre | [TFG] Fig. 11; [Oliveira] ensaios 11, 12, 15, 24, 25 | **confirmado por duas fontes** |
+| Com RC90 | engaste no plano da RC90; nos pórticos espaciais de 2008, as bases "engastadas" parecem ter RC90 nas duas direções | [Oliveira] Figs. 5.30–5.37 | provável: duas perpendiculares = engaste completo |
+| Como prende na chapa | **ímãs embaixo, sobre a chapa metálica** (2008) | [Oliveira] 3.4 | provável: medir a força (T2) |
 | Massa | ? | — | a medir |
 
 ### 3.6 Ligações RC90, CC e CC90
@@ -177,10 +285,11 @@ Notação: c/c = centro a centro das esferas; L_f = comprimento flexível (só a
 | Grandeza | RC90 | CC | CC90 | Fonte | Status |
 |---|---|---|---|---|---|
 | Forma | triângulo de catetos 18,3 mm, 6 mm de espessura | trapézio baixo | "chapéu" alto sobre a CC | [2022]; caixa | desenho / provisório |
-| Material | plástico com ímãs | idem | idem | site | — |
-| O que trava | o ângulo entre as duas molas **no plano dela** (L10); a torção fica livre | duas molas alinhadas (continuidade) | o segundo par alinhado (X) | regras | equipe |
+| Material | plástico com ímãs (2008: MDF com 3 ímãs) | idem | idem | site; [Oliveira] | — |
+| Trecho rígido | a RC90 deixa reta a parte da mola que ela cobre (≈ 18 mm) | — | — | [Oliveira] ensaios 2–8 | a medir (T12) |
+| O que trava | o ângulo entre as duas molas **no plano dela** (L10); a torção fica livre | duas molas alinhadas: a viga fica contínua e **a coluna do mesmo nó continua rotulada** | o segundo par alinhado (X) | regras; [Oliveira] ensaios 19, 21 | equipe + 2008 |
 | Rigidez à rotação | finita ("nem engaste perfeito nem rótula", [TFG] 3.3.4) | ? | ? | — | a medir (T4) |
-| Momento que solta | ? | ? | ? | — | a medir (T4) |
+| Momento que solta | ? (H2 sugere poucas dezenas de gramas num balanço B6) | ? ("limite… ligado à força magnética") | ? | [Oliveira] 5.2.4; §2b.4 | a medir (T4, T14) |
 | Na base (GC + RC90) | **engaste no plano dela**: o balanço bate com a fórmula do engaste | — | — | [TFG] §5.1 | medido indiretamente |
 
 ### 3.7 Kit 3: cabo, acessórios e enrijecedor
@@ -213,15 +322,15 @@ Material: neodímio [TFG]. Sem esses números, a simulação não sabe dizer **o
 
 | Ligação | Hoje (1.x, cinemático) | Evidência | Modelo proposto (3.x) | Falta |
 |---|---|---|---|---|
-| Esfera | rótula | [TFG] Fig. 11 | nó com 3 deslocamentos; cada ponta de mola tem rotação própria | força do ímã (arranca/escorrega) |
+| Esfera | rótula | [TFG] Fig. 11; [Oliveira] 3.4 e ensaios 1, 5, 9 | nó com 3 deslocamentos; cada ponta de mola tem rotação própria | força do ímã (arranca/escorrega) |
 | Mola | distância fixa | §2.4 | viga inextensível (ou EA alto) com **EI = 2.966** | F₀; EI para momentos grandes |
-| RC90 entre molas | trava o ângulo no plano dela | regras L10 | mola de rotação **só no eixo normal ao plano dela**, rigidez k_RC90 e momento de deslizamento | k_RC90, M_solta (T4) |
-| RC90 na base | engasta (`RC90_BASE_ENGASTA = true`) | [TFG] balanço e pórtico | **engaste no plano dela**; duas RC90 em planos perpendiculares = engaste completo | confirmar com a equipe; k na base (T4) |
-| CC | colinear | — | continuidade da flexão nos dois planos entre as duas pontas | rigidez (T4) |
+| RC90 entre molas | trava o ângulo no plano dela | regras L10; [Oliveira] ensaios 11–17 | **trecho rígido** (≈ 18 mm) em cada mola + mola de rotação **só no eixo normal ao plano dela**, rigidez k_RC90 e momento de deslizamento | trecho, k_RC90, M_solta (T4, T12) |
+| RC90 na base | engasta (`RC90_BASE_ENGASTA = true`) | [TFG] balanço e pórtico; [Oliveira] ensaios 2–10, 13, 14 e pórticos espaciais | **engaste no plano dela** com trecho rígido; duas RC90 em planos perpendiculares = engaste completo. É a ligação que mais "cede" em 2008 | confirmar com a equipe; k na base (T4) |
+| CC | colinear | [Oliveira] ensaios 19, 21, 22, 24 | continuidade da flexão entre as **duas molas alinhadas**; as outras molas do nó (a coluna) continuam rotuladas | rigidez; força que solta (T14) |
 | CC90 | trava também o ângulo com o par da CC | — | idem para o segundo par; o ângulo entre os pares fica a confirmar | rigidez, regra |
-| GC | fixa | [TFG] Fig. 11 | apoio de 3 deslocamentos presos, rotação livre; verificar arrancamento e escorregamento pela reação | força na chapa (T2) |
-| Placa | corpo rígido | — | corpo rígido de 6 graus, preso aos cantos por "molas de ímã" | massa; escorregamento |
-| Diagonal | só tração | [TFG] Fig. 12 | barra só de tração (desliga quando comprimida); rigidez EA_d | EA_d, folga (T6) |
+| GC | fixa | [TFG] Fig. 11; [Oliveira] 3.4 (ímãs sobre a chapa metálica) | apoio de 3 deslocamentos presos, rotação livre; verificar arrancamento e escorregamento pela reação | força na chapa (T2) |
+| Placa | corpo rígido | [Oliveira] espaciais 4, 8; Estudo 3 | corpo rígido de 6 graus, preso aos cantos por "molas de ímã" | massa; escorregamento |
+| Diagonal | só tração | [TFG] Fig. 12; [Oliveira] 3.4 e ensaios 27, galpão 11–13 | barra só de tração (desliga quando comprimida) com rigidez das **molinhas das pontas** em série com o fio | rigidez das pontas, folga (T6) |
 | Cabo do Kit 3 | só tração, comprimento em bolinhas | manual | idem; frouxo de verdade (com barriga) na 3.5 | rigidez dos clips (T9) |
 | Anel | nó só de cabos, posição do usuário | — | posição de **equilíbrio** (busca de forma) | — |
 | Enrijecedor | — | [nós] | mola com EI × 100 (ou rígida) | EI (T11) |
@@ -278,9 +387,11 @@ São frequências fáceis de filmar (câmera lenta do celular, 120–240 quadros
 | **Flambagem** de uma mola comprimida | N > P_cr | Euler por barra, com o comprimento efetivo pelo tipo de ponta; depois, flambagem global (autovalor) | EI na compressão; vínculos da RC90 |
 | **Ímã solta** (a ponta descola) | tração na ponta > força do ímã | esforço normal na ponta da barra | força de arrancamento (T2) |
 | **Ponta escorrega** na esfera | cortante > atrito do contato | cortante na ponta | força de escorregamento (T2) |
-| **RC90 / CC cede** | momento > momento de deslizamento | momento na ligação | M_solta (T4) |
+| **RC90 / CC cede** | momento > momento de deslizamento. Em 2008: "existe um limite de carregamento… ligado à força magnética dos ímãs" para a CC | momento na ligação | M_solta (T4, T14) |
 | **GC escorrega ou levanta** da chapa | reação horizontal/vertical > força da GC | reações | T2 |
 | **Diagonal / cabo frouxo** | ficaria comprimido | barra só de tração (desliga) | folga montada |
+| **Flambagem lateral** de treliça plana longa | só com o peso próprio (Estudo 2 de 2008) | flambagem global em 3D (autovalor), não por barra | — |
+| **Deslocável demais** (P-Δ) | pórtico só com ligações rígidas, carga lateral (Estudo 3) | não linear geométrico; classificação deslocável × indeslocável | — |
 | **Deformação exagerada** | flecha visível demais (vale como "estado de serviço" didático) | flecha / vão | limite a combinar com a equipe |
 
 ---
@@ -299,7 +410,7 @@ Material:
 
 Para ler as flechas, fotografe de frente, com a câmera longe e com zoom (menos distorção). Repita cada medida 3 vezes, de preferência com peças diferentes.
 
-Registro: `docs/ensaios-template.csv` (uma linha por leitura).
+Registro: `docs/ensaios-template.csv` (uma linha por leitura). Fotos: o método de Oliveira (2008) serve de modelo: câmera no tripé, de frente, fundo escuro e liso, luz uniforme, e a mesma foto antes e depois da carga.
 
 | # | Ensaio | O que fazer | Alimenta | Prioridade |
 |---|---|---|---|---|
@@ -315,6 +426,9 @@ Registro: `docs/ensaios-template.csv` (uma linha por leitura).
 | **T9** | Cabo do Kit 3 | Pendurar pesos num pedaço de 30 bolinhas preso por CABLE C + clip: alongamento e peso que solta | cabo, clips | baixa |
 | **T10** | Placa como contraventamento | Pórtico sem diagonal com uma placa vertical no vão; empurrar de lado até escorregar | placa no plano | baixa |
 | **T11** | Enrijecedor | Balanço do T3 com a B6 enrijecida | EI enrijecida | baixa |
+| **T12** | Onde a mola começa a curvar (RC90) | Balanço do T3 com 2 ou 3 moedas: foto de perfil, bem de perto, com o papel milimetrado atrás. Medir o trecho reto junto da RC90 e a inclinação da mola logo na saída dela | trecho rígido e mola de rotação da RC90 (§2b.4: H1 × H2) | **alta** (junto com o T3) |
+| **T13** | Pórtico com GC sozinha | Pórtico B6–B12–B6 com RC90 só nos cantos de cima e GC sem RC90; empurrar o topo de lado: as colunas giram na base (como na Fig. 5.12 de 2008)? | confirma GC = rótula no kit atual | média (2 min) |
+| **T14** | Viga contínua com CC | Três GC com colunas B6 e duas B12 em linha; CC na esfera do meio; peso no meio de um vão: o outro vão sobe? Ir pondo peso até a CC soltar | CC (continuidade e limite), como os ensaios 19 e 21 de 2008 | média |
 
 ---
 
@@ -330,15 +444,18 @@ Quando houver medida, os valores entram em **`data/parametros.xlsx`**, numa aba 
 | `mola_comprimento_flexivel_desconto_mm` | — | a medir (T1): peça − espiral |
 | `esfera_massa_g`, `barra_massa_g_por_mm`, `terminal_massa_g`, `diagonal_massa_g`, `placa_massa_g`, `gc_massa_g`, `rc90_massa_g`, `cabo_massa_g_por_m` | esfera 13,9 (estimado) | a medir (T0) |
 | `ima_mola_esfera_N`, `ima_diagonal_esfera_N`, `ima_placa_N`, `ima_rc90_N`, `gc_chapa_N` (arrancar e escorregar) | — | a medir (T2) |
-| `rc90_rigidez_Nmm_rad`, `rc90_momento_solta_Nmm`, `cc_rigidez_Nmm_rad` | rígido | a medir (T4) |
-| `diagonal_EA_N`, `diagonal_folga_mm` | rígido / 0 | a medir (T6) |
+| `rc90_rigidez_Nmm_rad`, `rc90_momento_solta_Nmm`, `cc_rigidez_Nmm_rad`, `cc_momento_solta_Nmm` | rígido (a H2 sugere ≈ 90 N·mm/rad) | a medir (T4, T14) |
+| `rc90_trecho_rigido_mm` | 0 (H1) ou 18 (H2) | a medir (T12) |
+| `diagonal_EA_N` (fio + molinhas das pontas), `diagonal_folga_mm` | rígido / 0 | a medir (T6) |
 | `amortecimento` (fração do crítico) | 0,02 | a medir (T7) |
 | `enrijecedor_fator_EI` | 100 | estimado |
 
 ## 9. Perguntas para a equipe
 
-1. **GC = rótula**: o TFG confirma (Fig. 11). Vocês confirmam no kit? Basta tirar a RC90 de um pilar e ver se ele tomba.
-2. **RC90 na base**: engasta **só no plano dela**, como entre molas (L10)? Se sim, a chave `RC90_BASE_ENGASTA` vira "engasta no plano", e duas RC90 perpendiculares engastam de vez.
+1. **GC = rótula**: confirmado por duas fontes, o TFG (Fig. 11) e Oliveira (ensaios 11, 12, 15, 24, 25). Falta só a confirmação da equipe com o kit atual: tirar a RC90 de um pilar e ver se ele tomba.
+2. **RC90 na base**: engasta **só no plano dela**, como entre molas (L10)? As bases "engastadas" dos pórticos espaciais de 2008 parecem usar RC90 nas duas direções, o que reforça o "sim". Se for assim, a chave `RC90_BASE_ENGASTA` vira "engasta no plano", e duas RC90 perpendiculares engastam de vez.
 3. **Unidade de carga na tela**: gramas (como no kit) ou newtons? Proposta: **gramas**, com newtons entre parênteses.
 4. **Onde parar a simulação** quando um ímã solta: só avisar ("solta aqui com 85 g") ou mostrar o colapso progressivo?
-5. A dissertação do criador do Mola (UFOP) pode ter mais dados (cap. 3.4 e 4). A versão em português está no site da Mola, mas daqui só deu para ler a introdução. Se alguém baixar e mandar o PDF, a §3 é completada.
+5. ~~Dissertação do criador do Mola~~: lida em 04/11 (§1b e §2b). Ela não tem números; os números continuam dependendo dos ensaios da §7.
+6. **O Simolar simula o kit, não o prédio.** O colapso do kit (ímã que solta) "não corresponde à situação real" (Oliveira). Proposta: o programa diz "no kit, isto acontece" e não tenta prever a falha de uma estrutura de aço real. Uma eventual "escala real" (1 M ≈ 1 m, como na concepção da Maquete) fica para a 2.x/3.x.
+7. **Trecho rígido da RC90**: a equipe vê, no kit, a mola sair reta da RC90 e só curvar depois? É a hipótese H2 da §2b.4 (ensaio T12).

@@ -25,7 +25,7 @@ Regras derivadas: comprimento da barra = n·M − 14,6 mm; lado da placa = n·M 
 
 ## O que é
 
-Mola ("spring" em inglês) é um modelo físico estrutural modular criado pelo arquiteto Márcio Sequeira de Oliveira (validação na dissertação de mestrado da UFOP). Barras são molas helicoidais de aço com terminais magnéticos; nós são esferas de aço; ligações rígidas/contínuas são peças plásticas com ímãs. Todos os kits são independentes e compatíveis entre si. Lançamentos: Kit 1 (2014), Kit 2 (2016), Kit 3 (2019), Kit 4 (mais recente).
+Mola ("spring" em inglês) é um modelo físico estrutural modular criado pelo arquiteto Márcio Sequeira de Oliveira. Ele nasceu como "Maquete Estrutural", validada na dissertação de mestrado dele (UFOP, 2008; ver a seção "Maquete Estrutural (2008)" abaixo). Barras são molas helicoidais de aço com terminais magnéticos; nós são esferas de aço; ligações rígidas/contínuas são peças plásticas com ímãs. Todos os kits são independentes e compatíveis entre si. Lançamentos: Kit 1 (2014), Kit 2 (2016), Kit 3 (2019), Kit 4 (mais recente).
 
 ## Sistema de módulos (base para o simulador)
 
@@ -86,6 +86,23 @@ Resumo; a análise completa, com as correções, está em **`docs/fisica-das-pec
 - O "k teórico ≈ 2,96 N/mm" do TFG tem um erro de conta: a fórmula de Riba dá **0,29 N/mm**. A mola real é ≈ 14× mais rígida que uma mola livre, o que reforça a hipótese de espiras encostadas.
 - O balanço de 90 mm (B6 em GC + RC90) com 11 g flete 8,0 mm, o que bate com o EI usando o comprimento flexível de ≈ 87 mm. O valor de 87 mm não fecha com a peça de 74,6 mm das pranchas: medir.
 
+## Maquete Estrutural (2008), a antecessora do Mola
+
+Fonte: Márcio Sequeira de Oliveira, dissertação de mestrado, UFOP, 2008 (Tabela 3.1). Análise completa em `docs/fisica-das-pecas.md` §2b.
+
+| Peça de 2008 | Medida | Equivalente atual (regra das pranchas) |
+|---|---|---|
+| Esfera (ligação articulada) | Ø 14 mm, metálica | C, Ø 15 mm |
+| Mola 3 / 4 / 6 / 12 | 30 / 45 / 74 / 162 mm | B3 (Kit 4) / B4 / B6 / B12 = 30,0 / 44,9 / 74,6 / 163,8 mm |
+| Diagonais 3x3 … 12x12 ("molas com a parte central retilínea") | 48, 61, 88, 174, 69, 94, 177, 110, 186, 235 mm | D4x6 / D6x6 / D6x12 = 93 / 112 / 185 mm (cabo + terminais) |
+| Placas 3x3 … 12x12, MDF 6 mm | lados 38, 53, 82, 170 mm | P6x6 / P6x12 = 81,9 e 171,1 mm (espessura estimada hoje: 4 mm) |
+| Ligação rígida e contínua | MDF com 3 ímãs | RC90 e CC |
+| Ligação de base | peça metálica cilíndrica, ímãs embaixo, sobre chapa metálica | GC sobre a chapa G |
+| Arcos ½ e ¼ de circunferência | molas curvas | arco A6x6 do Kit 4 |
+| Cabo e gancho | fio fino ou correntinha; mola com ímã e gancho | CABLE, CABLE C (Kit 3) |
+
+Módulo implícito em 2008: (peça + esfera)/n = **14,67 mm** nas quatro molas (hoje, pelas pranchas: 14,87 mm). A regra "barra = n·M − desconto" se confirma, e o desconto é praticamente o diâmetro da esfera. Conferir no kit atual (T1 de `fisica-das-pecas.md`).
+
 ## Outros kits (resumo)
 
 - Kit 3 (azul, 205 peças + cortador): detalhado na seção abaixo.
@@ -142,4 +159,5 @@ Sistemas do manual: cabo, reações de apoio do cabo, formas funiculares, viga c
 - https://br.molamodel.com/pages/manual-kit-estrutural-mola-1
 - https://br.molamodel.com/pages/manual-kit-estrutural-mola-2
 - https://molamodel.com/products/mola-structural-kit-3
-- https://upcommons.upc.edu/bitstreams/59bed473-2c1e-4be5-a9c3-d81db4e83e4c/download
+- https://upcommons.upc.edu/bitstreams/59bed473-2c1e-4be5-a9c3-d81db4e83e4c/download (TFG da UPC, 2026)
+- https://cdn.shopify.com/s/files/1/2107/9061/files/Mola_Master_Thesis_Portuguese_Version.pdf (dissertação de Oliveira, UFOP, 2008)

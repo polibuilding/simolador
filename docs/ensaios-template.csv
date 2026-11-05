@@ -52,3 +52,8 @@ T9,CABLE,30 bolinhas com CABLE C + clip; pendurar peso,alongamento,,,,,mm,1,
 T9,CABLE,idem,peso que solta,,,,,g,1,
 T10,P6x6,portico sem diagonal com placa vertical; empurrar de lado,peso que faz escorregar,,,,,g,1,
 T11,BS6,T3 com a B6 enrijecida,quanto a ponta abaixa,0,,,,mm,1,
+T12,B6,T3 com 2 ou 3 moedas; foto de perfil de perto com papel milimetrado,trecho reto junto da RC90,,,,,mm,1,H1 (0 mm) x H2 (~18 mm)
+T12,B6,idem,inclinacao da mola na saida da RC90,,,,,graus,1,0 = engaste perfeito
+T13,B6,portico B6-B12-B6; RC90 so nos cantos de cima; GC sem RC90; empurrar o topo,as colunas giram na base? (s/n),,,,,-,1,confirma GC = rotula
+T14,CC,tres GC; colunas B6; duas B12 em linha; CC na esfera do meio; peso no meio de um vao,o outro vao sobe? (s/n),,,,,-,1,viga continua
+T14,CC,idem,peso em que a CC solta,,,,,g,1,
