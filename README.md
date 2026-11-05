@@ -2,9 +2,9 @@
 
 Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (Mola Structural Model), feito pela equipe **Poli Mola** da **Poli Building** (Poli-USP) para o Desafio Poli-USP. Você monta a estrutura no navegador, com as peças, as regras físicas e o estoque reais dos kits, e o programa gera as **pranchas** (capa, plantas, vistas e cortes) prontas para entregar.
 
-**Abrir o programa:** https://polibuilding.github.io/simolador/ · funciona no navegador, sem instalar nada.
+**Abrir o programa:** https://polibuilding.github.io/simolador/ · funciona no navegador, sem instalar nada. Depois da primeira visita, abre **sem internet**. No Chrome e no Edge, dá para **instalar como aplicativo** (Configurações › Sobre).
 
-**Versão atual:** **1.9.0** (linha 1.x, "geométrica"). O que mudou em cada versão está no [CHANGELOG.md](CHANGELOG.md).
+**Versão atual:** **1.10.0** (linha 1.x, "geométrica"). O que mudou em cada versão está no [CHANGELOG.md](CHANGELOG.md).
 
 ## O que dá para fazer
 
@@ -38,7 +38,7 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 - Saídas em **PDF**, **DXF** (camadas MOLA-*) e SVG.
 
 ### Arquivos e configurações
-- Projetos em arquivos `.mola`, com salvamento automático no navegador.
+- Projetos em arquivos `.mola`: Salvar grava no mesmo arquivo (Chrome e Edge), Salvar como, Recentes e cópias automáticas antes de trocar de projeto, além do salvamento automático no navegador.
 - Estoque configurável por kit. No modo sem limite, o programa diz quantos kits a estrutura pede, no mínimo.
 - **Configurações** (engrenagem): tutorial dos primeiros passos, aparência (cor da chapa, fundo, eixos), perfil (nome e equipe na capa das pranchas), módulo, ângulos mínimos, passo das inclinadas, tamanho da chapa, e medidas e pesos das peças. São protegidas contra valores que quebram o programa; `?padrao` no endereço abre sem elas.
 - **Exemplos** (Biblioteca): pórtico simples, torre triangular e a Estrutura 01 do Desafio 2022.
@@ -104,7 +104,7 @@ Nunca edite os `.json` à mão.
 - **Idiomas:** inglês e espanhol.
 - **Biblioteca online:** modelos enviados pelos usuários.
 - **Geometria livre:** geodésicas e barras fora dos planos X, Y e Z.
-- **App local:** o programa instalado no computador.
+- **App local:** o instalador para baixar no site da equipe (fase 5, versão 1.11; plano em `docs/plano-simolador.md` §7c).
 
 **Depois da linha 1.x:**
 - **2.x (arquitetônica):** o módulo extra ajustável.

@@ -220,15 +220,65 @@ A **escala gráfica** saiu do carimbo: fica na direita da folha, vertical e sem 
 | 3d. Várias chapas ✅ | chapas lado a lado com distância padrão ou livre; estruturas ligadas entre chapas; exportar/importar por chapa; pranchas por chapa | duas chapas a 6 módulos com viga ligando os pilares |
 | 3e. Pranchas editáveis (1.8.0) | carimbo novo editável na folha; A2 e folha personalizada; Mostrar global e por desenho; inserir, tirar e mudar desenhos de prancha; cortes marcados na planta | torre sem os pavimentos repetidos e com um corte, em PDF |
 | 4. Geometria livre | geodésicas e barras fora dos planos ortogonais (E19); mover várias peças juntas | geodésica do manual do Kit 2 |
-| 5. App local + Kits 3/4 | empacotar com Tauri (Q01); cabos, arcos | — |
+| 5. Aplicativo (desde 05/11/2026) | 1.10 pronto para usar fora do site; 1.11 aplicativo de computador (detalhe na §7c) | o instalador baixado do site da equipe abre um `.mola` com duplo clique, funciona sem internet e se atualiza sozinho |
 
 Análise estrutural: fora da linha 1.x (Q09); plano da linha 3.x na §10.
+
+## 7c. Fase 5: aplicativo (plano de 05/11/2026)
+
+Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem internet. A cada fase nova (X.Y), o site oferece a versão nova, e as correções (Z) chegam sozinhas pelo atualizador.
+
+**Dois caminhos, nesta ordem:**
+
+1. **App instalável pelo navegador (PWA)**: "Instalar siMOLAdor" no Chrome e no Edge. Ganha ícone, janela própria, funciona sem internet e se atualiza sozinho. Entra na **1.10**.
+2. **App de computador (Tauri)**: instaladores para Windows, Mac e Linux (≈ 10 MB, usando o navegador do sistema), com `.mola` aberto por duplo clique, salvar direto no arquivo e atualizador. Entra na **1.11**.
+
+**1.10 — Pronto para usar fora do site** (vale para o site e prepara o app):
+
+| Entrega | Versão |
+|---|---|
+| Arquivos de verdade: Salvar grava no mesmo arquivo, Salvar como, Recentes, cópias automáticas antes de trocar de projeto, aviso de alterações não salvas | 1.10.0 |
+| Compatibilidade do `.mola`: o arquivo guarda a versão do programa; arquivo de versão mais nova abre com aviso, em vez de recusar | 1.10.0 |
+| Sem internet: fonte embutida, manifesto (ícone, `.mola`), service worker gerado no build com todos os arquivos; aviso "nova versão disponível" | 1.10.0 |
+| Sobre e Novidades (do CHANGELOG), botão Instalar, relatório de erro para a equipe (versão, navegador, placa de vídeo, erros recentes) | 1.10.0 |
+| Impressão direta das pranchas e revisão das exportações | 1.10.1 |
+| Modo leve para computador fraco (sem sombras nem renderizado, menos resolução) e teste num notebook com vídeo integrado | 1.10.2 |
+
+**1.11 — Aplicativo de computador:**
+
+- Envelope Tauri em volta do build. O núcleo não muda.
+- Salvar e exportar pela janela "Salvar como" do sistema: o download por link do navegador não funciona dentro do app.
+- Associação do `.mola`.
+- "Importar do site": as configurações, o perfil e o trabalho guardado no navegador ficam num armazenamento separado no app.
+- Testar o 3D no navegador interno do Mac e do Linux, que é mais fraco que o do Windows.
+- **Distribuição**:
+  - etiqueta `vX.Y.Z` → GitHub Actions monta os instaladores das três plataformas → *Release* no GitHub;
+  - a página de download no site da equipe usa os links `…/releases/latest/download/…`, que sempre apontam para o mais recente;
+  - o atualizador do Tauri lê o arquivo da última versão, com os pacotes assinados por uma chave da equipe, guardada como segredo no GitHub.
+- **Pré-requisito**: as etiquetas `vX.Y.Z` existirem no Git (hoje não há nenhuma; ver `.github/versoes.txt`).
+
+**Política de versões:**
+
+- **O site** (GitHub Pages) recebe toda entrega X.Y.Z, como hoje.
+- **O app** é anunciado por fase: a página mostra "siMOLAdor 1.11", e o instalador é sempre o último 1.11.z. As correções Z chegam pelo atualizador.
+- Virar app não muda o X (a linha).
+
+**Decisões da equipe (pendentes):**
+
+1. **Marca Mola**: autorização por escrito da Mola (Márcio) para distribuir um instalador público com o nome e as peças. É o passo mais importante fora do código.
+2. **Assinatura de código**: sem ela, o Windows mostra "o Windows protegeu o computador" e o Mac bloqueia o app.
+   - Mac: Apple Developer Program, US$ 99/ano.
+   - Windows: serviço de assinatura da Microsoft (≈ US$ 10/mês; conferir se atende a Poli Building no Brasil) ou um certificado comprado.
+   - Dá para começar sem assinatura, com instrução de instalação.
+3. **Plataformas**: só Windows primeiro, ou Windows e Mac.
+4. **Página de download**: em que plataforma está o site da Poli Building.
+5. **Licença do código** e **quem publica** (etiquetas e chave de assinatura).
 
 ## 7b. Versões do programa
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0.0`, `v1.8.2`…).
 
-- **1.x — geométrica** (atual: 1.9.0): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.10.0): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: o módulo extra ajustável.
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 

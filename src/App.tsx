@@ -7,12 +7,15 @@ import { Dock } from "./ui/Dock";
 import { Toolbar } from "./ui/Toolbar";
 import { Shortcuts } from "./ui/Shortcuts";
 import { AdvancedConfig } from "./ui/Config";
+import { AppNotices } from "./ui/AppNotices";
 import { GROUPS, PaletteMini } from "./ui/Palette";
 import { panelOpen, useApp } from "./ui/store";
 import { catalog, configState, markConfigBootOk } from "./core/catalog";
 
 // as pranchas (desenhos, PDF, DXF) só carregam quando são abertas: o programa abre mais rápido
 const SheetsView = lazy(() => import("./ui/SheetsView").then((m) => ({ default: m.SheetsView })));
+import { openProject, saveProject } from "./ui/files";
+import { logError } from "./ui/errorlog";
 import { available } from "./core/inventory";
 
 /** Retângulo de seleção: azul = só o que está inteiro dentro; verde tracejado = o que tocar. */
@@ -85,10 +88,10 @@ function useShortcuts() {
         st.removeSelectedBoard();
       } else if (mod && k === "s") {
         e.preventDefault();
-        document.dispatchEvent(new CustomEvent("simolador:salvar"));
+        void saveProject(e.shiftKey);
       } else if (mod && k === "o") {
         e.preventDefault();
-        document.dispatchEvent(new CustomEvent("simolador:abrir"));
+        void openProject();
       } else if (mod && k === "c") {
         st.copySelection();
       } else if (mod && k === "x" && (st.selection || st.multi.length)) {
@@ -196,6 +199,7 @@ function useShortcuts() {
         onKey(e);
       } catch (err) {
         console.error("[siMOLAdor] erro no atalho", e.key, err);
+        logError(`atalho ${e.key}`, err);
         useApp.getState().disarm();
         useApp.setState({ hint: `O atalho ${e.key} deu erro e o comando foi cancelado (nada foi perdido).` });
       }
@@ -253,6 +257,7 @@ export default function App() {
       <PropertiesPanel hidden={!propsOpen} />
       <SelectionTag />
       <VersionTag />
+      <AppNotices />
       <SelectBox />
       <Shortcuts />
       <AdvancedConfig />

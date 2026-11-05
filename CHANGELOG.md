@@ -22,6 +22,20 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 ---
 
+## 1.10 — Pronto para usar fora do site
+
+### 1.10.0 — Arquivos de verdade, uso sem internet e aviso de versão nova · 05/11/2026
+- **Salvar no mesmo arquivo**: Ctrl+S grava por cima do arquivo aberto (no Chrome e no Edge), sem perguntar de novo. **Salvar como** (Ctrl+Shift+S) escolhe outro. Nos outros navegadores, Salvar continua baixando o arquivo.
+- **Seta ao lado de Salvar**: Salvar como, **Recentes** (os últimos 8 arquivos) e **Cópias automáticas**. Antes de abrir outro projeto, começar um novo ou abrir um exemplo, e a cada 5 min de trabalho, a estrutura é guardada ali. Nada se perde por engano.
+- **Ponto amarelo ao lado do nome**: há alterações que ainda não foram para o arquivo. Fechar a aba nesse estado faz o navegador perguntar.
+- **Arquivo de versão mais nova**: em vez de recusar, o programa pergunta se quer abrir assim mesmo, com o que esta versão conhece. O `.mola` agora guarda a versão do programa que o salvou.
+- **Funciona sem internet**: depois de abrir o site uma vez, o programa inteiro fica guardado no computador (inclusive pranchas e PDF). A fonte agora vem junto com o programa.
+- **Instalar como aplicativo**: no Chrome e no Edge, Configurações › Sobre › Instalar no computador (ou o ícone na barra de endereço). O app ganha ícone e janela própria, e abre `.mola` com duplo clique.
+- **Aviso de versão nova**: quando sai uma versão, aparece "Há uma versão nova pronta · Atualizar"; depois, "Atualizado para a versão… · Ver novidades".
+- **Configurações › Sobre**: versão, últimas novidades, Instalar e **Copiar relatório de erro**, para mandar à equipe quando algo der errado. A tela de erro também tem o botão.
+
+---
+
 ## 1.9 — Montagens de cabo e configurações pessoais
 
 ### 1.9.0 — Anéis, clip múltiplo, emendas, régua 1:1 e menu de configurações · 04/11/2026

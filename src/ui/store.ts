@@ -12,6 +12,7 @@ import type { RopeBall } from "../core/rope";
 import { dropUnknownPieces, fromFile, toFile, type SheetMeta } from "../core/serialization";
 import { applyCandidate, type Candidate } from "../core/snapping";
 import { cutSelection, makeClip, pasteClip, repeatClip, type Clip } from "../core/clipboard";
+import { VERSION as APP_VERSION } from "../version";
 import {
   addBoard, boardAsModel, boardCenter, boardName, boardRad, boardSelection, filterByBoards, moveBoards, removeBoard, renameBoard,
   rotateBoard, setBoardCenter, setBoardsGap, type Side,
@@ -44,6 +45,12 @@ interface State {
   history: History<Model>;
   inventory: InventoryConfig;
   name: string;
+  /** arquivo .mola em edição (Salvar grava nele) e se há alterações que ainda não foram para ele */
+  fileName: string | null;
+  dirty: boolean;
+  /** versão nova do programa pronta (service worker) e convite de instalação do navegador disponível */
+  updateReady: boolean;
+  canInstall: boolean;
   sheet: SheetMeta;
   tool: Tool;
   snap: boolean;
@@ -210,7 +217,7 @@ interface State {
   setCamera: (v: CameraView) => void;
   setSheetsOpen: (v: boolean) => void;
   newProject: () => void;
-  load: (raw: unknown) => void;
+  load: (raw: unknown, opts?: { allowNewer?: boolean }) => void;
   serialize: () => string;
 }
 
@@ -282,6 +289,10 @@ export const useApp = create<State>((set, get) => ({
   history: createHistory(emptyModel()),
   inventory: defaultInventory(catalog),
   name: "Estrutura 01",
+  fileName: null,
+  dirty: false,
+  updateReady: false,
+  canInstall: false,
   sheet: { line1: "MOLA STRUCTURAL MODEL", line2: String(catalog.settings.prancha_projeto ?? "") },
   tool: { kind: "select" },
   snap: catalog.settings.gc_encaixe_padrao !== "livre",
@@ -784,8 +795,8 @@ export const useApp = create<State>((set, get) => ({
   newProject: () =>
     set((s) => ({ history: push(s.history, emptyModel()), selection: null, ghost: null, name: "Estrutura 01", tool: { kind: "select" }, sheet: sheetPrefs(s.sheet), sheetPast: [], sheetFuture: [] })),
 
-  load: (raw) => {
-    const f0 = fromFile(raw);
+  load: (raw, opts) => {
+    const f0 = fromFile(raw, opts);
     // peças que o catálogo não conhece saem (com aviso), em vez de quebrar a cena
     const clean = dropUnknownPieces(catalog, f0.model);
     const f = { ...f0, model: clean.model };
@@ -816,7 +827,7 @@ export const useApp = create<State>((set, get) => ({
 
   serialize: () => {
     const { history, inventory, name, sheet } = get();
-    return JSON.stringify(toFile(history.present, inventory, name, catalog.settings.modulo_mm, sheet), null, 2);
+    return JSON.stringify(toFile(history.present, inventory, name, catalog.settings.modulo_mm, sheet, APP_VERSION), null, 2);
   },
 }));
 

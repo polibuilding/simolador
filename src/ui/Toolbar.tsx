@@ -3,18 +3,64 @@ import { catalog } from "../core/catalog";
 import { minKits, usage } from "../core/inventory";
 import { LibraryPanel } from "./Config";
 import { useApp, useModel } from "./store";
+import { canSaveInPlace, listCopies, listRecents, newProjectSafe, openProject, openRecent, restoreCopy, saveProject, type AutoCopy, type RecentFile } from "./files";
 
 /** "2× K1 + 1× K2" */
 export const kitsText = (kits: Record<string, number>) =>
   Object.entries(kits).filter(([, c]) => c > 0).map(([k, c]) => `${c}× K${k}`).join(" + ");
 
-function download(name: string, text: string) {
-  const blob = new Blob([text], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${name.replace(/[^\p{L}\p{N} _-]/gu, "").trim() || "estrutura"}.mola`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+/** Menu de arquivo (seta ao lado de Salvar): Salvar como, Recentes e Cópias automáticas. */
+function FileMenu({ onClose }: { onClose: () => void }) {
+  const ref = useDismiss(onClose);
+  const [recents, setRecents] = useState<RecentFile[] | null>(null);
+  const [copies, setCopies] = useState<AutoCopy[] | null>(null);
+  useEffect(() => {
+    void listRecents().then(setRecents);
+    void listCopies().then(setCopies);
+  }, []);
+  const when = (t: number) => {
+    const d = new Date(t);
+    const today = new Date().toDateString() === d.toDateString();
+    return today ? `hoje, ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  };
+  const run = (fn: () => Promise<void>) => () => (onClose(), void fn());
+  return (
+    <div ref={ref} className="popover left file-pop" role="menu" aria-label="Arquivo">
+      <button className="file-item" onClick={run(() => saveProject(true))}>
+        Salvar como… <kbd>Ctrl+Shift+S</kbd>
+      </button>
+      <p className="file-sub">Recentes</p>
+      {recents === null ? null : recents.length ? (
+        <ul className="file-list">
+          {recents.map((r) => (
+            <li key={r.id}>
+              <button onClick={run(() => openRecent(r.id))} title={r.handle ? "Abre o arquivo (o navegador pode pedir permissão)" : "Abre a cópia guardada do último salvamento"}>
+                <b>{r.fileName}</b>
+                <small>{r.name} · {when(r.when)}</small>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="file-empty">Os arquivos abertos e salvos aparecem aqui.</p>
+      )}
+      <p className="file-sub">Cópias automáticas</p>
+      {copies === null ? null : copies.length ? (
+        <ul className="file-list">
+          {copies.map((c) => (
+            <li key={c.id}>
+              <button onClick={run(() => restoreCopy(c.id))} title="Abre esta cópia (a estrutura atual também vira uma cópia antes)">
+                <b>{c.name}</b>
+                <small>{when(c.when)} · {c.pieces} peças · {c.why}</small>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="file-empty">Antes de abrir outro projeto, e a cada 5 min de trabalho, a estrutura é guardada aqui.</p>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -105,6 +151,8 @@ const Ico = {
   redo: <path d="M10.5 4l3 3-3 3M13.5 7h-7a3.5 3.5 0 0 0 0 7H9" />,
   box: <path d="M2 5.5 8 2.5l6 3v6l-6 3-6-3zM2 5.5l6 3 6-3M8 8.5v6" />,
   sheet: <path d="M2 3.5h12v9H2zM2 10h12M9.5 10v2.5" />,
+  /** mais opções: seta para baixo */
+  more: <path d="M5 6.5 8 9.5l3-3" />,
   /** engrenagem (desenho no estilo Lucide, licença ISC) */
   gear: (
     <g transform="scale(0.6667)" strokeWidth="1.9">
@@ -193,15 +241,17 @@ export function Toolbar() {
   const canUndo = useApp((s) => s.history.past.length > 0);
   const canRedo = useApp((s) => s.history.future.length > 0);
   const inventory = useApp((s) => s.inventory);
-  const { setName, undo, redo, setSheetsOpen, newProject, load, serialize } = useApp.getState();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const fileName = useApp((s) => s.fileName);
+  const dirty = useApp((s) => s.dirty);
+  const { setName, undo, redo, setSheetsOpen } = useApp.getState();
+  const [fileOpen, setFileOpen] = useState(false);
+  const closeFile = useCallback(() => setFileOpen(false), []);
   const [stockOpen, setStockOpen] = useState(false);
   const [simOpen, setSimOpen] = useState(false);
   const [libOpen, setLibOpen] = useState(false);
   const closeLib = useCallback(() => setLibOpen(false), []);
   const closeStock = useCallback(() => setStockOpen(false), []);
   const closeSim = useCallback(() => setSimOpen(false), []);
-  const [error, setError] = useState<string | null>(null);
   const model = useModel();
   // modo sem limite: quantas caixas, no mínimo, a estrutura pede
   const need = useMemo(() => (inventory.unlimited ? minKits(catalog, usage(model)) : null), [inventory.unlimited, model]);
@@ -211,20 +261,9 @@ export function Toolbar() {
 
   const doNew = () => {
     const empty = Object.keys(useApp.getState().history.present.nodes).length === 0;
-    if (empty || window.confirm("Começar uma estrutura nova? A atual pode ser recuperada com Desfazer.")) newProject();
+    if (empty || window.confirm("Começar uma estrutura nova? A atual fica guardada nas cópias automáticas (seta ao lado de Salvar).")) void newProjectSafe();
   };
-  const doSave = () => download(useApp.getState().name, serialize());
-  const doOpen = () => fileRef.current?.click();
-  useEffect(() => {
-    const onSave = () => doSave();
-    const onOpen = () => doOpen();
-    document.addEventListener("simolador:salvar", onSave);
-    document.addEventListener("simolador:abrir", onOpen);
-    return () => {
-      document.removeEventListener("simolador:salvar", onSave);
-      document.removeEventListener("simolador:abrir", onOpen);
-    };
-  }, []);
+  const saveTitle = fileName ? `Salvar em ${fileName} (Ctrl+S)${canSaveInPlace() ? "" : ": baixa de novo"}` : "Salvar .mola (Ctrl+S)";
 
   return (
     <header className="toolbar">
@@ -233,8 +272,12 @@ export function Toolbar() {
         <span className="file-tools" role="group" aria-label="Arquivo .mola">
           <span className="file-ext" aria-hidden>.mola</span>
           <button className="icon ghost" onClick={doNew} title="Novo" aria-label="Novo"><Icon d={Ico.fileNew} /></button>
-          <button className="icon ghost" onClick={doOpen} title="Abrir .mola (Ctrl+O)" aria-label="Abrir"><Icon d={Ico.open} /></button>
-          <button className="icon ghost" onClick={doSave} title="Salvar .mola (Ctrl+S)" aria-label="Salvar"><Icon d={Ico.save} /></button>
+          <button className="icon ghost" onClick={() => void openProject()} title="Abrir .mola (Ctrl+O)" aria-label="Abrir"><Icon d={Ico.open} /></button>
+          <button className="icon ghost" onClick={() => void saveProject()} title={saveTitle} aria-label="Salvar"><Icon d={Ico.save} /></button>
+          <span className="menu">
+            <button className="icon ghost file-more" onClick={() => setFileOpen((o) => !o)} aria-expanded={fileOpen} title="Salvar como, recentes e cópias automáticas" aria-label="Mais opções de arquivo"><Icon d={Ico.more} /></button>
+            {fileOpen && <FileMenu onClose={closeFile} />}
+          </span>
         </span>
         <button className="icon ghost" onClick={() => useApp.setState({ settingsOpen: true, settingsTab: "geral" })} title="Configurações" aria-label="Configurações">
           <Icon d={Ico.gear} />
@@ -248,26 +291,12 @@ export function Toolbar() {
         <span className="tb-sep" />
         <button className="icon ghost" onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)" aria-label="Desfazer"><Icon d={Ico.undo} /></button>
         <button className="icon ghost" onClick={redo} disabled={!canRedo} title="Refazer (Ctrl+Y)" aria-label="Refazer"><Icon d={Ico.redo} /></button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".mola,application/json"
-          hidden
-          onChange={async (e) => {
-            const f = e.target.files?.[0];
-            e.target.value = "";
-            if (!f) return;
-            try {
-              load(JSON.parse(await f.text()));
-              setError(null);
-            } catch (err) {
-              setError(err instanceof Error ? err.message : "Não foi possível abrir o arquivo.");
-            }
-          }}
-        />
       </div>
 
-      <input className="project-name" value={name} onChange={(e) => setName(e.target.value)} aria-label="Nome do projeto" title="Nome do projeto (sai nas pranchas e no arquivo)" spellCheck={false} />
+      <span className="project-wrap">
+        {dirty && fileName && <span className="dirty-dot" title={`Alterações ainda não salvas em ${fileName} (estão guardadas no navegador)`} aria-label="Alterações não salvas">●</span>}
+        <input className="project-name" value={name} onChange={(e) => setName(e.target.value)} aria-label="Nome do projeto" title="Nome do projeto (sai nas pranchas e no arquivo)" spellCheck={false} />
+      </span>
 
       <div className="tb-right">
         <div className="stock">
@@ -286,11 +315,6 @@ export function Toolbar() {
           {simOpen && <SimPanel onClose={closeSim} />}
         </div>
       </div>
-      {error && (
-        <p className="toolbar-error" role="alert">
-          {error} <button onClick={() => setError(null)}>Ok</button>
-        </p>
-      )}
     </header>
   );
 }

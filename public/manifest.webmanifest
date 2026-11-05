@@ -1,0 +1,22 @@
+{
+  "name": "siMOLAdor",
+  "short_name": "siMOLAdor",
+  "description": "Monte estruturas com o Kit Mola em 3D e gere as pranchas do Desafio Poli-USP.",
+  "lang": "pt-BR",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f5",
+  "theme_color": "#1f2523",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icone-mascara-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "file_handlers": [
+    { "action": "./", "accept": { "application/json": [".mola"] } }
+  ],
+  "launch_handler": { "client_mode": "focus-existing" }
+}

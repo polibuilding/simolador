@@ -10,7 +10,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 
 - **No ar:** https://polibuilding.github.io/simolador/
 - **Repositório:** `polibuilding/simolador`, branch `main`. A publicação é por GitHub Actions no GitHub Pages (`.github/workflows/pages.yml`).
-- **Versão atual:** 1.9.0. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
+- **Versão atual:** 1.10.0. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
 - **Usuários:** estudantes de engenharia e arquitetura, que montam e documentam estruturas para a competição.
 
 ## Como trabalhar com a equipe
@@ -49,7 +49,7 @@ TypeScript, React 18, Three.js via React Three Fiber + drei, Zustand, Vite, Vite
 | `src/core/` | Lógica pura e testável, sem React nem Three |
 | `src/render/` | Cena 3D (`Scene.tsx`) e desenho das peças (`pieces/`) |
 | `src/interaction/` | Posicionamento com o mouse. `Placement.tsx`: eventos (mouse, Enter), o despacho por ferramenta, guardas e limpeza. `ctx.ts`: câmera, tela e o estado de **um comando** (`Cmd`). `queries.ts`: consultas com cache (candidatas, guias, caminhos, referências do Tab). `steps/`: cada ferramenta (`support` GC, `bars` barras livres, triângulos e ligação, `rope` cabo e enrijecedor, `move` caminho, arraste livre, mover e colar, `place` peças comuns, `box` retângulo). É a parte mais delicada. |
-| `src/ui/` | Interface: `store.ts` (estado), `PropertiesPanel.tsx` (resumo e painel da peça), `Palette.tsx`, `Dock.tsx` (barra de baixo), `Toolbar.tsx`, `Config.tsx` (janela da engrenagem, com as abas pessoais), `prefs.ts` (aparência, perfil e tutorial no localStorage), `Shortcuts.tsx`, `SheetsView.tsx` |
+| `src/ui/` | Interface: `store.ts` (estado), `PropertiesPanel.tsx` (resumo e painel da peça), `Palette.tsx`, `Dock.tsx` (barra de baixo), `Toolbar.tsx`, `Config.tsx` (janela da engrenagem, com as abas pessoais), `prefs.ts` (aparência, perfil e tutorial no localStorage), `files.ts` (Salvar no mesmo arquivo, Salvar como, Recentes, cópias automáticas; `idb.ts` guarda no IndexedDB), `pwa.ts` (service worker, aviso de versão nova, Instalar), `errorlog.ts` (relatório de erro), `AppNotices.tsx`, `Shortcuts.tsx`, `SheetsView.tsx` |
 | `src/drawings/` | Pranchas: vistas, folhas e exportação PDF/DXF/SVG |
 | `src/App.tsx` | Atalhos de teclado (`useShortcuts`) |
 | `tests/core/` | Testes do núcleo |
@@ -87,6 +87,8 @@ TypeScript, React 18, Three.js via React Three Fiber + drei, Zustand, Vite, Vite
 - **Desenho sob demanda:** a cena usa `frameloop="demand"` (só desenha quando algo muda). Mudanças pelo React e pela store já pedem quadro (`Invalidator` em `Scene.tsx`). Quem mexer na cena por fora (câmera, `useFrame`, efeitos com `requestAnimationFrame`) precisa chamar `invalidate()`, senão a tela não atualiza.
 - **Carregamento:** as pranchas (`SheetsView` e `src/drawings/`) carregam sob demanda (`lazy` em `App.tsx`). Não importe nada de `src/drawings/` nem de `SheetsView` no caminho da montagem, senão eles voltam para o pacote inicial.
 - **Configurações:** ficam em localStorage (`simolador:config`), com verificação de abertura (`simolador:config-teste`), `?padrao` no endereço e um ErrorBoundary.
+- **Sem internet (1.10.0):** o build gera `dist/sw.js` a partir de `scripts/sw-modelo.js` (plugin `offlinePlugin` no `vite.config.ts`), com a lista de todos os arquivos e um carimbo de versão. Arquivo novo em `public/` entra sozinho. Nada pode vir de fora do site (a fonte é `@fontsource-variable/archivo`). O service worker só é registrado no build (`import.meta.env.PROD`); para testar, use `vite preview`.
+- **Arquivos (1.10.0):** salvar e abrir passam por `src/ui/files.ts` (não chame `store.load` direto da interface: use `openText`/`openExample`, que guardam a cópia automática e tratam arquivo de versão mais nova). O `.mola` grava `app` (versão do programa). Regras A1–A8 em `regras-de-encaixe.md`.
 
 ## Modelo cinemático (rigidez)
 
@@ -167,7 +169,7 @@ O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o as
 
 ### Outros
 - **Geometria livre:** geodésicas e barras fora dos planos ortogonais (E19). É a fase 4 do plano.
-- **App local:** empacotar com Tauri (fase 5).
+- **App local:** fase 5, plano em `plano-simolador.md` §7c. Feito na 1.10.0: arquivos, sem internet, PWA, Sobre e relatório. Próximos: 1.10.1 impressão das pranchas, 1.10.2 modo leve, 1.11 Tauri (instaladores, atualizador, página de download).
 - **Medições pendentes:** o protocolo está em `plano-simolador.md` §9.
 - **Responsáveis por frente** (Q08): falta definir.
 

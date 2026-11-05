@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import { copyReport, logError } from "./errorlog";
 import { CONFIG_KEY, CONFIG_OFF, CONFIG_TEST, configState } from "../core/catalog";
 
 /**
@@ -9,6 +10,9 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
   state = { error: null as Error | null };
   static getDerivedStateFromError(error: Error) {
     return { error };
+  }
+  componentDidCatch(error: Error) {
+    logError("tela", error);
   }
   render() {
     const { error } = this.state;
@@ -32,6 +36,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
           <div className="crash-actions">
             {configState.applied && <button className="primary" onClick={resetConfig}>Voltar às configurações padrão</button>}
             <button onClick={() => location.reload()}>Recarregar</button>
+            <button onClick={(e) => { const b = e.currentTarget; void copyReport().then((r) => (b.textContent = r === "copiado" ? "Relatório copiado: mande para a equipe" : "Relatório baixado")); }}>Copiar relatório</button>
           </div>
           <details>
             <summary>Detalhes</summary>

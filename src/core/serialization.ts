@@ -155,6 +155,8 @@ export function cleanSheet(raw: unknown): SheetMeta | undefined {
 export interface MolaFile {
   format: typeof FORMAT;
   version: number;
+  /** versão do programa que salvou (desde 1.10.0), para avisar quem abre numa versão mais antiga */
+  app?: string;
   savedAt: string;
   name: string;
   moduleMm: number;
@@ -168,10 +170,11 @@ export interface MolaFile {
   boards?: Board[];
 }
 
-export function toFile(model: Model, inv: InventoryConfig, name: string, moduleMm: number, sheet?: SheetMeta): MolaFile {
+export function toFile(model: Model, inv: InventoryConfig, name: string, moduleMm: number, sheet?: SheetMeta, app?: string): MolaFile {
   return {
     format: FORMAT,
     version: VERSION,
+    ...(app ? { app } : {}),
     savedAt: new Date().toISOString(),
     name,
     moduleMm,
@@ -185,15 +188,23 @@ export function toFile(model: Model, inv: InventoryConfig, name: string, moduleM
   };
 }
 
-export class MolaFileError extends Error {}
+export class MolaFileError extends Error {
+  /** o arquivo é de um formato mais novo: dá para abrir assim mesmo, perdendo o que esta versão não conhece */
+  newer = false;
+}
 
 const vec = (v: unknown): Vec3 | null =>
   Array.isArray(v) && v.length === 3 && v.every((x) => typeof x === "number") ? [v[0], v[1], v[2]] : null;
 
-export function fromFile(raw: unknown): { model: Model; inventory: InventoryConfig; name: string; sheet?: SheetMeta } {
+export function fromFile(raw: unknown, opts: { allowNewer?: boolean } = {}): { model: Model; inventory: InventoryConfig; name: string; sheet?: SheetMeta } {
   const f = raw as Partial<MolaFile>;
   if (!f || f.format !== FORMAT) throw new MolaFileError("Este arquivo não é um projeto do siMOLAdor.");
-  if (typeof f.version !== "number" || f.version > VERSION) throw new MolaFileError("Arquivo de uma versão mais nova do siMOLAdor.");
+  if (typeof f.version !== "number") throw new MolaFileError("Arquivo sem o número do formato: não é um projeto do siMOLAdor ou está corrompido.");
+  if (f.version > VERSION && !opts.allowNewer) {
+    const e = new MolaFileError(`Arquivo salvo numa versão mais nova do siMOLAdor${typeof f.app === "string" ? ` (${f.app})` : ""}.`);
+    e.newer = true;
+    throw e;
+  }
   if (!Array.isArray(f.nodes) || !Array.isArray(f.members)) throw new MolaFileError("Arquivo incompleto.");
   const nodes: Model["nodes"] = {};
   for (const n of f.nodes) {

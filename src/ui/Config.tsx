@@ -8,6 +8,10 @@ import {
 } from "../core/config";
 import { configImpact } from "./configImpact";
 import { useApp, useModel } from "./store";
+import { openExample } from "./files";
+import { copyReport } from "./errorlog";
+import { applyUpdate, isInstalled, offlineReady, promptInstall } from "./pwa";
+import { EDITION, VERSION } from "../version";
 import { DEFAULT_APPEARANCE, readAppearance, readProfile, readTutorial, resetTutorial, saveAppearance, saveProfile, type Appearance, type Profile } from "./prefs";
 import { GROUPS, paletteName } from "./Palette";
 
@@ -169,6 +173,7 @@ const PERSONAL = [
   { id: "aparencia", label: "Aparência", hint: "Chapa, fundo, eixos" },
   { id: "perfil", label: "Perfil", hint: "Nome e equipe" },
   { id: "idioma", label: "Idioma", hint: "Português" },
+  { id: "sobre", label: "Sobre", hint: `Versão ${VERSION}` },
 ] as const;
 
 /** Janela das configurações avançadas, com abas laterais (no estilo da lista de atalhos). */
@@ -254,6 +259,7 @@ function AdvancedInner() {
             {tab === "aparencia" && <AppearanceTab />}
             {tab === "perfil" && <ProfileTab />}
             {tab === "idioma" && <LanguageTab />}
+            {tab === "sobre" && <AboutTab />}
           </div>
         </div>
         {!PERSONAL.some((t) => t.id === tab) && <footer className="cfg-adv-foot">
@@ -288,17 +294,8 @@ export function LibraryPanel({ dismissRef, onClose }: { dismissRef: React.RefObj
       return null;
     }
   }).filter(Boolean) as { path: string; raw: string; name: string; pieces: number }[];
-  const open = (raw: string) => {
-    const st = useApp.getState();
-    const empty = Object.keys(st.history.present.nodes).length === 0;
-    if (!empty && !window.confirm("Abrir o exemplo no lugar da estrutura atual? Salve antes (.mola) se quiser guardá-la.")) return;
-    try {
-      st.load(JSON.parse(raw));
-      onClose();
-    } catch (e) {
-      useApp.setState({ hint: e instanceof Error ? e.message : "Não foi possível abrir o exemplo." });
-    }
-  };
+  // a estrutura atual vai para as cópias automáticas antes (Arquivo › Cópias automáticas)
+  const open = (raw: string) => void openExample(raw).then((ok) => ok && onClose());
   return (
     <div ref={dismissRef} className="popover left lib-pop" role="dialog" aria-label="Biblioteca">
       <p className="popover-title">Biblioteca · em breve</p>
@@ -422,6 +419,79 @@ function LanguageTab() {
         </span>
       </div>
       <p className="cfg-foot">Inglês e espanhol (o manual do Mola é bilíngue) dependem de separar os textos da interface para tradução: está nas próximas etapas.</p>
+    </div>
+  );
+}
+
+// ---------- Sobre (1.10.0): versão, novidades, instalar e relatório ----------
+
+interface NewsEntry { title: string; items: string[] }
+
+/** As últimas entregas do CHANGELOG.md (carregado só quando a aba abre). */
+function parseNews(md: string, max = 4): NewsEntry[] {
+  const out: NewsEntry[] = [];
+  let cur: NewsEntry | null = null;
+  for (const line of md.split("\n")) {
+    if (line.startsWith("### ")) {
+      if (out.length >= max) break;
+      cur = { title: line.slice(4).trim(), items: [] };
+      out.push(cur);
+    } else if (line.startsWith("## ") && cur) {
+      cur = null;
+    } else if (cur && /^- /.test(line)) cur.items.push(line.slice(2));
+    else if (cur && /^ {2,}- /.test(line) && cur.items.length) cur.items[cur.items.length - 1] += ` ${line.trim().slice(2)}`;
+    else if (cur && line.trim() && !line.startsWith("|") && cur.items.length && !/^[#>]/.test(line)) cur.items[cur.items.length - 1] += ` ${line.trim()}`;
+  }
+  return out;
+}
+
+/** **negrito** e `código` do markdown, o resto como texto. */
+function Inline({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).filter(Boolean);
+  return <>{parts.map((p, i) => (p.startsWith("**") ? <b key={i}>{p.slice(2, -2)}</b> : p.startsWith("`") ? <code key={i}>{p.slice(1, -1)}</code> : <span key={i}>{p}</span>))}</>;
+}
+
+function AboutTab() {
+  const canInstall = useApp((s) => s.canInstall);
+  const updateReady = useApp((s) => s.updateReady);
+  const [news, setNews] = useState<NewsEntry[] | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+  useEffect(() => {
+    void import("../../CHANGELOG.md?raw").then((m) => setNews(parseNews(m.default))).catch(() => setNews([]));
+  }, []);
+  const installed = isInstalled();
+  const offline = offlineReady();
+  return (
+    <div className="cfg-about">
+      <p className="about-name"><b>siMOLAdor</b> {VERSION}{EDITION ? ` · linha ${EDITION}` : ""}</p>
+      <ul className="about-status">
+        <li className={offline ? "ok" : ""}>{offline ? "✓ Guardado neste computador: abre mesmo sem internet." : "Ainda não está guardado para usar sem internet (abra pelo site, com internet, uma vez)."}</li>
+        <li className={installed ? "ok" : ""}>
+          {installed ? "✓ Aberto como aplicativo instalado." : canInstall ? (
+            <>Dá para instalar como aplicativo (ícone próprio, janela própria). <button className="primary" onClick={() => void promptInstall()}>Instalar no computador</button></>
+          ) : "Para instalar como aplicativo: no Chrome ou no Edge, menu ⋮ › Instalar siMOLAdor (ou o ícone na barra de endereço)."}
+        </li>
+        {updateReady && <li>Há uma versão nova pronta. <button className="primary" onClick={applyUpdate}>Atualizar</button></li>}
+      </ul>
+      <p className="about-sub">Novidades</p>
+      {news === null ? <p className="cfg-foot">Carregando…</p> : news.length ? (
+        <div className="about-news">
+          {news.map((n) => (
+            <section key={n.title}>
+              <h4><Inline text={n.title} /></h4>
+              <ul>{n.items.map((it, i) => <li key={i}><Inline text={it} /></li>)}</ul>
+            </section>
+          ))}
+        </div>
+      ) : <p className="cfg-foot">O histórico completo está no CHANGELOG do repositório.</p>}
+      <p className="about-sub">Algo deu errado?</p>
+      <p className="cfg-foot">Copie o relatório e mande para a equipe: versão, navegador, placa de vídeo, o tamanho da estrutura e os últimos erros (nada do seu perfil).</p>
+      <div className="cfg-actions">
+        <button className="ghost" onClick={() => void copyReport().then((r) => setCopied(r === "copiado" ? "Relatório copiado." : "Relatório baixado (.txt)."))}>Copiar relatório de erro</button>
+        {copied && <span className="cfg-foot">{copied}</span>}
+      </div>
+      <p className="about-sub">Créditos</p>
+      <p className="cfg-foot">Feito pela equipe Poli Mola, da Poli Building (Poli-USP), para o Desafio Poli-USP. O Kit Mola é criação de Márcio Sequeira de Oliveira (molamodel.com). Código: github.com/polibuilding/simolador.</p>
     </div>
   );
 }

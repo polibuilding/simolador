@@ -22,6 +22,7 @@ import { freeBar, linkStep, sphereUnder, triangleStep } from "./steps/bars";
 import { mclipStep, ringStep, ropeStep, stiffStep } from "./steps/rope";
 import { boxSelect } from "./steps/box";
 import { moveStep } from "./steps/move";
+import { logError } from "../ui/errorlog";
 import { spotStep } from "./steps/place";
 
 // as consultas com cache continuam saindo daqui (Scene e outros importam de "interaction/Placement")
@@ -228,6 +229,7 @@ export function Placement() {
         fn(...a);
       } catch (err) {
         console.error(`[siMOLAdor] erro em ${name}:`, err);
+        logError(name, err);
         resetCommand();
         const now = performance.now();
         const st = useApp.getState();
