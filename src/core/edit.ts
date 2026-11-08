@@ -77,7 +77,8 @@ export function rotateSelection(cat: Catalog, inv: InventoryConfig, model: Model
     if (!p) return {};
     const base: Model = { ...model, plates: without(model.plates, p.id) };
     const corners = p.corners.map((id) => model.nodes[id].pos);
-    const center = corners.reduce((s, q) => [s[0] + q[0] / 4, s[1] + q[1] / 4, s[2] + q[2] / 4] as Vec3, [0, 0, 0] as Vec3);
+    const k = corners.length;
+    const center = corners.reduce((s, q) => [s[0] + q[0] / k, s[1] + q[1] / k, s[2] + q[2] / k] as Vec3, [0, 0, 0] as Vec3);
     const cands = plateCandidates(cat, inv2, base, p.code).filter((c) => c.check.ok);
     cands.sort((x, y) => dist(markerPos(base, x), center) - dist(markerPos(base, y), center));
     const same = (c: Candidate) => c.kind === "plate" && c.geom.corners.every((q) => corners.some((r) => samePos(r, q)));
@@ -243,7 +244,7 @@ export function nodeMoveOptions(cat: Catalog, model: Model, nodeId: string): Nod
   // cabos (Kit 3) não seguram a forma: esticam ou encolhem com o nó (o pedaço é recortado)
   const rigid = Object.values(model.members).filter((m) => cat.pieces[m.code]?.type !== "rope");
   for (const m of rigid) link(m.a, m.b);
-  for (const p of Object.values(model.plates)) for (let i = 0; i < 4; i++) link(p.corners[i], p.corners[(i + 1) % 4]);
+  for (const p of Object.values(model.plates)) for (let i = 0; i < p.corners.length; i++) link(p.corners[i], p.corners[(i + 1) % p.corners.length]);
   const moving = new Set<string>([nodeId]);
   const seen = new Set<string>([nodeId]);
   for (const start of Object.keys(model.nodes)) {
@@ -774,7 +775,7 @@ export function bodyMoveOptions(cat: Catalog, model: Model, ref: BodyRef): BodyM
     (adj.get(b) ?? adj.set(b, new Set()).get(b)!).add(a);
   };
   for (const m of rigid) link(m.a, m.b);
-  for (const p of Object.values(model.plates)) for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) link(p.corners[i], p.corners[j]);
+  for (const p of Object.values(model.plates)) for (let i = 0; i < p.corners.length; i++) for (let j = i + 1; j < p.corners.length; j++) link(p.corners[i], p.corners[j]);
   // conjunto: a partir das pontas que não são GC, sem atravessar GC
   const ids = new Set<string>();
   const anchors = new Set<string>();

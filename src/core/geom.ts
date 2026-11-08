@@ -157,3 +157,116 @@ export function polygonsCross(Ain: Vec3[], Bin: Vec3[], margin = 0.03): boolean 
   const edges = (P: Vec3[]) => P.map((p, i) => [p, P[(i + 1) % P.length]] as const);
   return edges(A).some(([p, q]) => segmentHitsPolygon(p, q, B, 0)) || edges(B).some(([p, q]) => segmentHitsPolygon(p, q, A, 0));
 }
+
+// ---------- placas de qualquer formato (base para a placa ajustável da 2.x, X7) ----------
+// As placas do kit são retângulos e seguem pelo caminho de sempre (`isRectangle`). Só uma placa que não é
+// retângulo (vinda de um .mola com peça criada) usa as contas de polígono abaixo.
+
+/** Centro (média dos cantos). */
+export const polyCenter = (ps: Vec3[]): Vec3 => scale(ps.reduce((acc, p) => add(acc, p), [0, 0, 0] as Vec3), 1 / ps.length);
+
+/** Normal do polígono plano pelo método de Newell (vale para qualquer número de cantos e para côncavos). */
+export function polyNormal(ps: Vec3[]): Vec3 {
+  const n: Vec3 = [0, 0, 0];
+  for (let i = 0; i < ps.length; i++) {
+    const a = ps[i];
+    const b = ps[(i + 1) % ps.length];
+    n[0] += (a[1] - b[1]) * (a[2] + b[2]);
+    n[1] += (a[2] - b[2]) * (a[0] + b[0]);
+    n[2] += (a[0] - b[0]) * (a[1] + b[1]);
+  }
+  return len(n) < 1e-12 ? [0, 1, 0] : norm(n);
+}
+
+/** Todos os cantos no mesmo plano (X7: a placa é sempre plana)? `tol` em módulos. */
+export function isPlanar(ps: Vec3[], tol = 1e-3): boolean {
+  if (ps.length < 3) return false;
+  const n = polyNormal(ps);
+  const c = polyCenter(ps);
+  return ps.every((p) => Math.abs(dot(sub(p, c), n)) <= tol);
+}
+
+/**
+ * Quatro cantos em retângulo, na ordem ao redor (as placas do kit). `tol` é relativa (vale em módulos ou em mm):
+ * o cosseno entre os lados e o erro do 4º canto, dividido pelo lado maior, ficam abaixo dela.
+ */
+export function isRectangle(ps: Vec3[], tol = 1e-6): boolean {
+  if (ps.length !== 4) return false;
+  const u = sub(ps[1], ps[0]);
+  const v = sub(ps[3], ps[0]);
+  const lu = len(u);
+  const lv = len(v);
+  if (lu < 1e-9 || lv < 1e-9) return false;
+  return Math.abs(dot(u, v)) <= tol * lu * lv && len(sub(add(ps[0], add(u, v)), ps[2])) <= tol * Math.max(lu, lv);
+}
+
+/** Polígono 2D convexo (cantos em ordem, sem três seguidos alinhados contando como quebra)? */
+export function isConvex2(P: [number, number][]): boolean {
+  let sign = 0;
+  for (let i = 0; i < P.length; i++) {
+    const [x1, y1] = P[i];
+    const [x2, y2] = P[(i + 1) % P.length];
+    const [x3, y3] = P[(i + 2) % P.length];
+    const c = (x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2);
+    if (Math.abs(c) < 1e-12) continue;
+    if (sign && Math.sign(c) !== sign) return false;
+    sign = Math.sign(c);
+  }
+  return sign !== 0;
+}
+
+/** Os lados não se cruzam (polígono simples; côncavo pode)? */
+export function isSimple2(P: [number, number][]): boolean {
+  const n = P.length;
+  const cross2 = (o: [number, number], a: [number, number], b: [number, number]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  for (let i = 0; i < n; i++) {
+    const a = P[i];
+    const b = P[(i + 1) % n];
+    for (let j = i + 2; j < n; j++) {
+      if (i === 0 && j === n - 1) continue; // lados vizinhos pelo fecho
+      const c = P[j];
+      const d = P[(j + 1) % n];
+      const d1 = cross2(a, b, c);
+      const d2 = cross2(a, b, d);
+      const d3 = cross2(c, d, a);
+      const d4 = cross2(c, d, b);
+      if (d1 * d2 < 0 && d3 * d4 < 0) return false;
+    }
+  }
+  return true;
+}
+
+/** Cantos no plano do polígono, em coordenadas 2D (origem no 1º canto, x ao longo do 1º lado). */
+export function polyTo2D(ps: Vec3[]): { pts: [number, number][]; origin: Vec3; ex: Vec3; ey: Vec3; n: Vec3 } {
+  const n = polyNormal(ps);
+  const ex = norm(sub(ps[1], ps[0]));
+  const ey = cross(n, ex);
+  const o = ps[0];
+  return { pts: ps.map((p) => [dot(sub(p, o), ex), dot(sub(p, o), ey)]), origin: o, ex, ey, n };
+}
+
+/**
+ * Recua cada lado do polígono convexo 2D `d` para dentro (a folga entre a placa e as esferas): cada canto novo é o
+ * cruzamento dos dois lados recuados. Em polígono côncavo o resultado é aproximado (a confirmar com a placa côncava, X7).
+ */
+export function insetPolygon2(P: [number, number][], d: number): [number, number][] {
+  const n = P.length;
+  let area = 0;
+  for (let i = 0; i < n; i++) area += P[i][0] * P[(i + 1) % n][1] - P[(i + 1) % n][0] * P[i][1];
+  const s = area >= 0 ? 1 : -1; // anti-horário: para dentro é a esquerda
+  const lines = P.map((a, i) => {
+    const b = P[(i + 1) % n];
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const nx = (-(b[1] - a[1]) / L) * s;
+    const ny = ((b[0] - a[0]) / L) * s;
+    return { a: [a[0] + nx * d, a[1] + ny * d] as [number, number], dir: [(b[0] - a[0]) / L, (b[1] - a[1]) / L] as [number, number] };
+  });
+  return P.map((_, i) => {
+    const l1 = lines[(i - 1 + n) % n];
+    const l2 = lines[i];
+    const det = l1.dir[0] * l2.dir[1] - l1.dir[1] * l2.dir[0];
+    if (Math.abs(det) < 1e-9) return l2.a;
+    const t = ((l2.a[0] - l1.a[0]) * l2.dir[1] - (l2.a[1] - l1.a[1]) * l2.dir[0]) / det;
+    return [l1.a[0] + l1.dir[0] * t, l1.a[1] + l1.dir[1] * t];
+  });
+}

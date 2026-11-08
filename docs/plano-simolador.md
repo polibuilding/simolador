@@ -242,8 +242,9 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 | Sem internet: fonte embutida, manifesto (ícone, `.mola`), service worker gerado no build com todos os arquivos; aviso "nova versão disponível" | 1.10.0 |
 | Sobre e Novidades (do CHANGELOG), botão Instalar, relatório de erro para a equipe (versão, navegador, placa de vídeo, erros recentes) | 1.10.0 |
 | Pranchas (pedido da equipe, 07/11): esquema dos pavimentos na capa, planta baixa cortada a qualquer altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20) | 1.10.1 ✅ |
-| Impressão direta das pranchas e revisão das exportações | 1.10.2 |
-| Modo leve para computador fraco (sem sombras nem renderizado, menos resolução) e teste num notebook com vídeo integrado | 1.10.3 |
+| Base para a 2.x, por dentro e sem mudar o uso (pedido da equipe, 08/11): catálogo em camadas, peças criadas no `.mola`, arquivo `.kit`, kit sem limite, placa de N cantos, parâmetros do Kit X na planilha (§11.5) | 1.10.2 ✅ |
+| Impressão direta das pranchas e revisão das exportações | 1.10.3 |
+| Modo leve para computador fraco (sem sombras nem renderizado, menos resolução) e teste num notebook com vídeo integrado | 1.10.4 |
 
 **1.11 — Aplicativo de computador:**
 
@@ -279,7 +280,7 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0.0`, `v1.8.2`…).
 
-- **1.x — geométrica** (atual: 1.10.1): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.10.2): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: flexibilidade, ajustabilidade e criação de peças próprias para representar e simular estruturas que fogem das limitações das peças atuais do kit. O instrumento é o **Kit X** (barra, placa e RC de qualquer ângulo, catálogo próprio e arquivo `.kit`, §11).
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
@@ -470,10 +471,10 @@ O Kit X mexe em três coisas que hoje são fixas no programa: a **geometria** (t
 | Preparação | Por quê | Onde |
 |---|---|---|
 | **Fase 4 (geometria livre) antes da 2.0**: esferas em qualquer posição, molas fora dos planos ortogonais, planos inclinados quaisquer | A barra ajustável e a RC de qualquer ângulo produzem posições fora da grade; sem isso, encaixe, rigidez e pranchas não acompanham | `snapping.ts`, `rules.ts`, `mechanism.ts`, `views.ts` |
-| **Catálogo em camadas**: peças da planilha + peças do usuário (registro em tempo de execução), código de peça livre | Base do "salvar no catálogo" e do `.kit` | `catalog.ts`, `config.ts` |
-| **O `.mola` leva a definição das peças próprias que usa** | Um `.mola` enviado sem o `.kit` precisa abrir igual em outro computador | `serialization.ts` (regras A) |
-| **Placa com N cantos** no modelo, no desenho e nas pranchas | A placa ajustável é um polígono | `model.ts`, `render/pieces`, `drawings/` |
-| **Estoque sem limite por kit** (hoje o "sem limite" vale para tudo) e cor por kit | O Kit X é infinito ao lado de kits contados | `inventory.ts`, aba Estoque |
+| ✅ 1.10.2 · **Catálogo em camadas**: peças da planilha + peças do usuário (registro em tempo de execução), código de peça livre | Base do "salvar no catálogo" e do `.kit` | `catalog.ts` (o `catalog` do programa é uma cópia; `baseCatalog` fica intocado), `userPieces.ts` (nomes X2/X3, "fabricar" X4, bloqueio X5, paleta abaixo da peça-mãe) |
+| ✅ 1.10.2 · **O `.mola` leva a definição das peças próprias que usa** | Um `.mola` enviado sem o `.kit` precisa abrir igual em outro computador | `serialization.ts` (campo `pieces`, regra A9); o formato do `.kit` (`toKitFile`/`fromKitFile`) está pronto, falta a tela |
+| ✅ 1.10.2 (parte) · **Placa com N cantos** no modelo, no desenho e nas pranchas | A placa ajustável é um polígono | Modelo, rigidez, cena 3D, pranchas e colisões aceitam N cantos (retângulos seguem pelo caminho antigo; o resto por `geom.ts`). Falta: encaixe e criação da placa na tela, e colisão de placa **côncava** (hoje as contas de polígono supõem convexa; X7 em aberto) |
+| ✅ 1.10.2 · **Estoque sem limite por kit** e cor por peça | O Kit X é infinito ao lado de kits contados | `inventory.ts` (`kitAmount`, `minKits`), `PieceDef.color` na mola e na placa. Falta: a RC de qualquer ângulo no desenho 3D (`RigidConnector` só faz 90°) e a aba Estoque com os `.kit` abertos |
 | **Exportar a estrutura em 3D** (STL/glTF) já na 1.x | Útil hoje (impressão, apresentações) e é a mesma função da peça do Kit X | `render/`, via three.js |
 | **Folha de detalhamento de peças** nas pranchas | Serve já para a CC/CC90 e o Kit 3, e é onde entram os desenhos das peças do Kit X | `drawings/` |
 | **Medir as Barras de Comprimento Regulável** (mín./máx. em mm de cada uma, folga, rigidez perto do máximo) | Sem as faixas reais, a conta de "quantos kits comerciais" não fecha | protocolo da §9, `kit-mola-pecas.md` |

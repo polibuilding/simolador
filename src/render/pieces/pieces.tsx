@@ -101,7 +101,8 @@ export function Bar({
     };
   }, [a, b]);
   const render = useApp((s) => s.render);
-  const springMat = useMaterial(look, render ? COLORS.springSteel : "#8f979e", 0.9, 0.35);
+  // cor própria da peça (peças criadas no Kit X, 2.x); as do kit seguem com a cor de sempre
+  const springMat = useMaterial(look, catalog.pieces[code]?.color ?? (render ? COLORS.springSteel : "#8f979e"), 0.9, 0.35);
   const capMat = useMaterial(look, COLORS.cap, 0.8, 0.3);
   const hitMat = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
   return (

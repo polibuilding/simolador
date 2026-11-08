@@ -13,6 +13,7 @@ import { dropUnknownPieces, fromFile, toFile, type SheetMeta } from "../core/ser
 import { applyCandidate, type Candidate } from "../core/snapping";
 import { cutSelection, makeClip, pasteClip, repeatClip, type Clip } from "../core/clipboard";
 import { VERSION as APP_VERSION } from "../version";
+import { registerUserPieces, userPiecesUsed } from "../core/userPieces";
 import {
   addBoard, boardAsModel, boardCenter, boardName, boardRad, boardSelection, filterByBoards, moveBoards, removeBoard, renameBoard,
   rotateBoard, setBoardCenter, setBoardsGap, type Side,
@@ -251,6 +252,7 @@ function restore(): Partial<Pick<State, "history" | "inventory" | "name" | "shee
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
     const f0 = fromFile(JSON.parse(raw));
+    registerUserPieces(catalog, f0.pieces); // peças criadas (2.x) que vieram no arquivo
     const f = { ...f0, model: dropUnknownPieces(catalog, f0.model).model };
     return { history: createHistory(f.model), inventory: f.inventory, name: f.name, ...(f.sheet ? { sheet: f.sheet } : {}), ...overlapReport(f.model) };
   } catch {
@@ -616,13 +618,15 @@ export const useApp = create<State>((set, get) => ({
     const s = get();
     const m = boardAsModel(catalog, s.history.present, id);
     const b = boardsOf(s.history.present).find((x) => x.id === id);
-    return JSON.stringify(toFile(m, s.inventory, `${s.name} - ${b ? boardName(b) : `chapa ${id.slice(1)}`}`, catalog.settings.modulo_mm, s.sheet), null, 2);
+    return JSON.stringify(toFile(m, s.inventory, `${s.name} - ${b ? boardName(b) : `chapa ${id.slice(1)}`}`, catalog.settings.modulo_mm, s.sheet, undefined, userPiecesUsed(catalog, m)), null, 2);
   },
   importToBoard: (id, raw) => {
     const s = get();
     let src: Model;
     try {
-      src = fromFile(raw).model;
+      const f = fromFile(raw);
+      registerUserPieces(catalog, f.pieces);
+      src = f.model;
     } catch (e) {
       return e instanceof Error ? e.message : "Arquivo inválido.";
     }
@@ -797,10 +801,14 @@ export const useApp = create<State>((set, get) => ({
 
   load: (raw, opts) => {
     const f0 = fromFile(raw, opts);
+    // peças criadas pelo usuário (Kit X, 2.x) que vieram no arquivo entram no catálogo antes de conferir as peças
+    const own = registerUserPieces(catalog, f0.pieces);
     // peças que o catálogo não conhece saem (com aviso), em vez de quebrar a cena
     const clean = dropUnknownPieces(catalog, f0.model);
     const f = { ...f0, model: clean.model };
-    const unknownNote = clean.dropped.length ? `Peças desconhecidas deixadas de fora: ${clean.dropped.join(", ")}.` : null;
+    const unknownNote = clean.dropped.length
+      ? `Peças desconhecidas deixadas de fora: ${clean.dropped.join(", ")}.${own.refused.length ? ` (${own.refused.join("; ")})` : ""}`
+      : null;
     // arquivo feito com outro módulo (configurações): as posições valem em módulos, as medidas em mm mudam
     const fileM = Number((raw as { moduleMm?: unknown })?.moduleMm);
     const mNote =
@@ -827,7 +835,7 @@ export const useApp = create<State>((set, get) => ({
 
   serialize: () => {
     const { history, inventory, name, sheet } = get();
-    return JSON.stringify(toFile(history.present, inventory, name, catalog.settings.modulo_mm, sheet, APP_VERSION), null, 2);
+    return JSON.stringify(toFile(history.present, inventory, name, catalog.settings.modulo_mm, sheet, APP_VERSION, userPiecesUsed(catalog, history.present)), null, 2);
   },
 }));
 

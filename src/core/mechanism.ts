@@ -48,7 +48,7 @@ export function mechComponent(cat: Catalog, model: Model, start: string[]): Set<
     (adj.get(b) ?? adj.set(b, new Set()).get(b)!).add(a);
   };
   for (const m of Object.values(model.members)) if (!isTie(cat, m.code)) link(m.a, m.b);
-  for (const p of Object.values(model.plates)) for (let i = 0; i < 4; i++) link(p.corners[i], p.corners[(i + 1) % 4]);
+  for (const p of Object.values(model.plates)) for (let i = 0; i < p.corners.length; i++) link(p.corners[i], p.corners[(i + 1) % p.corners.length]);
   const seen = new Set<string>();
   const stack = [...start];
   while (stack.length) {

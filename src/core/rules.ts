@@ -3,7 +3,7 @@
 import type { Catalog } from "./catalog";
 import { available, remaining, type InventoryConfig } from "./inventory";
 import { boardAt, frameRadAt } from "./boards";
-import { pointSegDist, polygonsCross, rc90Outline, segmentHitsPolygon, segSegDist } from "./geom";
+import { isRectangle, pointSegDist, polyCenter, polygonsCross, polyNormal, rc90Outline, segmentHitsPolygon, segSegDist } from "./geom";
 import { kit3Usage, nodeEnd, ropeEndAt, ropeInfo, ropeMinMm, ropePlan, ROPE, ROPE_CLIP, ROPE_CONN, ROPE_MCLIP, stiffenerFor, ballsPerRoll, ropeSpec, type RopeEnd } from "./rope";
 import {
   DIR_TOL, EPS, UP, type Model, boardsOf, type Vec3, type Member, add, chainOf, cross, dot, findNodeAt, len, membersAt,
@@ -241,7 +241,7 @@ export function inRc90Corner(dirs: Vec3[], c: Vec3): boolean {
 /** Direção, a partir de cada canto, do ponto onde a placa encosta na esfera (rumo ao centro da placa). */
 function plateSpots(model: Model, cornerIds: string[]): Map<string, Vec3> {
   const ps = cornerIds.map((id) => model.nodes[id].pos);
-  const c = scale(ps.reduce((acc, p) => add(acc, p), [0, 0, 0] as Vec3), 0.25);
+  const c = polyCenter(ps);
   return new Map(cornerIds.map((id, i) => [id, norm(sub(c, ps[i]))]));
 }
 
@@ -262,11 +262,14 @@ export function connectorHitsPlate(c: { code: string; dirs: Vec3[]; side?: Vec3 
 
 const plateNormal = (model: Model, corners: string[]) => {
   const p = corners.map((id) => model.nodes[id].pos);
+  if (!isRectangle(p, 1e-2)) return polyNormal(p); // placa que não é retângulo (2.x)
   return norm(cross(sub(p[1], p[0]), sub(p[3], p[0])));
 };
 
 /** O segmento a–b atravessa o miolo da placa (cantos em ordem)? Barras no contorno não contam. */
 export function segmentHitsPlate(a: Vec3, b: Vec3, corners: Vec3[]): boolean {
+  // placa que não é retângulo (placa ajustável da 2.x): conta de polígono convexo, com a mesma margem
+  if (!isRectangle(corners, 1e-2)) return segmentHitsPolygon(a, b, corners, 0.3);
   const [c0, c1, , c3] = corners;
   const eu = sub(c1, c0);
   const ev = sub(c3, c0);
@@ -424,6 +427,7 @@ export function plateCorners(origin: Vec3, u: Vec3, a: number, v: Vec3, b: numbe
 
 /** Duas placas no mesmo plano (qualquer orientação) se sobrepõem? Eixos separadores = lados das duas. */
 function platesOverlap(a: Vec3[], b: Vec3[]): boolean {
+  if (!isRectangle(a, 1e-2) || !isRectangle(b, 1e-2)) return polygonsCross(a, b, 1e-3); // placa da 2.x
   const n = norm(cross(sub(a[1], a[0]), sub(a[3], a[0])));
   const n2 = norm(cross(sub(b[1], b[0]), sub(b[3], b[0])));
   if (Math.abs(Math.abs(dot(n, n2)) - 1) > DIR_TOL || Math.abs(dot(n, sub(b[0], a[0]))) > 1e-3) return false;

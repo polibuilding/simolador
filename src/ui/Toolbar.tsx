@@ -98,6 +98,7 @@ export function useDismiss(onClose: () => void) {
 const SOON = [
   { id: "3", name: "Kit 3", color: "#2F6FD6", tag: "em breve", note: "Kit 3 (azul): cabos, anéis, enrijecedores e duas chapas de base · em breve" },
   { id: "A", name: "Kit A", color: "#9A6BD0", tag: "2.x", note: "Kit A: entra com as versões 2.x (arquitetônica)" },
+  { id: "X", name: "Kit X", color: "#000000", tag: "2.x", note: "Kit X (preto): barra, placa e ligação ajustáveis, sem limite, e as peças que você criar · versões 2.x" },
 ];
 
 function StockPanel({ onClose }: { onClose: () => void }) {

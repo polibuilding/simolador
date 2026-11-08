@@ -13,12 +13,22 @@ export const defaultInventory = (cat: Catalog): InventoryConfig => ({
   unlimited: false,
 });
 
+/**
+ * Quanto de uma peça `count` caixas do kit dão. Kit sem limite (Kit X, 2.x): Infinity para as peças que ele traz,
+ * com pelo menos uma caixa. Sem caixa, 0 (nunca 0 × Infinity).
+ */
+export function kitAmount(kit: Catalog["kits"][string] | undefined, code: string, count: number): number {
+  const q = kit?.pieces[code] ?? 0;
+  if (!(count > 0) || !(q > 0)) return 0;
+  return kit!.unlimited ? Infinity : q * count;
+}
+
 /** Quantidade disponível de uma peça, somando todas as caixas. Infinity no modo sem limite. */
 export function available(cat: Catalog, inv: InventoryConfig, code: string): number {
   if (inv.unlimited) return Infinity;
   let total = 0;
   for (const [kitId, count] of Object.entries(inv.kits)) {
-    total += (cat.kits[kitId]?.pieces[code] ?? 0) * count;
+    total += kitAmount(cat.kits[kitId], code, count);
   }
   return total;
 }
@@ -53,8 +63,10 @@ export function minKits(cat: Catalog, used: Record<string, number>): { kits: Rec
   const need = Object.entries(used).filter(([, n]) => n > 0);
   const missing = need.filter(([c]) => !ids.some((k) => (cat.kits[k].pieces[c] ?? 0) > 0)).map(([c]) => c);
   const req = need.filter(([c]) => !missing.includes(c));
-  // teto de cada kit: o bastante para cobrir sozinho as peças que ele tem
-  const cap = ids.map((k) => Math.max(0, ...req.map(([c, n]) => ((cat.kits[k].pieces[c] ?? 0) > 0 ? Math.ceil(n / cat.kits[k].pieces[c]) : 0))));
+  // teto de cada kit: o bastante para cobrir sozinho as peças que ele tem (kit sem limite: uma caixa basta)
+  const cap = ids.map((k) =>
+    Math.max(0, ...req.map(([c, n]) => ((cat.kits[k].pieces[c] ?? 0) > 0 ? (cat.kits[k].unlimited ? 1 : Math.ceil(n / cat.kits[k].pieces[c])) : 0))),
+  );
   let best: { counts: number[]; total: number; spare: number } | null = null;
   const counts = ids.map(() => 0);
   let visited = 0;
@@ -64,9 +76,9 @@ export function minKits(cat: Catalog, used: Record<string, number>): { kits: Rec
     if (i === ids.length) {
       let spare = 0;
       for (const [c, n] of req) {
-        const have = ids.reduce((s, k, j) => s + (cat.kits[k].pieces[c] ?? 0) * counts[j], 0);
+        const have = ids.reduce((s, k, j) => s + kitAmount(cat.kits[k], c, counts[j]), 0);
         if (have < n) return;
-        spare += have - n;
+        if (Number.isFinite(have)) spare += have - n;
       }
       if (!best || total < best.total || (total === best.total && spare < best.spare)) best = { counts: [...counts], total, spare };
       return;

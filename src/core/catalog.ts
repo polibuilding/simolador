@@ -16,12 +16,26 @@ export interface PieceDef {
   notes: string | null;
   /** peso (g; no cabo, g por metro), das configurações avançadas; null = não informado */
   weightG?: number | null;
+  // ---- base para a 2.x (Kit X, plano §11): peças criadas pelo usuário. Ausentes nas peças da planilha. ----
+  /** "user" = peça criada e guardada pelo usuário (vem do .mola ou de um .kit), nunca da planilha */
+  origin?: "user";
+  /** peça que a gerou (a ajustável do Kit X); na paleta ela entra logo abaixo desta */
+  parent?: string;
+  /** cor própria da peça (hex); sem ela, a cor de sempre do tipo */
+  color?: string;
+  /** contorno da placa poligonal, em módulos, no plano dela (x, y), na ordem dos cantos */
+  outline?: [number, number][];
 }
 
 export interface KitDef {
   name: string;
   color: string | null;
   pieces: Record<string, number>;
+  /** kit sem limite (Kit X, 2.x): cada caixa dá quantas peças quiser das que ele traz (quantidade > 0 = traz) */
+  unlimited?: boolean;
+  /** kit criado pelo usuário (catálogo de um .kit); `file` = nome do arquivo de onde veio */
+  user?: boolean;
+  file?: string;
 }
 
 export interface Settings {
@@ -140,7 +154,9 @@ function loadConfig(base: Catalog): { catalog: Catalog; state: ConfigState } {
 
 const loaded = loadConfig(baseCatalog);
 /** Catálogo em uso: a planilha com as configurações do usuário. */
-export const catalog: Catalog = loaded.catalog;
+// cópia própria das listas de peças e kits: as peças criadas pelo usuário (2.x, `userPieces.ts`) entram aqui e nunca
+// no catálogo da planilha (`baseCatalog`), que as Configurações usam como referência
+export const catalog: Catalog = { ...loaded.catalog, pieces: { ...loaded.catalog.pieces }, kits: { ...loaded.catalog.kits } };
 export const configState: ConfigState = loaded.state;
 
 /** Chamado pelo App quando a tela abriu sem erro: as configurações novas passaram no teste. */

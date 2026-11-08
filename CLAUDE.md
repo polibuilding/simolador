@@ -10,7 +10,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 
 - **No ar:** https://polibuilding.github.io/simolador/
 - **Repositório:** `polibuilding/simolador`, branch `main`. A publicação é por GitHub Actions no GitHub Pages (`.github/workflows/pages.yml`).
-- **Versão atual:** 1.10.1. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
+- **Versão atual:** 1.10.2. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
 - **Usuários:** estudantes de engenharia e arquitetura, que montam e documentam estruturas para a competição.
 
 ## Como trabalhar com a equipe
@@ -26,7 +26,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 npm install
 npm run dados     # data/parametros.xlsx → data/catalog.json e data/kits.json (nunca edite os .json à mão)
 npm run dev       # http://localhost:5173/simolador/
-npm test          # Vitest (núcleo); hoje 176 testes, todos passando
+npm test          # Vitest (núcleo); hoje 192 testes, todos passando
 npm run typecheck
 npm run build     # tsc + vite build
 npx vite preview --port 4173 --strictPort   # testar o build em http://localhost:4173/simolador/
@@ -61,7 +61,7 @@ TypeScript, React 18, Three.js via React Three Fiber + drei, Zustand, Vite, Vite
 
 | Arquivo | Papel |
 |---|---|
-| `model.ts` | Grafo: nós (`sphere` ou `support` = GC), membros (barra, diagonal = `cable`, cabo do Kit 3 = `rope`; `stiff` = enrijecedor), placas (4 cantos), ligações (RC90, CC, CC90; `base` = RC90 na GC), chapas |
+| `model.ts` | Grafo: nós (`sphere` ou `support` = GC), membros (barra, diagonal = `cable`, cabo do Kit 3 = `rope`; `stiff` = enrijecedor), placas (4 cantos no kit; N cantos aceitos para a 2.x), ligações (RC90, CC, CC90; `base` = RC90 na GC), chapas |
 | `rules.ts` | Todas as validações (`validateMember`, `validateSupport`, `validateMovedModel`…), cada uma com a regra de `regras-de-encaixe.md` |
 | `snapping.ts` | Candidatas de encaixe e guias da GC |
 | `edit.ts` | Edições: mover só o nó (`nodeMoveOptions`, loci esfera/círculo/pontos/caminho), ligar duas esferas (`connectReach`), girar, remover, trechos azul/vermelho do caminho (`locusStatus`), paradas na horizontal/vertical (`alignStops`) |
@@ -72,7 +72,9 @@ TypeScript, React 18, Three.js via React Three Fiber + drei, Zustand, Vite, Vite
 | `boards.ts` | Várias chapas |
 | `clipboard.ts` | Copiar e colar |
 | `inventory.ts` | Estoque por kit; `minKits` |
-| `serialization.ts` | Arquivo `.mola` (JSON) |
+| `serialization.ts` | Arquivo `.mola` (JSON), com as peças criadas que a montagem usa (`pieces`, A9) |
+| `userPieces.ts` | Base da 2.x (1.10.2): peças criadas por cima da planilha, Kit X sem limite, nomes (X2/X3), "fabricar" (X4), bloqueio da exclusão (X5), paleta e arquivo `.kit` |
+| `geom.ts` | Contas de geometria; desde 1.10.2 também as de polígono (placa de N cantos: normal de Newell, planicidade, recuo, convexo/simples) |
 | `config.ts` | Configurações do usuário sobrepostas ao catálogo, com proteção contra valores que quebram |
 | `history.ts` | Desfazer e refazer |
 
@@ -88,6 +90,7 @@ TypeScript, React 18, Three.js via React Three Fiber + drei, Zustand, Vite, Vite
 - **Carregamento:** as pranchas (`SheetsView` e `src/drawings/`) carregam sob demanda (`lazy` em `App.tsx`). Não importe nada de `src/drawings/` nem de `SheetsView` no caminho da montagem, senão eles voltam para o pacote inicial.
 - **Configurações:** ficam em localStorage (`simolador:config`), com verificação de abertura (`simolador:config-teste`), `?padrao` no endereço e um ErrorBoundary.
 - **Sem internet (1.10.0):** o build gera `dist/sw.js` a partir de `scripts/sw-modelo.js` (plugin `offlinePlugin` no `vite.config.ts`), com a lista de todos os arquivos e um carimbo de versão. Arquivo novo em `public/` entra sozinho. Nada pode vir de fora do site (a fonte é `@fontsource-variable/archivo`). O service worker só é registrado no build (`import.meta.env.PROD`); para testar, use `vite preview`.
+- **Peças criadas (1.10.2, base da 2.x):** o `catalog` do programa é uma **cópia** do da planilha (`baseCatalog` fica intocado; as Configurações o usam). Peças do usuário entram só por `registerUserPieces` (`userPieces.ts`), com `origin: "user"`, e moram no Kit X (`unlimited`). Placas que não são retângulo seguem por contas de polígono (`isRectangle(…, 1e-2)` decide; as do kit nunca mudam de caminho). Sem peças criadas, nada disso aparece.
 - **Arquivos (1.10.0):** salvar e abrir passam por `src/ui/files.ts` (não chame `store.load` direto da interface: use `openText`/`openExample`, que guardam a cópia automática e tratam arquivo de versão mais nova). O `.mola` grava `app` (versão do programa). Regras A1–A8 em `regras-de-encaixe.md`.
 
 ## Modelo cinemático (rigidez)
@@ -169,7 +172,7 @@ O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o as
 
 ### Outros
 - **Geometria livre:** geodésicas e barras fora dos planos ortogonais (E19). É a fase 4 do plano.
-- **App local:** fase 5, plano em `plano-simolador.md` §7c. Feito na 1.10.0: arquivos, sem internet, PWA, Sobre e relatório. Feito na 1.10.1: pavimentos na capa, planta baixa cortada a uma altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20). Próximos: 1.10.2 impressão das pranchas, 1.10.3 modo leve, 1.11 Tauri (instaladores, atualizador, página de download).
+- **App local:** fase 5, plano em `plano-simolador.md` §7c. Feito na 1.10.0: arquivos, sem internet, PWA, Sobre e relatório. Feito na 1.10.1: pavimentos na capa, planta baixa cortada a uma altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20). Feito na 1.10.2: base para a 2.x (plano §11.5). Próximos: 1.10.3 impressão das pranchas, 1.10.4 modo leve, 1.11 Tauri (instaladores, atualizador, página de download).
 - **Medições pendentes:** o protocolo está em `plano-simolador.md` §9.
 - **Responsáveis por frente** (Q08): falta definir.
 

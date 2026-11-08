@@ -24,6 +24,13 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 ## 1.10 — Pronto para usar fora do site
 
+### 1.10.2 — Base para o Kit X (por dentro, sem mudar o uso) · 08/11/2026
+- Nada muda no uso: montagem, pranchas e arquivos funcionam como na 1.10.1.
+- Por dentro, o programa já sabe guardar **peças criadas** (o futuro Kit X da 2.x): elas vão junto no arquivo `.mola`, para ele abrir igual em outro computador, e já existe o formato do catálogo de peças `.kit`.
+- Placas de **qualquer número de lados** já são desenhadas na cena e nas pranchas, e entram na conta de rigidez (para a placa ajustável).
+- O estoque já aceita um kit **sem limite** (o Kit X), ao lado dos kits contados. O Kit X aparece no Estoque como "2.x".
+- A planilha de parâmetros ganhou a seção **Kit X**: faixa das Barras de Comprimento Regulável (B3 a B12, a medir) e a precisão dos códigos (0.01 M e 0.1°).
+
 ### 1.10.1 — Pavimentos na capa, planta baixa a qualquer altura e mais liberdade nas pranchas · 08/11/2026
 - **Pavimentos na capa**: abaixo da lista de peças, um esquema da vista A só em linhas, com cada pavimento tracejado e o nome ao lado.
 - **Planta baixa a qualquer altura**: com **Corte** ligado, passe o cursor numa vista e clique na altura desejada. Sai uma planta baixa cortada ali, com o título "PLANTA BAIXA" e "ALTURA = 12,5 cm" embaixo. Para mudar a altura, é só editar esse texto: aceita cm, mm, m ou módulos ("8 M"). As molas cortadas aparecem como círculos pretos. As vistas não ganham marca; a planta aparece no esquema da capa como um andar a mais.

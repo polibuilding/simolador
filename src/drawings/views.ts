@@ -1,6 +1,7 @@
 // Projeção ortográfica do modelo nas plantas e vistas A–D, com os símbolos das pranchas do Desafio 2022.
 import type { Catalog } from "../core/catalog";
 import { continuousOutline } from "../core/shapes";
+import { insetPolygon2, isRectangle, polyCenter, polyTo2D } from "../core/geom";
 import { type Model, type Vec3, cross, norm, sub } from "../core/model";
 import { GRAY, PEN, type Prim, type Pt } from "./prims";
 
@@ -254,15 +255,29 @@ export function itemsFor(cat: Catalog, model: Model, pr: Projector): Item[] {
   // placas
   for (const p of Object.values(model.plates)) {
     const c = p.corners.map(P);
-    const u = norm(sub(c[1], c[0]));
-    const v = norm(sub(c[3], c[0]));
-    const n = norm(cross(u, v));
-    const center = c.reduce((acc, q) => [acc[0] + q[0] / 4, acc[1] + q[1] / 4, acc[2] + q[2] / 4] as Vec3, [0, 0, 0] as Vec3);
-    const hu = Math.hypot(...sub(c[1], c[0])) / 2 - s.placa_desconto_mm / 2;
-    const hv = Math.hypot(...sub(c[3], c[0])) / 2 - s.placa_desconto_mm / 2;
-    const ch = Math.min(8, hu / 3, hv / 3);
-    const at = (x: number, y: number): Vec3 => [center[0] + u[0] * x + v[0] * y, center[1] + u[1] * x + v[1] * y, center[2] + u[2] * x + v[2] * y];
-    const outline3 = [at(-hu + ch, -hv), at(hu - ch, -hv), at(hu, -hv + ch), at(hu, hv - ch), at(hu - ch, hv), at(-hu + ch, hv), at(-hu, hv - ch), at(-hu, -hv + ch)];
+    let n: Vec3;
+    let center: Vec3;
+    let outline3: Vec3[];
+    if (isRectangle(c, 1e-2)) {
+      // placas do kit: retângulo com os cantos chanfrados
+      const u = norm(sub(c[1], c[0]));
+      const v = norm(sub(c[3], c[0]));
+      n = norm(cross(u, v));
+      center = c.reduce((acc, q) => [acc[0] + q[0] / 4, acc[1] + q[1] / 4, acc[2] + q[2] / 4] as Vec3, [0, 0, 0] as Vec3);
+      const hu = Math.hypot(...sub(c[1], c[0])) / 2 - s.placa_desconto_mm / 2;
+      const hv = Math.hypot(...sub(c[3], c[0])) / 2 - s.placa_desconto_mm / 2;
+      const ch = Math.min(8, hu / 3, hv / 3);
+      const at = (x: number, y: number): Vec3 => [center[0] + u[0] * x + v[0] * y, center[1] + u[1] * x + v[1] * y, center[2] + u[2] * x + v[2] * y];
+      outline3 = [at(-hu + ch, -hv), at(hu - ch, -hv), at(hu, -hv + ch), at(hu, hv - ch), at(hu - ch, hv), at(-hu + ch, hv), at(-hu, hv - ch), at(-hu, -hv + ch)];
+    } else {
+      // placa de outro formato (placa ajustável da 2.x): o polígono dos cantos, recuado como as do kit
+      const f = polyTo2D(c);
+      n = f.n;
+      center = polyCenter(c);
+      outline3 = insetPolygon2(f.pts, s.placa_desconto_mm / 2).map(([x, y]) => [
+        f.origin[0] + f.ex[0] * x + f.ey[0] * y, f.origin[1] + f.ex[1] * x + f.ey[1] * y, f.origin[2] + f.ex[2] * x + f.ey[2] * y,
+      ] as Vec3);
+    }
     const horizontal = Math.abs(n[1]) > 0.5;
     const pts = planar(pr, outline3, n, Number(cat.pieces[p.code]?.geometry.thicknessMm ?? s.placa_espessura_mm));
     const [, , d] = pr.p(center);

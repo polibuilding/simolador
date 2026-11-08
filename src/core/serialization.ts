@@ -1,4 +1,5 @@
 // Arquivo de projeto .mola (JSON com versão de esquema; A-CONFIRMAR Q05).
+import type { PieceDef } from "./catalog";
 import type { InventoryConfig } from "./inventory";
 import type { Board, Connector, Member, Model, MolaNode, Plate, Vec3 } from "./model";
 
@@ -173,9 +174,14 @@ export interface MolaFile {
   connectors: Connector[];
   /** chapas de base (v3); sem elas, uma chapa no canto (0, 0) */
   boards?: Board[];
+  /**
+   * peças criadas pelo usuário que a montagem usa (Kit X, 2.x; desde 1.10.2). Vão junto para o arquivo abrir igual
+   * em outro computador, mesmo sem o .kit. Versões anteriores ignoram o campo e deixam essas peças de fora.
+   */
+  pieces?: PieceDef[];
 }
 
-export function toFile(model: Model, inv: InventoryConfig, name: string, moduleMm: number, sheet?: SheetMeta, app?: string): MolaFile {
+export function toFile(model: Model, inv: InventoryConfig, name: string, moduleMm: number, sheet?: SheetMeta, app?: string, pieces?: PieceDef[]): MolaFile {
   return {
     format: FORMAT,
     version: VERSION,
@@ -190,6 +196,7 @@ export function toFile(model: Model, inv: InventoryConfig, name: string, moduleM
     plates: Object.values(model.plates),
     connectors: Object.values(model.connectors),
     ...(model.boards?.length ? { boards: model.boards } : {}),
+    ...(pieces?.length ? { pieces } : {}),
   };
 }
 
@@ -201,7 +208,10 @@ export class MolaFileError extends Error {
 const vec = (v: unknown): Vec3 | null =>
   Array.isArray(v) && v.length === 3 && v.every((x) => typeof x === "number") ? [v[0], v[1], v[2]] : null;
 
-export function fromFile(raw: unknown, opts: { allowNewer?: boolean } = {}): { model: Model; inventory: InventoryConfig; name: string; sheet?: SheetMeta } {
+export function fromFile(
+  raw: unknown,
+  opts: { allowNewer?: boolean } = {},
+): { model: Model; inventory: InventoryConfig; name: string; sheet?: SheetMeta; pieces: unknown[] } {
   const f = raw as Partial<MolaFile>;
   if (!f || f.format !== FORMAT) throw new MolaFileError("Este arquivo não é um projeto do siMOLAdor.");
   if (typeof f.version !== "number") throw new MolaFileError("Arquivo sem o número do formato: não é um projeto do siMOLAdor ou está corrompido.");
@@ -227,9 +237,14 @@ export function fromFile(raw: unknown, opts: { allowNewer?: boolean } = {}): { m
     if (!nodes[m.a] || !nodes[m.b]) throw new MolaFileError(`Peça ${m.id} liga um nó que não existe.`);
     members[m.id] = { id: m.id, code: m.code, a: m.a, b: m.b, ...(m.stiff ? { stiff: true } : {}), ...(typeof m.chain === "string" ? { chain: m.chain } : {}), ...(m.uncut ? { uncut: true } : {}) };
   }
+  // peças criadas que vieram no arquivo (conferidas depois, ao entrar no catálogo: `registerUserPieces`)
+  const pieces: unknown[] = Array.isArray(f.pieces) ? f.pieces : [];
+  // placa com 3 ou mais cantos só se for uma placa criada que veio no próprio arquivo (as do kit têm 4)
+  const polyPlates = new Set(pieces.flatMap((p) => ((p as PieceDef)?.type === "plate" && typeof (p as PieceDef).code === "string" ? [(p as PieceDef).code] : [])));
   const plates: Model["plates"] = {};
   for (const p of f.plates ?? []) {
-    if (!Array.isArray(p.corners) || p.corners.length !== 4 || p.corners.some((c) => !nodes[c])) {
+    const okCount = Array.isArray(p.corners) && (p.corners.length === 4 || (p.corners.length >= 3 && polyPlates.has(p.code)));
+    if (!okCount || p.corners.some((c) => !nodes[c])) {
       throw new MolaFileError(`Placa ${p.id} com cantos inválidos.`);
     }
     plates[p.id] = { id: p.id, code: p.code, corners: [...p.corners] as Plate["corners"] };
@@ -262,6 +277,7 @@ export function fromFile(raw: unknown, opts: { allowNewer?: boolean } = {}): { m
     inventory: f.inventory ?? { kits: {}, unlimited: false },
     name: f.name ?? "Estrutura",
     sheet: cleanSheet(f.sheet),
+    pieces,
   };
 }
 

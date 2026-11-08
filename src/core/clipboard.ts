@@ -12,7 +12,7 @@ import { validateConnector, validateMember, validateMovedModel, validatePlate, v
 export interface Clip {
   nodes: { key: string; kind: NodeKind; rel: Vec3; ring?: string }[];
   members: { code: string; a: string; b: string; stiff?: boolean; chain?: string }[];
-  plates: { code: string; corners: [string, string, string, string] }[];
+  plates: { code: string; corners: string[] }[];
   connectors: { code: string; node: string; dirs: Vec3[]; base?: boolean; side?: Vec3 }[];
   /** âncora na posição original (centro da planta arredondado, no nível mais baixo) */
   anchor: Vec3;
@@ -138,7 +138,7 @@ export function pasteClip(cat: Catalog, inv: InventoryConfig, model: Model, clip
     newMembers.push(mid);
   }
   for (const p of clip.plates) {
-    const corners = p.corners.map((k) => map.get(k)!) as [string, string, string, string];
+    const corners = p.corners.map((k) => map.get(k)!);
     const key = plateKey(corners);
     if (Object.values(m.plates).some((x) => plateKey(x.corners) === key)) continue;
     const pid = id("p");

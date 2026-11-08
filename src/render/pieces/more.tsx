@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import * as THREE from "three";
 import { catalog } from "../../core/catalog";
 import { continuousOutline } from "../../core/shapes";
+import { insetPolygon2, isRectangle, polyTo2D } from "../../core/geom";
 import type { Vec3 } from "../../core/model";
 import { COLORS } from "../units";
 import { pickProps, SPHERE_R, useMaterial, type Look, type Pickable } from "./pieces";
@@ -222,7 +223,28 @@ export function RopeClip({ position, look = "normal", ...p }: { position: THREE.
 // ---------- Placa ----------
 
 /** Placa entre 4 cantos (centros das esferas, em mm), na ordem ao redor do retângulo. */
-export function PlateMesh({ corners, code, look = "normal", ...p }: { corners: THREE.Vector3[]; code: string; look?: Look } & Pickable) {
+export function PlateMesh(props: { corners: THREE.Vector3[]; code: string; look?: Look } & Pickable) {
+  // placas do kit (retângulos) seguem pelo desenho de sempre; outro formato (placa ajustável da 2.x), pelo polígono
+  const rect = isRectangle(props.corners.map((c) => [c.x, c.y, c.z] as Vec3), 1e-2);
+  return rect ? <RectPlateMesh {...props} /> : <PolygonPlateMesh {...props} />;
+}
+
+function PolygonPlateMesh({ corners, code, look = "normal", ...p }: { corners: THREE.Vector3[]; code: string; look?: Look } & Pickable) {
+  const piece = catalog.pieces[code];
+  const t = Number(piece?.geometry.thicknessMm ?? s.placa_espessura_mm);
+  const { geom, matrix } = useMemo(() => {
+    const f = polyTo2D(corners.map((c) => [c.x, c.y, c.z] as Vec3));
+    const inset = insetPolygon2(f.pts, s.placa_desconto_mm / 2);
+    const g = new THREE.ExtrudeGeometry(new THREE.Shape(inset.map(([x, y]) => new THREE.Vector2(x, y))), { depth: t, bevelEnabled: false });
+    g.translate(0, 0, -t / 2);
+    const m = new THREE.Matrix4().makeBasis(new THREE.Vector3(...f.ex), new THREE.Vector3(...f.ey), new THREE.Vector3(...f.n)).setPosition(new THREE.Vector3(...f.origin));
+    return { geom: g, matrix: m };
+  }, [corners, t]);
+  const mat = useMaterial(look, piece?.color ?? "#e4e7e9", 0.02, 0.6);
+  return <mesh geometry={geom} material={mat} matrix={matrix} matrixAutoUpdate={false} castShadow receiveShadow {...pickProps(p)} />;
+}
+
+function RectPlateMesh({ corners, code, look = "normal", ...p }: { corners: THREE.Vector3[]; code: string; look?: Look } & Pickable) {
   const piece = catalog.pieces[code];
   const desconto = s.placa_desconto_mm;
   const t = Number(piece?.geometry.thicknessMm ?? s.placa_espessura_mm);
@@ -233,7 +255,7 @@ export function PlateMesh({ corners, code, look = "normal", ...p }: { corners: T
     const center = corners.reduce((acc, c) => acc.add(c), new THREE.Vector3()).multiplyScalar(0.25);
     return { matrix: basis(center, u.clone().normalize(), v.clone().normalize()), su: u.length() - desconto, sv: v.length() - desconto };
   }, [corners, desconto]);
-  const mat = useMaterial(look, "#e4e7e9", 0.02, 0.6);
+  const mat = useMaterial(look, piece?.color ?? "#e4e7e9", 0.02, 0.6);
   const geom = useMemo(() => {
     // retângulo com cantos chanfrados (onde a placa encosta nas esferas)
     const c = Math.min(8, su / 6, sv / 6);

@@ -49,7 +49,8 @@ export const chainMembers = (model: Model, m: Member) => Object.values(model.mem
 export interface Plate {
   id: string;
   code: string;
-  corners: [string, string, string, string];
+  /** cantos em ordem ao redor; as placas do kit têm 4 (retângulo). Mais cantos: placa ajustável da 2.x (X7) */
+  corners: string[];
 }
 
 /**
@@ -195,7 +196,7 @@ export function addMember(model: Model, code: string, fromId: string, toPos: Vec
   return { id, model: { ...m, nextId: m.nextId + 1, members: { ...m.members, [id]: { id, code, a: fromId, b: target.id } } } };
 }
 
-export function addPlate(model: Model, code: string, corners: [string, string, string, string]): { model: Model; id: string } {
+export function addPlate(model: Model, code: string, corners: string[]): { model: Model; id: string } {
   const id = newId(model, "p");
   return { id, model: { ...model, nextId: model.nextId + 1, plates: { ...model.plates, [id]: { id, code, corners } } } };
 }

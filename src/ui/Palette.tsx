@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
 import { available, usage } from "../core/inventory";
 import { ropePlan, ropeSpec, STIFF_TOOL } from "../core/rope";
+import { withUserPieces } from "../core/userPieces";
 
 /** peças que se colocam clicando na cena (sem arrastar da paleta) */
 const TWO_CLICKS = new Set(["CABLE", STIFF_TOOL]);
@@ -147,7 +148,7 @@ function KitDots({ code }: { code: string }) {
     <span className="kit-dots" aria-label="Kits que trazem esta peça">
       {Object.entries(catalog.kits).map(([id, k]) =>
         codes.some((c) => k.pieces[c]) ? (
-          <i key={id} style={{ background: k.color ?? "#999" }} title={`${k.name}: ${codes.filter((c) => k.pieces[c]).map((c) => `${k.pieces[c]}${codes.length > 1 ? ` ${c}` : ""}`).join(" + ")}${code === "CABLE" ? " rolo de 3,35 m" : ""}`} />
+          <i key={id} style={{ background: k.color ?? "#999" }} title={`${k.name}: ${codes.filter((c) => k.pieces[c]).map((c) => `${k.unlimited ? "sem limite" : k.pieces[c]}${codes.length > 1 ? ` ${c}` : ""}`).join(" + ")}${code === "CABLE" ? " rolo de 3,35 m" : ""}`} />
         ) : null,
       )}
     </span>
@@ -163,7 +164,9 @@ function usePalette() {
   const avail = (code: string) => stockCodes(code).reduce((n, c) => n + available(catalog, inventory, c), 0);
   const usedOf = (code: string) => stockCodes(code).reduce((n, c) => n + (used[c] ?? 0), 0);
   const shown = (code: string) => avail(code) > 0 || usedOf(code) > 0 || (code === "CABLE" && Object.values(model.members).some((m) => m.code === "CABLE"));
-  const groups = GROUPS.map((g) => ({ ...g, codes: g.codes.filter(shown) })).filter((g) => g.codes.length);
+  // peças criadas (Kit X, 2.x) entram abaixo da peça que as gerou; sem elas, os grupos de sempre
+  const all = withUserPieces(GROUPS, catalog, { bar: "Barras", plate: "Placas", connector: "Ligações" });
+  const groups = all.map((g) => ({ ...g, codes: g.codes.filter(shown) })).filter((g) => g.codes.length);
   const rope = ropePlan(catalog, model);
   const info = (code: string) => {
     const armed = tool.kind === "place" && tool.code === code;

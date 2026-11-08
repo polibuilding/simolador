@@ -25,7 +25,7 @@ export function markerPos(model: Model, c: Candidate): Vec3 {
   switch (c.kind) {
     case "support": return c.pos;
     case "member": return c.toPos;
-    case "plate": return scale(c.geom.corners.reduce((s, p) => add(s, p), [0, 0, 0] as Vec3), 0.25);
+    case "plate": return scale(c.geom.corners.reduce((s, p) => add(s, p), [0, 0, 0] as Vec3), 1 / c.geom.corners.length);
     case "connector": return model.nodes[c.spec.node].pos;
   }
 }
