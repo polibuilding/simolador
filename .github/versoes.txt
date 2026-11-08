@@ -36,3 +36,4 @@ v1.10.1 a12d9ac Pavimentos na capa, planta baixa a qualquer altura e mais liberd
 v1.10.2 cd4efca Base para o Kit X (por dentro, sem mudar o uso)
 v1.10.3 7962b8b Chave Ajustável (em breve) e Kit X no estoque
 v1.10.4 3c4cfc6 Modo escuro, inglês e espanhol, e RC90 na base
+v1.10.5 c2b3e25 Pranchas traduzidas, diagonais claras no escuro e título que acompanha o desenho
