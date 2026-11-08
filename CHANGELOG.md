@@ -7,14 +7,14 @@ A versão aparece bem de leve no canto inferior direito do programa e no `packag
 | Versão | Nome | O que traz |
 |---|---|---|
 | **1.x** | **Geométrica** | Montar a estrutura com as peças e as regras reais do kit e gerar as pranchas. É a que estamos fazendo. |
-| 2.x | Flexibilidade | O Kit X: barra, placa e ligação ajustáveis, catálogo próprio e arquivo `.kit` (em planejamento). |
+| 2.x | Arquitetônica | Flexibilidade, ajustabilidade e peças próprias para fugir das limitações do kit: o Kit X, com barra, placa e ligação ajustáveis, catálogo próprio e arquivo `.kit` (em planejamento). |
 | 3.x | De engenharia | Ferramentas para analisar deformação, estaticidade e estabilidade. |
 
 ## Como numerar
 
 O número tem três partes, **X.Y.Z**:
 
-- **X** é a linha (1 geométrica, 2 flexibilidade, 3 de engenharia).
+- **X** é a linha (1 geométrica, 2 arquitetônica, 3 de engenharia).
 - **Y** é a fase: sobe quando muda o assunto principal ou o jeito de usar (ex.: 1.7 rigidez, 1.8 pranchas editáveis).
 - **Z** conta cada entrega publicada dentro da fase, seja novidade ou correção (1.8.0, 1.8.1, 1.8.2…).
 

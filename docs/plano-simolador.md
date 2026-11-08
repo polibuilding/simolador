@@ -280,7 +280,7 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0.0`, `v1.8.2`…).
 
 - **1.x — geométrica** (atual: 1.10.1): montar com as peças e regras reais do kit e gerar as pranchas.
-- **2.x — flexibilidade (Kit X)**: peças ajustáveis (barra, placa e RC de qualquer ângulo), catálogo próprio e arquivo `.kit` (§11). O módulo extra ajustável de arquitetura fica a confirmar nesta linha.
+- **2.x — arquitetônica**: flexibilidade, ajustabilidade e criação de peças próprias para representar e simular estruturas que fogem das limitações das peças atuais do kit. O instrumento é o **Kit X** (barra, placa e RC de qualquer ângulo, catálogo próprio e arquivo `.kit`, §11).
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
 O número tem três partes, **X.Y.Z**: X é a linha; Y sobe quando muda o assunto principal ou o jeito de usar (uma fase: 1.7 rigidez, 1.8 pranchas editáveis); Z conta cada entrega publicada dentro da fase, nova ou correção (1.8.0, 1.8.1, 1.8.2…). Toda entrega publicada ganha número. Em 28/10/2026 as versões 1.0 a 1.25 foram renumeradas nesse formato (1.25 virou 1.8.1); a equivalência está no `CHANGELOG.md`.
@@ -420,17 +420,17 @@ A ordem segue o que dá mais retorno com menos dado. A 3.0 não precisa de nenhu
 | Expectativa de precisão | o próprio kit varia ≈ 10 % (CV do TFG); o programa mostra valores arredondados e "≈" |
 | Mudança de comportamento na montagem (1.x) | nenhuma: a simulação só lê o modelo; não muda as regras de encaixe |
 
-## 11. Linha 2.x — Kit X, o kit ajustável (ideias da equipe, 07/11/2026)
+## 11. Linha 2.x — Kit X, o kit ajustável (ideias da equipe, 07/11/2026; decisões de 08/11/2026)
 
-A 2.x é a fase da **flexibilidade**. O **Kit X** é um kit variável: ao escolhê-lo no estoque, o usuário tem **peças sem limite** de três famílias ajustáveis e pode guardar as peças que criar num catálogo próprio. As peças do Kit X são **pretas**; as criadas e guardadas no catálogo, **cinza-escuro** (mais escuro que as peças de hoje). O preto identifica o Kit X em toda a interface.
+A 2.x continua a **arquitetônica**: o conceito junta flexibilidade, ajustabilidade e criação de peças específicas, para representar e simular estruturas que fogem das limitações das peças atuais do kit (equipe, 08/11). O **Kit X** é um kit variável: ao escolhê-lo no estoque, o usuário tem **peças sem limite** de três famílias ajustáveis e pode guardar as peças que criar num catálogo próprio. As peças do Kit X são **pretas**; as criadas e guardadas no catálogo, **cinza-escuro** (mais escuro que as peças de hoje). O preto identifica o Kit X em toda a interface.
 
 ### 11.1 Peças
 
 | Peça | Como se cria | O que a define |
 |---|---|---|
-| **Barra ajustável** | Como a mola de hoje, mas com o comprimento livre entre duas esferas | Comprimento em módulos. Existe à venda: **Barras de Comprimento Regulável** da Mola (8 barras, 2 de cada: AB B3-B4, AB B4-B6, AB B6-B9, AB B9-B12; gira-se um lado para mudar o comprimento; R$ 139 em 07/11/2026; um comprador avisa que perto do máximo ela fica menos firme) |
-| **Placa ajustável** | Clicar num plano definido por **três ou mais esferas**, sem obstruções: o programa gera a placa poligonal com esses lados | Polígono plano (lados e ângulos) |
-| **RC ajustável** | Clicar em **duas barras** (ou numa barra e numa GC): o programa gera uma ligação como a RC, mas com o **ângulo das duas peças** em vez de 90° | Ângulo em graus |
+| **Barra ajustável** | Como a mola de hoje, mas com o comprimento livre entre duas esferas | Comprimento em módulos (código Bx com 0.01 M). Fora das faixas comerciais (menor que B3 ou maior que B12) é permitida, com o aviso "fabricar" (X4). Existe à venda: **Barras de Comprimento Regulável** da Mola (8 barras, 2 de cada: AB B3-B4, AB B4-B6, AB B6-B9, AB B9-B12; gira-se um lado para mudar o comprimento; R$ 139 em 07/11/2026; um comprador avisa que perto do máximo ela fica menos firme) |
+| **Placa ajustável** | Clicar num plano definido por **três ou mais esferas**, sem obstruções: o programa gera a placa poligonal com esses lados | Polígono **sempre plano**, sem limite de lados (X7) |
+| **RC ajustável** | Clicar em **duas barras** (ou numa barra e numa GC): o programa gera uma ligação como a RC, mas com o **ângulo das duas peças** em vez de 90° | Ângulo em graus (0.1°). **Não existe física ajustável** (X6): a equipe vai imprimir as de ângulos notáveis |
 
 ### 11.2 Funções próprias (no resumo e no painel da peça)
 
@@ -478,12 +478,18 @@ O Kit X mexe em três coisas que hoje são fixas no programa: a **geometria** (t
 | **Folha de detalhamento de peças** nas pranchas | Serve já para a CC/CC90 e o Kit 3, e é onde entram os desenhos das peças do Kit X | `drawings/` |
 | **Medir as Barras de Comprimento Regulável** (mín./máx. em mm de cada uma, folga, rigidez perto do máximo) | Sem as faixas reais, a conta de "quantos kits comerciais" não fecha | protocolo da §9, `kit-mola-pecas.md` |
 
-### 11.6 Decisões da equipe (pendentes)
+### 11.6 Decisões da equipe (08/11/2026)
 
-1. **Nome da linha**: a §7b dizia "2.x — arquitetônica: o módulo extra ajustável". Com o Kit X, a 2.x vira "flexibilidade". O módulo ajustável de arquitetura continua na 2.x ou fica para depois?
-2. **Separador decimal nos códigos**: B2.34 e RC45.2 (ponto, como no pedido) ou B2,34 (vírgula, como no resto da interface)? E a precisão: 0,01 M e 0,1°?
-3. **Nome das placas repetidas**: "P42" pode ser lido como 42 lados. Sugestão: P4-2 ou P4b.
-4. **Barra fora das faixas comerciais** (menor que B3 ou maior que B12): permitir e marcar "impressão 3D", ou bloquear?
-5. **Excluir uma peça guardada que está na montagem**: bloquear, ou ela volta a ser ajustável (preta)?
-6. **A RC ajustável existe fisicamente?** Se for só impressa em 3D, as medidas de partida (furo, ímã, espessura) saem da RC90.
-7. **Placa ajustável**: o número máximo de lados, e se a placa pode ter furo ou ser côncava.
+| # | Pergunta | Decisão |
+|---|---|---|
+| X1 | Nome da linha 2.x | Continua **arquitetônica**. O nome passa a significar o conjunto: flexibilidade, ajustabilidade e criação de peças específicas para estruturas que fogem das limitações do kit atual. O Kit X é o instrumento dessa linha. |
+| X2 | Códigos das peças criadas | **Ponto** como separador decimal: B2.34, RC45.2. Precisão: **0.01 M** no comprimento e **0.1°** no ângulo. |
+| X3 | Placas com o mesmo número de lados | **P4-2**, P4-3… (a primeira é P4). |
+| X4 | Barra fora das faixas comerciais (menor que B3 ou maior que B12) | **Permitida**, mas com indicação clara de que **não sai das Barras de Comprimento Regulável** atuais: precisa ser **fabricada**. Vale no painel da peça, no resumo, na lista de peças e nas pranchas. |
+| X5 | Excluir peça guardada que ainda está na montagem | **Bloqueia**. O aviso diz que ela ainda está na montagem e o modelo mostra **uma bolinha preta em cada lugar** onde ela está. |
+| X6 | A RC ajustável existe? | **Não existe ajustável.** O plano da equipe: imprimir em 3D RCs de **ângulos notáveis** descobertos no siMOLAdor e, em paralelo, projetar uma RC ajustável. As medidas de partida (furo, ímã, espessura) saem da RC90. |
+| X7 | Limites da placa ajustável | **Sempre plana** (todos os cantos no mesmo plano); **sem limite de lados**. |
+
+**Ainda em aberto:**
+- **Placa côncava ou com furo:** a resposta foi "sempre plana, sem limite de lados". Proposta para a implementação: aceitar côncava desde que os lados não se cruzem; furo fica para depois. Confirmar com a equipe.
+- **A RC ajustável do projeto paralelo:** quando existir, entra como peça física (com faixa de ângulos, como a barra comercial).

@@ -107,7 +107,7 @@ Nunca edite os `.json` à mão.
 - **App local:** o instalador para baixar no site da equipe (fase 5, versão 1.11; plano em `docs/plano-simolador.md` §7c).
 
 **Depois da linha 1.x:**
-- **2.x (flexibilidade):** o Kit X, com barra, placa e ligação ajustáveis, catálogo próprio e arquivo `.kit` (em planejamento).
+- **2.x (arquitetônica):** flexibilidade e peças próprias com o Kit X, com barra, placa e ligação ajustáveis, catálogo próprio e arquivo `.kit` (em planejamento).
 - **3.x (de engenharia):** deformação, estaticidade e estabilidade, a partir do modelo de rigidez que já existe (botão **Simolar**).
 
 O plano completo está em [docs/plano-simolador.md](docs/plano-simolador.md), e as regras de montagem em [docs/regras-de-encaixe.md](docs/regras-de-encaixe.md).
