@@ -421,9 +421,24 @@ A ordem segue o que dá mais retorno com menos dado. A 3.0 não precisa de nenhu
 | Expectativa de precisão | o próprio kit varia ≈ 10 % (CV do TFG); o programa mostra valores arredondados e "≈" |
 | Mudança de comportamento na montagem (1.x) | nenhuma: a simulação só lê o modelo; não muda as regras de encaixe |
 
-## 11. Linha 2.x — Kit X, o kit ajustável (ideias da equipe, 07/11/2026; decisões de 08/11/2026)
+## 11. Linha 2.x — Kit X, o kit ajustável (ideias da equipe, 07/11/2026; decisões e esclarecimentos de 08/11/2026)
 
-A 2.x continua a **arquitetônica**: o conceito junta flexibilidade, ajustabilidade e criação de peças específicas, para representar e simular estruturas que fogem das limitações das peças atuais do kit (equipe, 08/11). O **Kit X** é um kit variável: ao escolhê-lo no estoque, o usuário tem **peças sem limite** de três famílias ajustáveis e pode guardar as peças que criar num catálogo próprio. As peças do Kit X são **pretas**; as criadas e guardadas no catálogo, **cinza-escuro** (mais escuro que as peças de hoje). O preto identifica o Kit X em toda a interface.
+A 2.x continua a **arquitetônica**: o conceito junta flexibilidade, ajustabilidade e criação de peças específicas, para representar e simular estruturas que fogem das limitações das peças atuais do kit (equipe, 08/11). O **Kit X** é um kit variável: ao escolhê-lo no estoque, o usuário tem **peças sem limite** de quatro famílias ajustáveis e pode guardar as peças que criar num catálogo próprio. As peças do Kit X são **pretas**; as criadas e guardadas no catálogo, **cinza-escuro** (mais escuro que as peças de hoje). O preto identifica o Kit X em toda a interface.
+
+**Kit X = Kit A** (equipe, 08/11): o "Kit A" previsto no estoque desde a 1.4.5 é este mesmo kit. Fica um nome só, **Kit X**.
+
+**Para que serve** (equipe, 08/11): criar peças que **não existem no kit**, de dois jeitos:
+- com o que a Mola já vende (as **Barras de Comprimento Regulável**);
+- **fabricando**: o siMOLAdor dá as dimensões (e o modelo 3D) das peças que não existem à venda (placa, RC e tirante).
+
+O plano da equipe é montar estruturas, ver quais peças criadas fazem sentido fabricar e montar com elas **um kit do grupo** (um `.kit` com as peças escolhidas).
+
+### 11.0 Chave "Ajustável" (o modo avançado da 2.x)
+
+- Uma **chave deslizante num canto de baixo** liga a **ajustabilidade**: as peças ajustáveis e o Kit X. É como a opção "avançado" de outros programas: quem não precisa, não vê.
+- **Desligada**, o programa é exatamente a 1.x: sem Kit X no estoque, sem peças ajustáveis nem criadas na paleta.
+- **Ligada**, o Kit X aparece no Estoque. Com o **Kit X escolhido no estoque** (ou no modo **sem limite**), a paleta mostra as **ajustáveis** dentro das categorias de sempre: **barra**, **tirante**, **placa** e **RC**. As peças criadas e guardadas aparecem logo abaixo da ajustável que as gerou.
+- **O que define as linhas:** a **2.x** é a versão em que a chave existe e funciona; a **3.x** é a versão em que o botão **Simolar** funciona.
 
 ### 11.1 Peças
 
@@ -432,6 +447,9 @@ A 2.x continua a **arquitetônica**: o conceito junta flexibilidade, ajustabilid
 | **Barra ajustável** | Como a mola de hoje, mas com o comprimento livre entre duas esferas | Comprimento em módulos (código Bx com 0.01 M). Fora das faixas comerciais (menor que B3 ou maior que B12) é permitida, com o aviso "fabricar" (X4). Existe à venda: **Barras de Comprimento Regulável** da Mola (8 barras, 2 de cada: AB B3-B4, AB B4-B6, AB B6-B9, AB B9-B12; gira-se um lado para mudar o comprimento; R$ 139 em 07/11/2026; um comprador avisa que perto do máximo ela fica menos firme) |
 | **Placa ajustável** | Clicar num plano definido por **três ou mais esferas**, sem obstruções: o programa gera a placa poligonal com esses lados | Polígono **sempre plano**, sem limite de lados (X7) |
 | **RC ajustável** | Clicar em **duas barras** (ou numa barra e numa GC): o programa gera uma ligação como a RC, mas com o **ângulo das duas peças** em vez de 90° | Ângulo em graus (0.1°). **Não existe física ajustável** (X6): a equipe vai imprimir as de ângulos notáveis |
+| **Tirante ajustável** (08/11) | Como a diagonal de hoje, entre duas esferas a qualquer distância | Comprimento (só tração, como a diagonal). **Não existe à venda**: o programa dá as dimensões para fabricar (cabo e terminais, a partir da diagonal do kit) |
+
+**Quem já existe à venda e quem se fabrica:** só a **barra** tem peça comercial (as reguláveis). **Placa, RC e tirante** são fabricados: para eles o siMOLAdor dá as **dimensões** (desenho técnico na folha de detalhamento) e o **modelo 3D** para imprimir ou mandar fazer.
 
 ### 11.2 Funções próprias (no resumo e no painel da peça)
 
@@ -440,6 +458,7 @@ A 2.x continua a **arquitetônica**: o conceito junta flexibilidade, ajustabilid
    - Placa: **Px** (x = número de lados); outra com o mesmo número de lados vira **Pxn**.
    - RC: **RCa** (a = ângulo em graus, ex.: RC45.2).
    - Barra: **Bx** (x = comprimento em módulos, ex.: B2.34).
+   - Tirante: a definir (X8; proposta **Tx**, comprimento em módulos entre centros, ex.: T5.83).
 3. **Pranchas e detalhamento** (resumo e pranchas):
    - placas e RCs: um desenho técnico de cada peça, com as dimensões principais;
    - barras ajustáveis: os comprimentos obtidos e, como há um kit comercial, **quantos kits comerciais** são precisos e **qual barra comercial** ajustar para cada comprimento (cada uma tem uma faixa).
@@ -478,6 +497,8 @@ O Kit X mexe em três coisas que hoje são fixas no programa: a **geometria** (t
 | **Exportar a estrutura em 3D** (STL/glTF) já na 1.x | Útil hoje (impressão, apresentações) e é a mesma função da peça do Kit X | `render/`, via three.js |
 | **Folha de detalhamento de peças** nas pranchas | Serve já para a CC/CC90 e o Kit 3, e é onde entram os desenhos das peças do Kit X | `drawings/` |
 | **Medir as Barras de Comprimento Regulável** (mín./máx. em mm de cada uma, folga, rigidez perto do máximo) | Sem as faixas reais, a conta de "quantos kits comerciais" não fecha | protocolo da §9, `kit-mola-pecas.md` |
+| **Kit A vira Kit X** no Estoque (uma linha só) e o tirante entre os tipos de peça criada (`cable` em `userPieces.ts`) | Esclarecimento de 08/11: são o mesmo kit; o tirante é a 4ª ajustável | próxima entrega da 1.10 (`Toolbar.tsx`, `userPieces.ts`) |
+| **A chave "Ajustável"** (§11.0) | O modo avançado da 2.x; na 1.x pode aparecer desativada, como o Simolar "em breve" | `Dock.tsx` (canto de baixo), `prefs.ts`, `Palette.tsx` |
 
 ### 11.6 Decisões da equipe (08/11/2026)
 
@@ -491,6 +512,13 @@ O Kit X mexe em três coisas que hoje são fixas no programa: a **geometria** (t
 | X6 | A RC ajustável existe? | **Não existe ajustável.** O plano da equipe: imprimir em 3D RCs de **ângulos notáveis** descobertos no siMOLAdor e, em paralelo, projetar uma RC ajustável. As medidas de partida (furo, ímã, espessura) saem da RC90. |
 | X7 | Limites da placa ajustável | **Sempre plana** (todos os cantos no mesmo plano); **sem limite de lados**. |
 
+| X8 | Tirante ajustável (08/11) | É a 4ª família ajustável, ao lado de barra, placa e RC. Não existe à venda: o programa dá as dimensões para fabricar. Código **a definir** (proposta: Tx, ex.: T5.83). |
+| X9 | Kit A e Kit X (08/11) | São **o mesmo kit**. Fica só o nome Kit X. |
+| X10 | Chave "Ajustável" (08/11) | Chave deslizante num canto de baixo liga a ajustabilidade (ajustáveis + Kit X), como um modo avançado. A 2.x é a versão em que ela funciona; a 3.x, a versão em que o Simolar funciona. |
+
 **Ainda em aberto:**
 - **Placa côncava ou com furo:** a resposta foi "sempre plana, sem limite de lados". Proposta para a implementação: aceitar côncava desde que os lados não se cruzem; furo fica para depois. Confirmar com a equipe.
+- **Código do tirante** (X8): Tx (proposta) ou outro.
+- **Chave "Ajustável" e arquivos:** proposta: abrir um `.mola` que usa peças criadas **liga a chave sozinho**, com aviso no rodapé; a chave fica lembrada no navegador (preferência pessoal, como a aparência), não no arquivo. Com a chave desligada, as peças criadas que já estão na montagem continuam lá (só some a criação de novas).
+- **A chave na 1.x:** mostrar já desativada ("2.x"), como o Simolar "em breve", ou só aparecer na 2.0?
 - **A RC ajustável do projeto paralelo:** quando existir, entra como peça física (com faixa de ângulos, como a barra comercial).

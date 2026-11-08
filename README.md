@@ -9,7 +9,7 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 ## O que dá para fazer
 
 ### Montar
-- **Peças dos Kits 1, 2 e 3**: ligação de base (GC), esferas, barras B4, B6 e B12, diagonais D4x6, D6x6 e D6x12, placas P6x6 e P6x12 (laje ou parede), ligações RC90, CC e CC90, cabo de bolinhas e enrijecedor. O Kit A já está previsto no estoque.
+- **Peças dos Kits 1, 2 e 3**: ligação de base (GC), esferas, barras B4, B6 e B12, diagonais D4x6, D6x6 e D6x12, placas P6x6 e P6x12 (laje ou parede), ligações RC90, CC e CC90, cabo de bolinhas e enrijecedor. O Kit X (o kit ajustável da 2.x, antes chamado Kit A) já está previsto no estoque.
 - **Encaixe guiado**: pontos verdes mostram onde a peça entra. Os pontos azuis ficam a um vão de barra. Os amarelos e laranja fecham triângulos e pirâmides com um clique.
 - **Ligar duas esferas**: com uma mola na mão, clique numa esfera e depois em outra. Se a distância não bate, a segunda esfera anda até a mola caber.
 - **Barras em qualquer direção**: nos eixos, em passos de 15° ou livres (treliças 3D, telhados).
