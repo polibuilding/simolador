@@ -10,7 +10,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 
 - **No ar:** https://polibuilding.github.io/simolador/
 - **Repositório:** `polibuilding/simolador`, branch `main`. A publicação é por GitHub Actions no GitHub Pages (`.github/workflows/pages.yml`).
-- **Versão atual:** 1.10.3. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
+- **Versão atual:** 1.10.4. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
 - **Usuários:** estudantes de engenharia e arquitetura, que montam e documentam estruturas para a competição.
 
 ## Como trabalhar com a equipe
@@ -26,7 +26,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 npm install
 npm run dados     # data/parametros.xlsx → data/catalog.json e data/kits.json (nunca edite os .json à mão)
 npm run dev       # http://localhost:5173/simolador/
-npm test          # Vitest (núcleo); hoje 193 testes, todos passando
+npm test          # Vitest (núcleo); hoje 199 testes, todos passando
 npm run typecheck
 npm run build     # tsc + vite build
 npx vite preview --port 4173 --strictPort   # testar o build em http://localhost:4173/simolador/
@@ -49,7 +49,7 @@ TypeScript, React 18, Three.js via React Three Fiber + drei, Zustand, Vite, Vite
 | `src/core/` | Lógica pura e testável, sem React nem Three |
 | `src/render/` | Cena 3D (`Scene.tsx`) e desenho das peças (`pieces/`) |
 | `src/interaction/` | Posicionamento com o mouse. `Placement.tsx`: eventos (mouse, Enter), o despacho por ferramenta, guardas e limpeza. `ctx.ts`: câmera, tela e o estado de **um comando** (`Cmd`). `queries.ts`: consultas com cache (candidatas, guias, caminhos, referências do Tab). `steps/`: cada ferramenta (`support` GC, `bars` barras livres, triângulos e ligação, `rope` cabo e enrijecedor, `move` caminho, arraste livre, mover e colar, `place` peças comuns, `box` retângulo). É a parte mais delicada. |
-| `src/ui/` | Interface: `store.ts` (estado), `PropertiesPanel.tsx` (resumo e painel da peça), `Palette.tsx`, `Dock.tsx` (barra de baixo), `Toolbar.tsx`, `Config.tsx` (janela da engrenagem, com as abas pessoais), `prefs.ts` (aparência, perfil e tutorial no localStorage), `files.ts` (Salvar no mesmo arquivo, Salvar como, Recentes, cópias automáticas; `idb.ts` guarda no IndexedDB), `pwa.ts` (service worker, aviso de versão nova, Instalar), `errorlog.ts` (relatório de erro), `AppNotices.tsx`, `Shortcuts.tsx`, `SheetsView.tsx`, `AdjustSwitch.tsx` (chave Ajustável da 2.x; na 1.x desativada, "em breve") |
+| `src/ui/` | Interface: `store.ts` (estado), `PropertiesPanel.tsx` (resumo e painel da peça), `Palette.tsx`, `Dock.tsx` (barra de baixo), `Toolbar.tsx`, `Config.tsx` (janela da engrenagem, com as abas pessoais), `prefs.ts` (aparência, perfil e tutorial no localStorage), `files.ts` (Salvar no mesmo arquivo, Salvar como, Recentes, cópias automáticas; `idb.ts` guarda no IndexedDB), `pwa.ts` (service worker, aviso de versão nova, Instalar), `errorlog.ts` (relatório de erro), `AppNotices.tsx`, `Shortcuts.tsx`, `SheetsView.tsx`, `AdjustSwitch.tsx` (chave Ajustável da 2.x; na 1.x desativada, "em breve"), `i18n.ts` + `i18n-dict.ts` (idiomas) |
 | `src/drawings/` | Pranchas: vistas, folhas e exportação PDF/DXF/SVG |
 | `src/App.tsx` | Atalhos de teclado (`useShortcuts`) |
 | `tests/core/` | Testes do núcleo |
@@ -91,6 +91,8 @@ TypeScript, React 18, Three.js via React Three Fiber + drei, Zustand, Vite, Vite
 - **Configurações:** ficam em localStorage (`simolador:config`), com verificação de abertura (`simolador:config-teste`), `?padrao` no endereço e um ErrorBoundary.
 - **Sem internet (1.10.0):** o build gera `dist/sw.js` a partir de `scripts/sw-modelo.js` (plugin `offlinePlugin` no `vite.config.ts`), com a lista de todos os arquivos e um carimbo de versão. Arquivo novo em `public/` entra sozinho. Nada pode vir de fora do site (a fonte é `@fontsource-variable/archivo`). O service worker só é registrado no build (`import.meta.env.PROD`); para testar, use `vite preview`.
 - **Peças criadas (1.10.2, base da 2.x):** o `catalog` do programa é uma **cópia** do da planilha (`baseCatalog` fica intocado; as Configurações o usam). Peças do usuário entram só por `registerUserPieces` (`userPieces.ts`), com `origin: "user"`, e moram no Kit X (`unlimited`). Placas que não são retângulo seguem por contas de polígono (`isRectangle(…, 1e-2)` decide; as do kit nunca mudam de caminho). Sem peças criadas, nada disso aparece.
+- **Tema escuro (1.10.4):** todas as cores de `styles.css` são variáveis em `:root`; o escuro redefine as mesmas em `:root[data-theme="dark"]` (no fim do arquivo). Cor nova no CSS: use uma variável (ou acrescente uma `--c-xxxxxx` nos dois blocos). `main.tsx` põe `data-theme` ao abrir (`resolvedTheme` em `prefs.ts`); a cena usa `sceneBackground` e `plateOf` ("auto" = chapa clara no escuro). A folha das pranchas fica sempre branca.
+- **Idiomas (1.10.4):** o código continua em português. Com outro idioma, `i18n.ts` observa a página e troca cada texto (e `title`, `placeholder`, `aria-label`) pela tradução de `i18n-dict.ts` (linhas `[pt, en, es]`; modelos com partes variáveis em `PATTERNS`, e as partes também são traduzidas). Texto sem tradução fica em português. Não traduz `.sheet-paper`, `.notranslate`, campos de texto. Para mensagens fora da página (`window.confirm`), use `tr()`; para o que é desenhado na cena (cubo de vistas), `useLang()`. Texto novo na interface: acrescente a linha no dicionário.
 - **Arquivos (1.10.0):** salvar e abrir passam por `src/ui/files.ts` (não chame `store.load` direto da interface: use `openText`/`openExample`, que guardam a cópia automática e tratam arquivo de versão mais nova). O `.mola` grava `app` (versão do programa). Regras A1–A8 em `regras-de-encaixe.md`.
 
 ## Modelo cinemático (rigidez)
@@ -102,14 +104,14 @@ Em `mechanism.ts` e `globalMove.ts`, cada ligação vira um vínculo:
 | Esfera | Rótula |
 | Mola | Distância fixa |
 | RC90 | Trava só a **inclinação no plano em que foi posicionada** (L10, 16/10): distância entre as pontas das duas molas. No plano perpendicular a mola gira, e a torção também fica livre (14/10). No "mover só o nó" (`edit.ts`), vira mais um vínculo de distância, em vez de travar o nó |
-| RC90 na base | Engasta o pilar (o topo fica fixo). **A confirmar**: travar só o plano dela; a chave é `RC90_BASE_ENGASTA` em `model.ts` |
+| RC90 na base | Trava só o tombamento do pilar **no plano dela** (equipe 08/11; vínculo `planes` em `mechanism.ts`, `RC90_BASE_ENGASTA = false` em `model.ts`). Duas, em lados perpendiculares, engastam |
 | CC | Colinear (`lerps`) |
 | CC90 | Também trava o ângulo com o par da CC (**a confirmar**) |
 | Placa | Corpo rígido (shape matching) |
 | Diagonal e cabo | Só tração (`ties`) |
-| GC | Fixa |
+| GC | Fixa na chapa e **rótula** para as molas (confirmado pela equipe em 08/11) |
 
-A **GC como rótula** está **a conferir pela equipe**. O TFG da UPC (jan. 2026, ver `docs/fisica-das-pecas.md`) já mostra o pórtico sem RC90 na base tombando (GC = rótula) e a GC + RC90 funcionando como engaste no plano da RC90. A dissertação de Oliveira (UFOP, 2008, a origem do kit) mostra o mesmo em vários ensaios. Ela mostra também que a RC90 deixa reto um trecho da mola (modelar como trecho rígido + mola de rotação) e que a CC deixa a viga contínua sem passar momento para a coluna.
+A **GC é rótula** (equipe, 08/11/2026), e a **RC90 trava uma direção só**, inclusive na base; a outra fica um pouco mais rígida na peça real (para a 3.x). O TFG da UPC (jan. 2026, ver `docs/fisica-das-pecas.md`) já mostra o pórtico sem RC90 na base tombando (GC = rótula) e a GC + RC90 funcionando como engaste no plano da RC90. A dissertação de Oliveira (UFOP, 2008, a origem do kit) mostra o mesmo em vários ensaios. Ela mostra também que a RC90 deixa reto um trecho da mola (modelar como trecho rígido + mola de rotação) e que a CC deixa a viga contínua sem passar momento para a coluna.
 
 - **Graus de liberdade:** saem do núcleo da matriz de rigidez, mais um teste finito (`newtonProject`) que descarta dobras que só existem no infinitesimal.
 - **Duplo clique:** com 0 graus a peça fica travada e o rodapé diz o que trava. Com 1, ela anda num caminho traçado por `tracePath`, azul onde pode e vermelho onde não pode. Com 2 ou mais, o arraste é livre (`dragTo` mexe o mínimo).
@@ -156,8 +158,8 @@ O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o as
 ## Pendências e próximas implementações
 
 ### Lembretes fixos (mencionar ao fim de cada entrega)
-1. **Idiomas:** a aba Idioma (1.9.0) só tem português. Inglês e espanhol pedem separar os textos da interface para tradução.
-2. **Corrigir as peças CC e CC90:** o formato é provisório até a equipe medir.
+1. **Idiomas:** inglês e espanhol funcionam desde a 1.10.4 (interface). Falta completar o dicionário: as mensagens das regras e as dicas com partes variáveis (núcleo e `steps/`) e, se a equipe quiser, pranchas em outro idioma.
+2. **Corrigir as peças CC e CC90:** o formato é provisório até a equipe medir; o comportamento da CC90 (travar o ângulo com o par da CC) também falta conferir.
 3. **Confirmar as medidas do Kit 3** com o kit em mãos (e as regras K10–K14 da 1.9.0: anel, clip múltiplo, emenda, sem cortar).
 4. **Biblioteca online** de modelos dos usuários: precisa de servidor e contas, e é preciso definir onde hospedar. Hoje a Biblioteca só abre os exemplos.
 5. **Próximas montagens com cabo:** o mapa está em `plano-simolador.md` §8. Feito na 1.9.0: clip múltiplo, anéis, emenda, laço sem cortar, régua 1:1. Falta:
@@ -167,12 +169,12 @@ O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o as
 
 ### Mecanismo e rigidez (próximos passos)
 - Feito (1.8.3): rótulas que giram em laranja (`turningJoints`), **G** segue um modo por vez no arraste livre (`Mobility.modes`, `dofMode` na ferramenta `moveBody`), diagonal frouxa com barriga (`sagCurve`). Falta: o cabo do Kit 3 frouxo (hoje é recontado e fica sempre esticado).
-- Conferir com a equipe a GC como rótula e a CC90.
+- Conferido em 08/11: GC = rótula; RC90 trava só o plano dela (também na base). Falta conferir a CC90.
 - Levar o estudo para a 3.x: plano em `plano-simolador.md` §10. Primeiro passo sem depender de medida: a 3.0 (estaticidade: estados de autotensão = vínculos − posto, a partir do `mechanism.ts`). Os ensaios da equipe estão em `fisica-das-pecas.md` §7 (prioridade T0–T3).
 
 ### Outros
 - **Geometria livre:** geodésicas e barras fora dos planos ortogonais (E19). É a fase 4 do plano.
-- **App local:** fase 5, plano em `plano-simolador.md` §7c. Feito na 1.10.0: arquivos, sem internet, PWA, Sobre e relatório. Feito na 1.10.1: pavimentos na capa, planta baixa cortada a uma altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20). Feito na 1.10.2: base para a 2.x (plano §11.5). Feito na 1.10.3: chave Ajustável desativada, Kit X no Estoque, tirante criado. Próximos: 1.10.4 impressão das pranchas, 1.10.5 modo leve, 1.11 Tauri (instaladores, atualizador, página de download).
+- **App local:** fase 5, plano em `plano-simolador.md` §7c. Feito na 1.10.0: arquivos, sem internet, PWA, Sobre e relatório. Feito na 1.10.1: pavimentos na capa, planta baixa cortada a uma altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20). Feito na 1.10.2: base para a 2.x (plano §11.5). Feito na 1.10.3: chave Ajustável desativada, Kit X no Estoque, tirante criado. Feito na 1.10.4: modo escuro, inglês e espanhol, RC90 na base só no plano dela. Próximos: 1.10.5 impressão das pranchas, 1.10.6 modo leve, 1.11 Tauri (instaladores, atualizador, página de download).
 - **Medições pendentes:** o protocolo está em `plano-simolador.md` §9.
 - **Responsáveis por frente** (Q08): falta definir.
 

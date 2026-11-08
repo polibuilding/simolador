@@ -68,8 +68,9 @@ describe("etapas que mexem (Espaço amplia)", () => {
     m = bar(m, [3, 6, 3], [9, 6, 3]);
     m = addConnector(m, { code: "RC90", node: id(m, [3, 6, 3]), dirs: [[0, -1, 0], [1, 0, 0]] }).model;
     m = addConnector(m, { code: "RC90", node: id(m, [9, 6, 3]), dirs: [[0, -1, 0], [-1, 0, 0]] }).model;
-    m = addConnector(m, { code: "RC90", node: id(m, [3, 0, 3]), dirs: [[0, 1, 0], [1, 0, 0]], base: true }).model;
-    m = addConnector(m, { code: "RC90", node: id(m, [9, 0, 3]), dirs: [[0, 1, 0], [-1, 0, 0]], base: true }).model;
+    // RC90 da base virada para fora do plano do pórtico: trava o tombamento que sobrava (equipe 08/11)
+    m = addConnector(m, { code: "RC90", node: id(m, [3, 0, 3]), dirs: [[0, 1, 0], [0, 0, 1]], base: true }).model;
+    m = addConnector(m, { code: "RC90", node: id(m, [9, 0, 3]), dirs: [[0, 1, 0], [0, 0, 1]], base: true }).model;
     const beam = Object.values(m.members).find((b) => m.nodes[b.a].pos[1] === 6 && m.nodes[b.b].pos[1] === 6)!;
     expect(moveScopes(catalog, m, { kind: "member", id: beam.id })).toEqual([]);
   });

@@ -24,6 +24,11 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 ## 1.10 — Pronto para usar fora do site
 
+### 1.10.4 — Modo escuro, inglês e espanhol, e a RC90 na base como a equipe confirmou · 08/11/2026
+- **Modo escuro** (Configurações › Aparência › Tema): fundo grafite, painéis e menus escuros, letras claras. A chapa fica clara para contrastar com o fundo (opção "Do tema"; dá para escolher outra cor). "Do sistema" segue o modo escuro do computador. As folhas das pranchas continuam brancas.
+- **Idiomas** (Configurações › Idioma): **English** e **Español**, além do português. A troca é na hora, sem recarregar, e fica guardada neste navegador. Menus, paleta, resumo, painel da peça, configurações, atalhos, barra das pranchas e as dicas mais comuns estão traduzidos; o que ainda não estiver aparece em português. As pranchas continuam em português (padrão do Desafio).
+- **RC90 na base**: como a equipe confirmou (a GC é rótula e a RC90 trava uma direção só), a RC90 entre a GC e o pilar agora trava só o tombamento **no plano dela**; o pilar ainda tomba para o outro lado. Duas RC90 na mesma GC, em lados perpendiculares, engastam o pilar.
+
 ### 1.10.3 — Chave "Ajustável" (em breve) e Kit X no estoque · 08/11/2026
 - **Chave "Ajustável"** no canto de baixo, à direita: é por ela que, na linha 2.x, vão ligar o **Kit X** e as peças ajustáveis (barra, tirante, placa e RC de qualquer medida). Por enquanto aparece desativada, como o Simolar; clicar explica o que ela vai fazer.
 - No Estoque, o **Kit A** virou **Kit X** (eram o mesmo kit).

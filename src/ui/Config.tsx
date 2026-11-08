@@ -12,6 +12,7 @@ import { openExample } from "./files";
 import { copyReport } from "./errorlog";
 import { applyUpdate, isInstalled, offlineReady, promptInstall } from "./pwa";
 import { EDITION, VERSION } from "../version";
+import { currentLang, LANGS, setLang, type Lang } from "./i18n";
 import { DEFAULT_APPEARANCE, readAppearance, readProfile, readTutorial, resetTutorial, saveAppearance, saveProfile, type Appearance, type Profile } from "./prefs";
 import { GROUPS, paletteName } from "./Palette";
 
@@ -170,9 +171,9 @@ const TABS = [
 ] as const;
 const PERSONAL = [
   { id: "tutorial", label: "Tutorial", hint: "Primeiros passos" },
-  { id: "aparencia", label: "Aparência", hint: "Chapa, fundo, eixos" },
+  { id: "aparencia", label: "Aparência", hint: "Tema, chapa, fundo" },
   { id: "perfil", label: "Perfil", hint: "Nome e equipe" },
-  { id: "idioma", label: "Idioma", hint: "Português" },
+  { id: "idioma", label: "Idioma", hint: "Português, English, Español" },
   { id: "sobre", label: "Sobre", hint: `Versão ${VERSION}` },
 ] as const;
 
@@ -373,9 +374,10 @@ function AppearanceTab() {
   );
   return (
     <div className="cfg-appearance">
-      <p className="cfg-lead">Como a cena aparece só para você (fica neste navegador; não muda o projeto).</p>
-      {opt("plate", "Chapa", [["preta", "Preta"], ["grafite", "Grafite"], ["clara", "Clara"]])}
-      {opt("background", "Fundo da cena", [["claro", "Claro"], ["cinza", "Cinza"]])}
+      <p className="cfg-lead">Como o programa aparece só para você (fica neste navegador; não muda o projeto).</p>
+      {opt("theme", "Tema", [["claro", "Claro"], ["escuro", "Escuro"], ["sistema", "Do sistema"]])}
+      {opt("plate", "Chapa", [["auto", "Do tema"], ["preta", "Preta"], ["grafite", "Grafite"], ["clara", "Clara"]])}
+      {opt("background", "Fundo da cena", [["claro", "Padrão"], ["cinza", "Contraste"]])}
       {opt("axes", "Eixos X, Y, Z no canto", [[true, "Mostrar"], [false, "Esconder"]])}
       {opt("motion", "Animações dos painéis", [[true, "Com"], [false, "Sem"]])}
       <div className="cfg-actions">
@@ -405,20 +407,25 @@ function ProfileTab() {
   );
 }
 
-/** Idioma: hoje só português (os textos ainda não estão separados para tradução). */
+/** Idioma (1.10.4): português, inglês e espanhol. A troca é na hora; as pranchas continuam em português. */
 function LanguageTab() {
+  const [l, setL] = useState<Lang>(currentLang);
+  const pick = (id: Lang) => {
+    setL(id);
+    void setLang(id);
+  };
   return (
     <div className="cfg-language">
-      <p className="cfg-lead">O programa está em português.</p>
+      <p className="cfg-lead">Idioma da interface (fica neste navegador). A troca é na hora, sem recarregar.</p>
       <div className="cfg-row">
         <span className="cfg-label">Idioma</span>
-        <span className="segmented">
-          <button className="on">Português</button>
-          <button disabled title="Em preparação">English</button>
-          <button disabled title="Em preparação">Español</button>
+        <span className="segmented notranslate">
+          {LANGS.map((x) => (
+            <button key={x.id} className={l === x.id ? "on" : ""} onClick={() => pick(x.id)}>{x.name}</button>
+          ))}
         </span>
       </div>
-      <p className="cfg-foot">Inglês e espanhol (o manual do Mola é bilíngue) dependem de separar os textos da interface para tradução: está nas próximas etapas.</p>
+      <p className="cfg-foot">As pranchas continuam em português, no padrão do Desafio. O que ainda não foi traduzido aparece em português.</p>
     </div>
   );
 }

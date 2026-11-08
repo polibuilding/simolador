@@ -1,4 +1,4 @@
-import { PLATE_COLORS, readAppearance } from "../ui/prefs";
+import { PLATE_COLORS, plateOf, readAppearance } from "../ui/prefs";
 // Conversão do modelo (módulos) para a cena (milímetros). Origem: canto da chapa, topo da chapa em y = 0.
 import * as THREE from "three";
 import { catalog } from "../core/catalog";
@@ -20,8 +20,8 @@ export const COLORS = {
   springSteel: "#9aa1a8",
   cap: "#6f777f",
   plastic: "#dcdfe2",
-  plate: PLATE_COLORS[APPEARANCE.plate].plate,
-  grid: PLATE_COLORS[APPEARANCE.plate].grid,
+  plate: PLATE_COLORS[plateOf(APPEARANCE)].plate,
+  grid: PLATE_COLORS[plateOf(APPEARANCE)].grid,
   valid: "#19a974",
   invalid: "#e5484d",
   select: "#2563eb",

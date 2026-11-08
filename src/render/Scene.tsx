@@ -21,10 +21,12 @@ import { Cable, ContinuousConnector, PlateMesh, RigidConnector, Rope, RopeClip, 
 import { COLORS, M, PLATE_D, PLATE_W, toWorld } from "./units";
 import { Boards } from "./Boards";
 import { SnapshotHook } from "./snapshot";
-import { BACKGROUNDS, readAppearance } from "../ui/prefs";
+import { readAppearance, resolvedTheme, sceneBackground } from "../ui/prefs";
+import { tr, useLang } from "../ui/i18n";
 
 /** aparência escolhida nas configurações (lida na abertura; Aplicar recarrega) */
 const APPEARANCE = readAppearance();
+const DARK = resolvedTheme(APPEARANCE) === "dark";
 
 const typeOf = (code: string) => catalog.pieces[code]?.type;
 
@@ -873,6 +875,8 @@ function KeyCamera() {
 }
 
 export function Scene() {
+  // nomes das faces do cubo de vistas no idioma escolhido (o cubo é desenhado na cena, fora do alcance do tradutor da página)
+  const lang = useLang();
   const select = useApp((s) => s.select);
   const inertia = useApp((s) => s.inertia);
   const render = useApp((s) => s.render);
@@ -894,7 +898,7 @@ export function Scene() {
       }}
       gl={{ preserveDrawingBuffer: true }}
     >
-      <color attach="background" args={[BACKGROUNDS[APPEARANCE.background]]} />
+      <color attach="background" args={[sceneBackground(APPEARANCE)]} />
       <SnapshotHook />
       <ambientLight intensity={render ? 0.35 : 0.55} />
       {/* modo simples: sem reflexos do estúdio; uma luz de céu/chão deixa as peças legíveis */}
@@ -942,12 +946,13 @@ export function Scene() {
       <CubeHelper alignment="top-right" margin={[84 + propsInset, 84]} perspective={!ortho}>
         <group scale={1.35}>
           <ViewCube
-            faces={["DIREITA", "ESQUERDA", "TOPO", "BASE", "FRENTE", "TRÁS"]}
+            key={lang}
+            faces={["DIREITA", "ESQUERDA", "TOPO", "BASE", "FRENTE", "TRÁS"].map(tr)}
             font="600 18px Arial"
-            color="#e4e8e6"
-            textColor="#3c4644"
-            strokeColor="#a9b2af"
-            hoverColor="#bfe3d3"
+            color={DARK ? "#353d40" : "#e4e8e6"}
+            textColor={DARK ? "#dfe5e3" : "#3c4644"}
+            strokeColor={DARK ? "#56606a" : "#a9b2af"}
+            hoverColor={DARK ? "#2f6b55" : "#bfe3d3"}
             opacity={1}
           />
         </group>

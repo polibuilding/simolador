@@ -34,13 +34,31 @@ describe("graus de liberdade (esferas = rótulas; RC90, CC e placas travam)", ()
     expect(r.dof).toBe(1);
     expect(r.hand).toBe(1);
   });
-  it("e com RC90 na base das duas GC: travado", () => {
+  // equipe 08/11: a RC90 na base trava só o tombamento no plano dela (GC = rótula)
+  it("RC90 na base no plano do pórtico: ele ainda tomba para fora (1)", () => {
     let m = portico();
     m = rc90(m, [3, 6, 3], [0, -1, 0], [1, 0, 0]);
     m = rc90(m, [9, 6, 3], [0, -1, 0], [-1, 0, 0]);
     m = addConnector(m, { code: "RC90", node: id(m, [3, 0, 3]), dirs: [[0, 1, 0], [1, 0, 0]], base: true }).model;
     m = addConnector(m, { code: "RC90", node: id(m, [9, 0, 3]), dirs: [[0, 1, 0], [-1, 0, 0]], base: true }).model;
+    expect(mob(m, [[3, 6, 3], [9, 6, 3]]).r.dof).toBe(1);
+  });
+  it("RC90 na base virada para fora do plano: travado", () => {
+    let m = portico();
+    m = rc90(m, [3, 6, 3], [0, -1, 0], [1, 0, 0]);
+    m = rc90(m, [9, 6, 3], [0, -1, 0], [-1, 0, 0]);
+    m = addConnector(m, { code: "RC90", node: id(m, [3, 0, 3]), dirs: [[0, 1, 0], [0, 0, 1]], base: true }).model;
     expect(mob(m, [[3, 6, 3], [9, 6, 3]]).r.dof).toBe(0);
+  });
+  it("pilar solto numa GC: uma RC90 na base deixa tombar para um lado (2 → 1); duas, em lados perpendiculares, engastam", () => {
+    let m = emptyModel();
+    m = addSupport(m, [3, 0, 3]).model;
+    m = addMember(m, "B6", id(m, [3, 0, 3]), [3, 6, 3]).model;
+    expect(mob(m, [[3, 6, 3]]).r.dof).toBe(2);
+    m = addConnector(m, { code: "RC90", node: id(m, [3, 0, 3]), dirs: [[0, 1, 0], [1, 0, 0]], base: true }).model;
+    expect(mob(m, [[3, 6, 3]]).r.dof).toBe(1);
+    m = addConnector(m, { code: "RC90", node: id(m, [3, 0, 3]), dirs: [[0, 1, 0], [0, 0, 1]], base: true }).model;
+    expect(mob(m, [[3, 6, 3]]).r.dof).toBe(0);
   });
   it("placa no pórtico: trava o esquadro, mas o conjunto ainda tomba em torno das GC (1)", () => {
     let m = portico();

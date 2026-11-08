@@ -51,7 +51,7 @@ A dissertação descreve a Maquete Estrutural de 2008, que virou o Mola. Ela **n
    - placa = diafragma rígido (espaciais 4 e 8; núcleo rígido do Estudo 3);
    - diagonal = tirante que "apresenta pouca resistência à compressão".
 
-   A dúvida "GC é rótula?" fica respondida por duas fontes independentes (Oliveira 2008 e o TFG de 2026).
+   A dúvida "GC é rótula?" fica respondida por duas fontes independentes (Oliveira 2008 e o TFG de 2026), e a **equipe confirmou em 08/11/2026**: GC = rótula; a **RC90 trava uma direção só** (também na base), e a outra direção fica **um pouco mais rígida** (rigidez parcial fora do plano: parâmetro a medir para a 3.x). O programa trata assim desde a 1.10.4.
 3. **A RC90 trava um trecho da mola, não só a ponta.** Em quase todos os ensaios com engaste, a deformada real se afasta da teórica perto da RC90: a peça, "em função da sua dimensão", deixa reto o trecho da mola que ela cobre. O efeito é maior entre mola e GC do que entre duas molas, e cresce com a carga. Para a simulação, a ponta de mola com RC90 tem um **trecho rígido** (≈ o cateto da RC90, 18 mm) e, provavelmente, uma **mola de rotação**. As contas (§2b.4) mostram que o balanço do TFG só fecha com as duas coisas juntas, ou com o comprimento flexível que o TFG supôs.
 4. **As diagonais de 2008 eram "molas com a parte central retilínea"**: um fio reto com uma molinha em cada ponta. Por isso a diagonal **não é um tirante rígido**: ela estica um pouco nas molinhas. As fotos do TFG mostram molinhas parecidas nas pontas das diagonais do Mola atual. A rigidez da diagonal (T6) passa a ser importante.
 5. **A GC prende na chapa por ímã** ("peça metálica cilíndrica… com ímãs na parte inferior que fazem o contato com a fundação, chapa metálica"). Então a GC pode **escorregar ou levantar**, e isso é um modo de falha.
@@ -222,7 +222,7 @@ Notação: c/c = centro a centro das esferas; L_f = comprimento flexível (só a
 | Diâmetro | 15,0 mm (14 mm em 2008) | [2022]; [Oliveira] Tab. 3.1 | desenho |
 | Material | aço (é atraída pelos ímãs) | site | confirmado |
 | Massa | **≈ 13,9 g** se for aço maciço | [nós] | estimado: pesar 10 (T0) |
-| Papel mecânico | **rótula**: as peças giram em volta dela; transmite força, não momento (a não ser com RC90, CC ou CC90) | [TFG] Fig. 11; [Oliveira] ensaios 1, 5, 9; 1.7.1 | confirmado (duas fontes) |
+| Papel mecânico | **rótula**: as peças giram em volta dela; transmite força, não momento (a não ser com RC90, CC ou CC90) | [TFG] Fig. 11; [Oliveira] ensaios 1, 5, 9; 1.7.1; equipe 08/11/2026 | confirmado (duas fontes e a equipe) |
 | Peso relativo | "elevado quando comparado ao peso de outros elementos"; pode limitar a montagem | [Oliveira] 8.1 | confirmado |
 
 ### 3.2 Barras B4, B6, B12 (molas)

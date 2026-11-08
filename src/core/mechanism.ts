@@ -5,7 +5,8 @@
 // - RC90 entre duas molas a 90°: trava o ângulo entre elas (vira um esquadro).
 // - CC entre duas molas alinhadas: trava em 180° (viga contínua); CC90 por cima de uma CC: trava o par
 //   perpendicular em 180° e o ângulo entre os dois pares.
-// - RC90 na base de uma GC: engasta o pilar (o topo dele não sai do lugar).
+// - RC90 na base de uma GC: trava só o tombamento do pilar no plano dela (equipe 08/11: a RC90 trava uma direção;
+//   a outra fica um pouco mais rígida, o que entra na simulação da 3.x). Duas, em lados perpendiculares, engastam.
 // - Placa: corpo rígido com as 4 esferas dos cantos.
 // - Diagonal e cabo: só tração. Não deixam esticar (vermelho), deixam afrouxar. Não entram na conta de graus de
 //   liberdade (seguram só um sentido).
@@ -16,7 +17,7 @@
 // "mais pesadas" (o que não precisa mexer fica parado).
 import type { Catalog } from "./catalog";
 import {
-  add, canonicalDir, cross, directionFrom, dot, len, memberAlong, membersAt, norm, scale, sub, UP,
+  RC90_BASE_ENGASTA, add, canonicalDir, cross, directionFrom, dot, len, memberAlong, membersAt, norm, scale, sub, UP,
   type Connector, type Member, type Model, type Vec3,
 } from "./model";
 
@@ -30,6 +31,8 @@ export interface Mech {
   /** corpos rígidos (placas e a forma travada das etapas anteriores): os 3 primeiros pontos fora de uma reta */
   rigids: { idx: number[]; rest: Vec3[]; planar: boolean }[];
   ties: { a: number; b: number; L: number; member: string }[];
+  /** ponto preso a um plano fixo: dot(x[i] − p, n) = 0 (RC90 na base: o pilar não tomba no plano dela) */
+  planes?: { i: number; p: Vec3; n: Vec3 }[];
   /** ligações e as molas que elas seguram (para acertar as direções depois de mexer) */
   conns: { id: string; members: string[] }[];
   /** o que trava, em palavras (para o painel) */
@@ -69,6 +72,7 @@ export function buildMech(cat: Catalog, model: Model, ids: Set<string>): Mech {
   const dists: Mech["dists"] = [];
   const lerps: Mech["lerps"] = [];
   const rigids: Mech["rigids"] = [];
+  const planes: NonNullable<Mech["planes"]> = [];
   const ties: Mech["ties"] = [];
   const conns: Mech["conns"] = [];
   const locks = { rc90: 0, rc90base: 0, cc: 0, plates: 0, ties: 0, frozen: 0 };
@@ -94,7 +98,13 @@ export function buildMech(cat: Catalog, model: Model, ids: Set<string>): Mech {
     if (c.code === "RC90" && c.base) {
       const col = memberAlong(model, c.node, c.dirs[0] ?? UP, bar);
       const top = col ? I(other(col, c.node)) : undefined;
-      if (top !== undefined) (fixed[top] = true), locks.rc90base++, conns.push({ id: c.id, members: [col!.id] });
+      if (top === undefined) continue;
+      const side = c.dirs[1];
+      if (RC90_BASE_ENGASTA || !side) fixed[top] = true;
+      // o topo fica no plano perpendicular ao lado da RC90 que passa por ele: não tomba para esse lado
+      else planes.push({ i: top, p: P(other(col!, c.node)), n: norm(side) });
+      locks.rc90base++;
+      conns.push({ id: c.id, members: [col!.id] });
       continue;
     }
     if (c.code === "RC90" && c.dirs.length === 2) {
@@ -141,7 +151,7 @@ export function buildMech(cat: Catalog, model: Model, ids: Set<string>): Mech {
     rigids.push(r);
     locks.plates++;
   }
-  return { ids: list, index, fixed, dists, lerps, rigids, ties, conns, locks };
+  return { ids: list, index, fixed, dists, lerps, rigids, ties, conns, locks, planes };
 }
 
 /** Corpo rígido com os pontos em ordem boa: os 3 primeiros fora de uma reta (base das contas); plano ou não. */
@@ -328,6 +338,12 @@ export function project(mech: Mech, x: Float64Array, w: Float64Array, iters: num
         x[3 * b + k] += fb * w[b] * l;
       }
     }
+    for (const { i, p, n } of mech.planes ?? []) {
+      if (!(w[i] > 0)) continue;
+      const C = dot(sub(get(x, i), p), n);
+      err = Math.max(err, Math.abs(C));
+      for (let k = 0; k < 3; k++) x[3 * i + k] -= C * n[k];
+    }
     for (const r of mech.rigids) {
       const m = r.idx.map((i) => mass[i]);
       const M = m.reduce((s, v) => s + v, 0);
@@ -414,6 +430,11 @@ function rigidityRows(mech: Mech, x: Float64Array, col: (i: number) => number, C
       }
     }
   }
+  for (const { i, n } of mech.planes ?? []) {
+    const r = row();
+    set3(r, i, n);
+    rows.push(r);
+  }
   return rows;
 }
 
@@ -438,6 +459,7 @@ function residuals(mech: Mech, x: Float64Array): number[] {
       for (const i4 of idx.slice(3)) f.push(dot(nrm, sub(get(x, i4), p1)));
     }
   }
+  for (const { i, p, n } of mech.planes ?? []) f.push(dot(sub(get(x, i), p), n));
   return f;
 }
 

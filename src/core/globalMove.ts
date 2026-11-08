@@ -6,7 +6,7 @@ import type { NodeMove, NodeMoveSet } from "./edit";
 import {
   buildMech, dragTo, freezeShapes, mechComponent, mobility, modelAt, newtonProject, positionsOf, stretchedTies, tracePath, weightsFrom, type Mech,
 } from "./mechanism";
-import { cross, dot, len, membersAt, sub, type Model, type Vec3 } from "./model";
+import { RC90_BASE_ENGASTA, cross, dot, len, membersAt, sub, type Model, type Vec3 } from "./model";
 import { segmentHitsPlate, validateMovedModel } from "./rules";
 
 export type MoveRef = { kind: "node" | "member" | "plate"; id: string };
@@ -98,7 +98,7 @@ export function globalMoveOptions(cat: Catalog, model: Model, ref: MoveRef, free
   if (free) mech.ids.forEach((id, i) => !free.has(id) && (mech.fixed[i] = true));
   const x0 = positionsOf(model, mech);
   const hand = nodes.map((id) => mech.index.get(id)!).filter((i) => i !== undefined);
-  if (!hand.some((i) => !mech.fixed[i])) return { mode: "locked", reason: "Essa peça está presa na chapa (GC) ou engastada por RC90 na base.", dof: 0 };
+  if (!hand.some((i) => !mech.fixed[i])) return { mode: "locked", reason: RC90_BASE_ENGASTA ? "Essa peça está presa na chapa (GC) ou engastada por RC90 na base." : "Essa peça está presa na chapa (GC).", dof: 0 };
   const mob = mobility(mech, x0, hand);
   const handle = hand.reduce((s, i) => [s[0] + x0[3 * i] / hand.length, s[1] + x0[3 * i + 1] / hand.length, s[2] + x0[3 * i + 2] / hand.length] as Vec3, [0, 0, 0] as Vec3);
   const locks = mech.locks;

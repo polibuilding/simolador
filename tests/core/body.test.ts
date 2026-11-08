@@ -64,9 +64,13 @@ describe("girar o conjunto em torno das GC (duplo clique numa mola)", () => {
     m = addMember(m, "B6", id(m, [3, 0, 9]), [3, 6, 9]).model;
     m = addMember(m, "B6", id(m, [3, 6, 3]), [3, 6, 9]).model;
     expect(bodyMoveOptions(catalog, m, { kind: "member", id: beam(m).id }).locked).toMatch(/fora de uma linha/);
+    // RC90 na base trava só o plano dela (equipe 08/11): virada para fora do pórtico, trava; no plano dele, deixa girar
     let n = porticoComPlaca();
-    n = addConnector(n, { code: "RC90", node: id(n, [3, 0, 3]), dirs: [[0, 1, 0], [1, 0, 0]], base: true }).model;
+    n = addConnector(n, { code: "RC90", node: id(n, [3, 0, 3]), dirs: [[0, 1, 0], [0, 0, 1]], base: true }).model;
     expect(bodyMoveOptions(catalog, n, { kind: "member", id: beam(n).id }).locked).toMatch(/RC90/);
+    let q = porticoComPlaca();
+    q = addConnector(q, { code: "RC90", node: id(q, [3, 0, 3]), dirs: [[0, 1, 0], [1, 0, 0]], base: true }).model;
+    expect(bodyMoveOptions(catalog, q, { kind: "member", id: beam(q).id }).locked).toBeUndefined();
   });
 
   it("sem GC: não gira (arrastar move a estrutura)", () => {

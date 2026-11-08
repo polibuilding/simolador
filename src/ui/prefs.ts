@@ -2,8 +2,10 @@
 // com cuidado: valor estranho vira o padrão (nunca quebram o programa).
 
 export interface Appearance {
-  /** cor da chapa de base */
-  plate: "preta" | "grafite" | "clara";
+  /** tema da interface (1.10.4): claro, escuro ou o do sistema */
+  theme: "claro" | "escuro" | "sistema";
+  /** cor da chapa de base ("auto": preta no tema claro, clara no escuro) */
+  plate: "auto" | "preta" | "grafite" | "clara";
   /** fundo da cena 3D */
   background: "claro" | "cinza";
   /** eixos X, Y, Z no canto da cena */
@@ -21,7 +23,7 @@ const APP_KEY = "simolador:aparencia";
 const PROFILE_KEY = "simolador:perfil";
 const TUTORIAL_KEY = "simolador:tutorial";
 
-export const DEFAULT_APPEARANCE: Appearance = { plate: "preta", background: "claro", axes: true, motion: true };
+export const DEFAULT_APPEARANCE: Appearance = { theme: "claro", plate: "auto", background: "claro", axes: true, motion: true };
 
 const read = <T,>(key: string): Partial<T> => {
   try {
@@ -43,7 +45,9 @@ const write = (key: string, v: unknown) => {
 export function readAppearance(): Appearance {
   const v = read<Appearance>(APP_KEY);
   return {
-    plate: v.plate === "grafite" || v.plate === "clara" ? v.plate : "preta",
+    theme: v.theme === "escuro" || v.theme === "sistema" ? v.theme : "claro",
+    // quem já tinha escolhido a cor guarda a escolha; sem escolha, acompanha o tema
+    plate: v.plate === "preta" || v.plate === "grafite" || v.plate === "clara" ? v.plate : "auto",
     background: v.background === "cinza" ? "cinza" : "claro",
     axes: v.axes !== false,
     motion: v.motion !== false,
@@ -70,13 +74,33 @@ export function markTutorial(step: string) {
 }
 export const resetTutorial = () => write(TUTORIAL_KEY, {});
 
+/** Tema em uso: "sistema" segue o modo escuro do computador (lido ao abrir o programa). */
+export function resolvedTheme(a: Appearance = readAppearance()): "light" | "dark" {
+  if (a.theme === "escuro") return "dark";
+  if (a.theme === "sistema") {
+    try {
+      return typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    } catch {
+      return "light";
+    }
+  }
+  return "light";
+}
+
+/** Chapa em uso: "auto" = preta no tema claro e clara no escuro (contraste com o fundo). */
+export const plateOf = (a: Appearance = readAppearance()): Exclude<Appearance["plate"], "auto"> =>
+  a.plate !== "auto" ? a.plate : resolvedTheme(a) === "dark" ? "clara" : "preta";
+
 /** cores da aparência */
-export const PLATE_COLORS: Record<Appearance["plate"], { plate: string; grid: string }> = {
+export const PLATE_COLORS: Record<Exclude<Appearance["plate"], "auto">, { plate: string; grid: string }> = {
   preta: { plate: "#151719", grid: "#e9ecee" },
   grafite: { plate: "#5a6066", grid: "#d8dcdf" },
   clara: { plate: "#d9dcd8", grid: "#8c9590" },
 };
 export const BACKGROUNDS: Record<Appearance["background"], string> = { claro: "#eef1f0", cinza: "#d4d8d6" };
+/** fundo da cena no tema escuro: grafite azulado, como os editores 3D */
+export const BACKGROUNDS_DARK: Record<Appearance["background"], string> = { claro: "#1b2022", cinza: "#2a3033" };
+export const sceneBackground = (a: Appearance = readAppearance()) => (resolvedTheme(a) === "dark" ? BACKGROUNDS_DARK : BACKGROUNDS)[a.background];
 
 /** "Nome (Equipe)", só o que estiver preenchido; vazio: nada. */
 export function profileLine(p: Profile): string | undefined {

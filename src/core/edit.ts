@@ -793,9 +793,11 @@ export function bodyMoveOptions(cat: Catalog, model: Model, ref: BodyRef): BodyM
   const A = [...anchors];
   const fmtP = (p: Vec3) => `(${toDisp(p).map((v) => +v.toFixed(2)).join("; ")})`;
   if (!A.length) return empty("Esse conjunto não está preso em nenhuma GC: segure e arraste para mover a estrutura.");
-  // RC90 na base de uma GC trava o pilar nela
-  const baseLock = Object.values(model.connectors).find((c) => c.base && anchors.has(c.node));
-  if (baseLock) return empty(`A RC90 na base da GC em ${fmtP(model.nodes[baseLock.node].pos)} trava o giro: tire a ligação para girar o conjunto.`);
+  // RC90 na base de uma GC: trava o tombamento do pilar no plano dela (L10). O conjunto só gira em torno de um eixo
+  // paralelo ao lado da RC90 (o pilar tomba no outro plano); com RC90_BASE_ENGASTA, trava sempre.
+  const baseLocks = Object.values(model.connectors).filter((c) => c.base && anchors.has(c.node));
+  const baseMsg = (c: Connector) => `A RC90 na base da GC em ${fmtP(model.nodes[c.node].pos)} trava o giro nesse sentido: tire a ligação para girar o conjunto.`;
+  if (baseLocks.length && (RC90_BASE_ENGASTA || A.length < 2)) return empty(baseMsg(baseLocks[0]));
   const P = A.map((id) => model.nodes[id].pos);
   // eixo: as GC precisam estar numa linha
   let axis: { a: Vec3; b: Vec3 } | undefined;
@@ -811,6 +813,8 @@ export function bodyMoveOptions(cat: Catalog, model: Model, ref: BodyRef): BodyM
     const off = P.find((q) => len(sub(sub(q, P[i0]), scale(u, dot(sub(q, P[i0]), u)))) > 1e-3);
     if (off) return empty(`Apoiado em ${P.length} GC fora de uma linha: o conjunto não gira como um bloco (só um mecanismo mexeria).`);
     axis = { a: P[i0], b: P[i1] };
+    const blocked = baseLocks.find((c) => !c.dirs[1] || Math.abs(dot(norm(c.dirs[1]), u)) < 1 - 1e-6);
+    if (blocked) return empty(baseMsg(blocked));
   }
   const pts = ends.map((id) => model.nodes[id].pos);
   const handle = scale(pts.reduce((s, q) => add(s, q), [0, 0, 0] as Vec3), 1 / pts.length);

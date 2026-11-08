@@ -1,3 +1,4 @@
+import { tr } from "./i18n";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
 import { minKits, usage } from "../core/inventory";
@@ -262,7 +263,7 @@ export function Toolbar() {
 
   const doNew = () => {
     const empty = Object.keys(useApp.getState().history.present.nodes).length === 0;
-    if (empty || window.confirm("Começar uma estrutura nova? A atual fica guardada nas cópias automáticas (seta ao lado de Salvar).")) void newProjectSafe();
+    if (empty || window.confirm(tr("Começar uma estrutura nova? A atual fica guardada nas cópias automáticas (seta ao lado de Salvar)."))) void newProjectSafe();
   };
   const saveTitle = fileName ? `Salvar em ${fileName} (Ctrl+S)${canSaveInPlace() ? "" : ": baixa de novo"}` : "Salvar .mola (Ctrl+S)";
 
