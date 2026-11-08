@@ -243,8 +243,9 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 | Sobre e Novidades (do CHANGELOG), botão Instalar, relatório de erro para a equipe (versão, navegador, placa de vídeo, erros recentes) | 1.10.0 |
 | Pranchas (pedido da equipe, 07/11): esquema dos pavimentos na capa, planta baixa cortada a qualquer altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20) | 1.10.1 ✅ |
 | Base para a 2.x, por dentro e sem mudar o uso (pedido da equipe, 08/11): catálogo em camadas, peças criadas no `.mola`, arquivo `.kit`, kit sem limite, placa de N cantos, parâmetros do Kit X na planilha (§11.5) | 1.10.2 ✅ |
-| Impressão direta das pranchas e revisão das exportações | 1.10.3 |
-| Modo leve para computador fraco (sem sombras nem renderizado, menos resolução) e teste num notebook com vídeo integrado | 1.10.4 |
+| Chave **Ajustável** desativada ("em breve") no canto de baixo, Kit X no lugar do Kit A no Estoque, tirante entre as peças criadas (§11.0, X8–X11) | 1.10.3 ✅ |
+| Impressão direta das pranchas e revisão das exportações | 1.10.4 |
+| Modo leve para computador fraco (sem sombras nem renderizado, menos resolução) e teste num notebook com vídeo integrado | 1.10.5 |
 
 **1.11 — Aplicativo de computador:**
 
@@ -280,7 +281,7 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0.0`, `v1.8.2`…).
 
-- **1.x — geométrica** (atual: 1.10.2): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.10.3): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: flexibilidade, ajustabilidade e criação de peças próprias para representar e simular estruturas que fogem das limitações das peças atuais do kit. O instrumento é o **Kit X** (barra, placa e RC de qualquer ângulo, catálogo próprio e arquivo `.kit`, §11).
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
@@ -458,7 +459,7 @@ O plano da equipe é montar estruturas, ver quais peças criadas fazem sentido f
    - Placa: **Px** (x = número de lados); outra com o mesmo número de lados vira **Pxn**.
    - RC: **RCa** (a = ângulo em graus, ex.: RC45.2).
    - Barra: **Bx** (x = comprimento em módulos, ex.: B2.34).
-   - Tirante: a definir (X8; proposta **Tx**, comprimento em módulos entre centros, ex.: T5.83).
+   - Tirante: **Tx** (comprimento em módulos entre centros, ex.: T5.83; X8).
 3. **Pranchas e detalhamento** (resumo e pranchas):
    - placas e RCs: um desenho técnico de cada peça, com as dimensões principais;
    - barras ajustáveis: os comprimentos obtidos e, como há um kit comercial, **quantos kits comerciais** são precisos e **qual barra comercial** ajustar para cada comprimento (cada uma tem uma faixa).
@@ -497,8 +498,8 @@ O Kit X mexe em três coisas que hoje são fixas no programa: a **geometria** (t
 | **Exportar a estrutura em 3D** (STL/glTF) já na 1.x | Útil hoje (impressão, apresentações) e é a mesma função da peça do Kit X | `render/`, via three.js |
 | **Folha de detalhamento de peças** nas pranchas | Serve já para a CC/CC90 e o Kit 3, e é onde entram os desenhos das peças do Kit X | `drawings/` |
 | **Medir as Barras de Comprimento Regulável** (mín./máx. em mm de cada uma, folga, rigidez perto do máximo) | Sem as faixas reais, a conta de "quantos kits comerciais" não fecha | protocolo da §9, `kit-mola-pecas.md` |
-| **Kit A vira Kit X** no Estoque (uma linha só) e o tirante entre os tipos de peça criada (`cable` em `userPieces.ts`) | Esclarecimento de 08/11: são o mesmo kit; o tirante é a 4ª ajustável | próxima entrega da 1.10 (`Toolbar.tsx`, `userPieces.ts`) |
-| **A chave "Ajustável"** (§11.0) | O modo avançado da 2.x; na 1.x pode aparecer desativada, como o Simolar "em breve" | `Dock.tsx` (canto de baixo), `prefs.ts`, `Palette.tsx` |
+| ✅ 1.10.3 · **Kit A vira Kit X** no Estoque (uma linha só) e o tirante entre os tipos de peça criada | Esclarecimento de 08/11: são o mesmo kit; o tirante é a 4ª ajustável | `Toolbar.tsx`; `userPieces.ts` (`cable`, guardado como a diagonal de um vão L × 0, `tieCode` → T5.83) |
+| ✅ 1.10.3 (desativada) · **A chave "Ajustável"** (§11.0) | O modo avançado da 2.x; na 1.x aparece desativada, como o Simolar "em breve" (X10) | `AdjustSwitch.tsx`: canto de baixo à direita, acompanha o resumo aberto e sobe para a margem da dica quando falta lugar. Na 2.0: ligar de verdade (preferência em `prefs.ts`), filtrar `Palette.tsx` e o Estoque |
 
 ### 11.6 Decisões da equipe (08/11/2026)
 
@@ -512,13 +513,11 @@ O Kit X mexe em três coisas que hoje são fixas no programa: a **geometria** (t
 | X6 | A RC ajustável existe? | **Não existe ajustável.** O plano da equipe: imprimir em 3D RCs de **ângulos notáveis** descobertos no siMOLAdor e, em paralelo, projetar uma RC ajustável. As medidas de partida (furo, ímã, espessura) saem da RC90. |
 | X7 | Limites da placa ajustável | **Sempre plana** (todos os cantos no mesmo plano); **sem limite de lados**. |
 
-| X8 | Tirante ajustável (08/11) | É a 4ª família ajustável, ao lado de barra, placa e RC. Não existe à venda: o programa dá as dimensões para fabricar. Código **a definir** (proposta: Tx, ex.: T5.83). |
+| X8 | Tirante ajustável (08/11) | É a 4ª família ajustável, ao lado de barra, placa e RC. Não existe à venda: o programa dá as dimensões para fabricar. Código **Tx** (comprimento em módulos entre centros, ex.: T5.83). |
 | X9 | Kit A e Kit X (08/11) | São **o mesmo kit**. Fica só o nome Kit X. |
-| X10 | Chave "Ajustável" (08/11) | Chave deslizante num canto de baixo liga a ajustabilidade (ajustáveis + Kit X), como um modo avançado. A 2.x é a versão em que ela funciona; a 3.x, a versão em que o Simolar funciona. |
+| X10 | Chave "Ajustável" (08/11) | Chave deslizante num canto de baixo liga a ajustabilidade (ajustáveis + Kit X), como um modo avançado. A 2.x é a versão em que ela funciona; a 3.x, a versão em que o Simolar funciona. **Na 1.x ela já aparece, desativada ("em breve")**, como o Simolar (1.10.3). |
+| X11 | Chave e arquivos (08/11) | Abrir um `.mola` que usa peças criadas **liga a chave sozinho**, com aviso no rodapé. A chave fica lembrada no navegador (preferência pessoal), não no arquivo. Desligar a chave não tira da montagem as peças criadas; só impede de criar novas. |
 
 **Ainda em aberto:**
 - **Placa côncava ou com furo:** a resposta foi "sempre plana, sem limite de lados". Proposta para a implementação: aceitar côncava desde que os lados não se cruzem; furo fica para depois. Confirmar com a equipe.
-- **Código do tirante** (X8): Tx (proposta) ou outro.
-- **Chave "Ajustável" e arquivos:** proposta: abrir um `.mola` que usa peças criadas **liga a chave sozinho**, com aviso no rodapé; a chave fica lembrada no navegador (preferência pessoal, como a aparência), não no arquivo. Com a chave desligada, as peças criadas que já estão na montagem continuam lá (só some a criação de novas).
-- **A chave na 1.x:** mostrar já desativada ("2.x"), como o Simolar "em breve", ou só aparecer na 2.0?
 - **A RC ajustável do projeto paralelo:** quando existir, entra como peça física (com faixa de ângulos, como a barra comercial).

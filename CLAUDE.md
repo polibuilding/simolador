@@ -10,7 +10,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 
 - **No ar:** https://polibuilding.github.io/simolador/
 - **Repositório:** `polibuilding/simolador`, branch `main`. A publicação é por GitHub Actions no GitHub Pages (`.github/workflows/pages.yml`).
-- **Versão atual:** 1.10.2. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
+- **Versão atual:** 1.10.3. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
 - **Usuários:** estudantes de engenharia e arquitetura, que montam e documentam estruturas para a competição.
 
 ## Como trabalhar com a equipe
@@ -26,7 +26,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 npm install
 npm run dados     # data/parametros.xlsx → data/catalog.json e data/kits.json (nunca edite os .json à mão)
 npm run dev       # http://localhost:5173/simolador/
-npm test          # Vitest (núcleo); hoje 192 testes, todos passando
+npm test          # Vitest (núcleo); hoje 193 testes, todos passando
 npm run typecheck
 npm run build     # tsc + vite build
 npx vite preview --port 4173 --strictPort   # testar o build em http://localhost:4173/simolador/
@@ -49,7 +49,7 @@ TypeScript, React 18, Three.js via React Three Fiber + drei, Zustand, Vite, Vite
 | `src/core/` | Lógica pura e testável, sem React nem Three |
 | `src/render/` | Cena 3D (`Scene.tsx`) e desenho das peças (`pieces/`) |
 | `src/interaction/` | Posicionamento com o mouse. `Placement.tsx`: eventos (mouse, Enter), o despacho por ferramenta, guardas e limpeza. `ctx.ts`: câmera, tela e o estado de **um comando** (`Cmd`). `queries.ts`: consultas com cache (candidatas, guias, caminhos, referências do Tab). `steps/`: cada ferramenta (`support` GC, `bars` barras livres, triângulos e ligação, `rope` cabo e enrijecedor, `move` caminho, arraste livre, mover e colar, `place` peças comuns, `box` retângulo). É a parte mais delicada. |
-| `src/ui/` | Interface: `store.ts` (estado), `PropertiesPanel.tsx` (resumo e painel da peça), `Palette.tsx`, `Dock.tsx` (barra de baixo), `Toolbar.tsx`, `Config.tsx` (janela da engrenagem, com as abas pessoais), `prefs.ts` (aparência, perfil e tutorial no localStorage), `files.ts` (Salvar no mesmo arquivo, Salvar como, Recentes, cópias automáticas; `idb.ts` guarda no IndexedDB), `pwa.ts` (service worker, aviso de versão nova, Instalar), `errorlog.ts` (relatório de erro), `AppNotices.tsx`, `Shortcuts.tsx`, `SheetsView.tsx` |
+| `src/ui/` | Interface: `store.ts` (estado), `PropertiesPanel.tsx` (resumo e painel da peça), `Palette.tsx`, `Dock.tsx` (barra de baixo), `Toolbar.tsx`, `Config.tsx` (janela da engrenagem, com as abas pessoais), `prefs.ts` (aparência, perfil e tutorial no localStorage), `files.ts` (Salvar no mesmo arquivo, Salvar como, Recentes, cópias automáticas; `idb.ts` guarda no IndexedDB), `pwa.ts` (service worker, aviso de versão nova, Instalar), `errorlog.ts` (relatório de erro), `AppNotices.tsx`, `Shortcuts.tsx`, `SheetsView.tsx`, `AdjustSwitch.tsx` (chave Ajustável da 2.x; na 1.x desativada, "em breve") |
 | `src/drawings/` | Pranchas: vistas, folhas e exportação PDF/DXF/SVG |
 | `src/App.tsx` | Atalhos de teclado (`useShortcuts`) |
 | `tests/core/` | Testes do núcleo |
@@ -130,7 +130,7 @@ A **GC como rótula** está **a conferir pela equipe**. O TFG da UPC (jan. 2026,
 - **Kit 3 (1.5.0):**
   - **cabo** em dois cliques, com a sequência esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera, contado em bolinhas, com plano de corte dos rolos;
   - **enrijecedor**, aplicado clicando na mola B6 ou B12.
-- **Kit X** (= o antigo "Kit A", equipe 08/11): o kit ajustável da 2.x, ligado pela chave **Ajustável** (§11.0 do plano). Barra, tirante, placa e RC ajustáveis; só a barra existe à venda (as reguláveis), as outras o programa dimensiona para fabricar.
+- **Kit X** (= o antigo "Kit A", equipe 08/11): o kit ajustável da 2.x, ligado pela chave **Ajustável** (§11.0 do plano). Barra, tirante, placa e RC ajustáveis; só a barra existe à venda (as reguláveis), as outras o programa dimensiona para fabricar. Códigos: B2.34, T5.83, P5 / P5-2, RC45.2 (X2, X3, X8).
 - **Medidas:** todas em `docs/kit-mola-pecas.md` e `data/parametros.xlsx`. As do Kit 3 são **estimadas por fotos**; a do CC/CC90 é **provisória**.
 
 ## Versões e publicação
@@ -138,7 +138,7 @@ A **GC como rótula** está **a conferir pela equipe**. O TFG da UPC (jan. 2026,
 | Linha | Nome | Escopo |
 |---|---|---|
 | **1.x** | Geométrica (atual) | Montar com as regras reais e gerar pranchas |
-| **2.x** | Arquitetônica | A chave **Ajustável** funciona: flexibilidade, ajustabilidade e peças próprias com o **Kit X** (barra, tirante, placa e RC ajustáveis, catálogo próprio, arquivo `.kit`): plano em `plano-simolador.md` §11, com a chave (§11.0), o que preparar ainda na 1.x (§11.5) e as decisões X1–X10 (§11.6) |
+| **2.x** | Arquitetônica | A chave **Ajustável** funciona: flexibilidade, ajustabilidade e peças próprias com o **Kit X** (barra, tirante, placa e RC ajustáveis, catálogo próprio, arquivo `.kit`): plano em `plano-simolador.md` §11, com a chave (§11.0), o que preparar ainda na 1.x (§11.5) e as decisões X1–X11 (§11.6) |
 | **3.x** | De engenharia | O botão **Simolar** funciona: deformação, estaticidade e estabilidade (hoje "em breve") |
 
 O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o assunto principal ou o jeito de usar (uma fase: 1.7 rigidez, 1.8 pranchas editáveis); **Z** conta cada entrega publicada dentro da fase, novidade ou correção (1.8.0, 1.8.1, 1.8.2…). Toda entrega publicada ganha número. Em 28/10/2026 as antigas 1.0–1.25 foram renumeradas (1.25 = 1.8.1); a equivalência está no fim do `CHANGELOG.md`.
@@ -172,7 +172,7 @@ O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o as
 
 ### Outros
 - **Geometria livre:** geodésicas e barras fora dos planos ortogonais (E19). É a fase 4 do plano.
-- **App local:** fase 5, plano em `plano-simolador.md` §7c. Feito na 1.10.0: arquivos, sem internet, PWA, Sobre e relatório. Feito na 1.10.1: pavimentos na capa, planta baixa cortada a uma altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20). Feito na 1.10.2: base para a 2.x (plano §11.5). Próximos: 1.10.3 impressão das pranchas, 1.10.4 modo leve, 1.11 Tauri (instaladores, atualizador, página de download).
+- **App local:** fase 5, plano em `plano-simolador.md` §7c. Feito na 1.10.0: arquivos, sem internet, PWA, Sobre e relatório. Feito na 1.10.1: pavimentos na capa, planta baixa cortada a uma altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20). Feito na 1.10.2: base para a 2.x (plano §11.5). Feito na 1.10.3: chave Ajustável desativada, Kit X no Estoque, tirante criado. Próximos: 1.10.4 impressão das pranchas, 1.10.5 modo leve, 1.11 Tauri (instaladores, atualizador, página de download).
 - **Medições pendentes:** o protocolo está em `plano-simolador.md` §9.
 - **Responsáveis por frente** (Q08): falta definir.
 

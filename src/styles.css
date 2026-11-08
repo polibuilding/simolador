@@ -1066,3 +1066,24 @@ dl { margin: 0 0 16px; }
 .sheet-paper text.selected { fill: #2563eb; }
 .sheets .select-box { z-index: 21; }
 .sheet-cut-band text { fill: var(--focus); font: 600 12px var(--font); }
+
+/* chave "Ajustável" (2.x; na 1.x desativada, em breve): canto de baixo, à direita da cena */
+.adjust-switch { position: absolute; right: 16px; bottom: 16px; z-index: 5; }
+.adjust-btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px 0 10px;
+  border: 1px solid var(--rule); border-radius: 12px; background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4px 18px rgba(20, 30, 28, 0.06); font: inherit; font-size: 12px; font-weight: 500; color: #8a928f; cursor: pointer;
+}
+.adjust-btn:hover { color: var(--graphite); background: #fff; }
+.adjust-track { position: relative; width: 26px; height: 15px; border-radius: 8px; background: #dfe3e1; flex: none; }
+.adjust-knob { position: absolute; left: 2px; top: 2px; width: 11px; height: 11px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); }
+.adjust-btn .soon-tag { margin-left: 0; }
+.adjust-pop { top: auto; bottom: calc(100% + 8px); right: 0; width: 290px; }
+/* a chave acompanha o resumo aberto; sem espaço ao lado da barra de baixo, fica acima dela, na margem que a dica
+   deixa livre (130 px de cada lado), sem o "em breve" */
+.app .adjust-switch { right: calc(var(--props-cur) + 16px); bottom: 66px; transition: right 0.26s var(--ease-slide); }
+.app .adjust-btn .soon-tag { display: none; }
+@container (min-width: 1560px) {
+  .app:not(.props-open) .adjust-switch { bottom: 16px; }
+  .app:not(.props-open) .adjust-btn .soon-tag { display: inline; }
+}

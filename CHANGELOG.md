@@ -24,6 +24,11 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 ## 1.10 — Pronto para usar fora do site
 
+### 1.10.3 — Chave "Ajustável" (em breve) e Kit X no estoque · 08/11/2026
+- **Chave "Ajustável"** no canto de baixo, à direita: é por ela que, na linha 2.x, vão ligar o **Kit X** e as peças ajustáveis (barra, tirante, placa e RC de qualquer medida). Por enquanto aparece desativada, como o Simolar; clicar explica o que ela vai fazer.
+- No Estoque, o **Kit A** virou **Kit X** (eram o mesmo kit).
+- Por dentro: o **tirante** já pode ser uma peça criada (código T5.83), ao lado de barra, placa e RC.
+
 ### 1.10.2 — Base para o Kit X (por dentro, sem mudar o uso) · 08/11/2026
 - Nada muda no uso: montagem, pranchas e arquivos funcionam como na 1.10.1.
 - Por dentro, o programa já sabe guardar **peças criadas** (o futuro Kit X da 2.x): elas vão junto no arquivo `.mola`, para ele abrir igual em outro computador, e já existe o formato do catálogo de peças `.kit`.

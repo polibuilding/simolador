@@ -11,8 +11,8 @@ export const KIT_X_COLOR = "#000000";
 /** cor das peças criadas e guardadas: cinza mais escuro que as peças de hoje (§11.3) */
 export const USER_PIECE_COLOR = "#3a3f44";
 
-/** Tipos de peça que o Kit X cria (barra, placa e ligação ajustáveis). */
-const USER_TYPES: PieceType[] = ["bar", "plate", "connector"];
+/** Tipos de peça que o Kit X cria: barra, tirante (`cable`, como a diagonal), placa e ligação ajustáveis. */
+const USER_TYPES: PieceType[] = ["bar", "cable", "plate", "connector"];
 
 // ---------- nomes (X2, X3) ----------
 
@@ -34,6 +34,11 @@ export function barCode(cat: Catalog, lenM: number): string {
 /** RC de `deg` graus: "RC45.2" (X2). */
 export function rcCode(cat: Catalog, deg: number): string {
   return `RC${trim(deg, digitsOf(angleStep(cat)))}`;
+}
+
+/** Tirante de `lenM` módulos entre os centros das esferas: "T5.83" (X8). */
+export function tieCode(cat: Catalog, lenM: number): string {
+  return `T${trim(lenM, digitsOf(lengthStep(cat)))}`;
 }
 
 /** Placa de `sides` lados: "P5"; se já existe, "P5-2", "P5-3"… (X3). */
@@ -70,7 +75,7 @@ export function cleanUserPiece(raw: unknown): PieceDef | string {
   if (typeof p.code !== "string" || !CODE_RE.test(p.code)) return `código "${String(p?.code)}" inválido`;
   if (!USER_TYPES.includes(p.type as PieceType)) return `${p.code}: tipo "${String(p.type)}" não é de peça criada`;
   const num = (x: unknown) => typeof x === "number" && Number.isFinite(x);
-  const spanM = p.spanM == null ? null : Array.isArray(p.spanM) && p.spanM.length > 0 && p.spanM.length <= 2 && p.spanM.every((x) => num(x) && x > 0) ? [...p.spanM] : undefined;
+  const spanM = p.spanM == null ? null : Array.isArray(p.spanM) && p.spanM.length > 0 && p.spanM.length <= 2 && p.spanM.every((x, i) => num(x) && (x > 0 || (i === 1 && x === 0))) ? [...p.spanM] : undefined;
   if (spanM === undefined) return `${p.code}: medidas inválidas`;
   const geometry: PieceDef["geometry"] = {};
   for (const [k, v] of Object.entries(p.geometry ?? {})) {
@@ -85,6 +90,9 @@ export function cleanUserPiece(raw: unknown): PieceDef | string {
     outline = p.outline.map((q) => [q[0], q[1]] as [number, number]);
   }
   if (p.type === "bar" && !spanM) return `${p.code}: barra sem comprimento`;
+  if (p.type === "cable" && !spanM) return `${p.code}: tirante sem comprimento`;
+  // tirante: guardado como a diagonal de um vão L × 0 (as contas da diagonal usam a hipotenusa dos dois números)
+  if (p.type === "cable" && spanM && spanM.length === 1) spanM.push(0);
   const text = (x: unknown, max: number) => (typeof x === "string" ? x.trim().slice(0, max) : null);
   return {
     code: p.code,

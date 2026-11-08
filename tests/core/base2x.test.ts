@@ -9,7 +9,7 @@ import { fromFile, toFile } from "../../src/core/serialization";
 import { insetPolygon2, isConvex2, isPlanar, isRectangle, isSimple2, polyNormal } from "../../src/core/geom";
 import { segmentHitsPlate } from "../../src/core/rules";
 import {
-  adjustableRange, barCode, fromKitFile, KIT_X, mustFabricate, pieceLocations, plateCode, rcCode, registerUserPieces,
+  adjustableRange, barCode, tieCode, fromKitFile, KIT_X, mustFabricate, pieceLocations, plateCode, rcCode, registerUserPieces,
   removeUserPiece, toKitFile, userPiecesUsed, withUserPieces,
 } from "../../src/core/userPieces";
 import { buildSheets } from "../../src/drawings/sheets";
@@ -66,6 +66,18 @@ describe("nomes das peças criadas (X2, X3) e barra que precisa ser fabricada (X
     expect(mustFabricate(catalog, 3)).toBe(false);
     expect(mustFabricate(catalog, 12)).toBe(false);
     expect(mustFabricate(catalog, 12.5)).toBe(true);
+  });
+});
+
+describe("tirante ajustável (X8)", () => {
+  it("código Tx e guardado como a diagonal de um vão L × 0 (as contas da diagonal servem)", () => {
+    expect(tieCode(catalog, 5.8312)).toBe("T5.83");
+    const cat = fresh();
+    const r = registerUserPieces(cat, [{ code: "T5.83", name: "Tirante T5.83", type: "cable", spanM: [5.83], geometry: {}, status: null, notes: null, parent: "D6x6" }]);
+    expect(r.added).toEqual(["T5.83"]);
+    expect(cat.pieces["T5.83"].spanM).toEqual([5.83, 0]);
+    expect(Math.hypot(...(cat.pieces["T5.83"].spanM as [number, number]))).toBeCloseTo(5.83);
+    expect(registerUserPieces(cat, [{ code: "T1", type: "cable", spanM: null }]).refused.length).toBe(1);
   });
 });
 

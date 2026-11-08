@@ -165,7 +165,7 @@ function usePalette() {
   const usedOf = (code: string) => stockCodes(code).reduce((n, c) => n + (used[c] ?? 0), 0);
   const shown = (code: string) => avail(code) > 0 || usedOf(code) > 0 || (code === "CABLE" && Object.values(model.members).some((m) => m.code === "CABLE"));
   // peças criadas (Kit X, 2.x) entram abaixo da peça que as gerou; sem elas, os grupos de sempre
-  const all = withUserPieces(GROUPS, catalog, { bar: "Barras", plate: "Placas", connector: "Ligações" });
+  const all = withUserPieces(GROUPS, catalog, { bar: "Barras", cable: "Diagonais", plate: "Placas", connector: "Ligações" });
   const groups = all.map((g) => ({ ...g, codes: g.codes.filter(shown) })).filter((g) => g.codes.length);
   const rope = ropePlan(catalog, model);
   const info = (code: string) => {
