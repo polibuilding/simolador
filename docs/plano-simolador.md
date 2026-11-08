@@ -241,8 +241,9 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 | Compatibilidade do `.mola`: o arquivo guarda a versão do programa; arquivo de versão mais nova abre com aviso, em vez de recusar | 1.10.0 |
 | Sem internet: fonte embutida, manifesto (ícone, `.mola`), service worker gerado no build com todos os arquivos; aviso "nova versão disponível" | 1.10.0 |
 | Sobre e Novidades (do CHANGELOG), botão Instalar, relatório de erro para a equipe (versão, navegador, placa de vídeo, erros recentes) | 1.10.0 |
-| Impressão direta das pranchas e revisão das exportações | 1.10.1 |
-| Modo leve para computador fraco (sem sombras nem renderizado, menos resolução) e teste num notebook com vídeo integrado | 1.10.2 |
+| Pranchas (pedido da equipe, 07/11): esquema dos pavimentos na capa, planta baixa cortada a qualquer altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20) | 1.10.1 ✅ |
+| Impressão direta das pranchas e revisão das exportações | 1.10.2 |
+| Modo leve para computador fraco (sem sombras nem renderizado, menos resolução) e teste num notebook com vídeo integrado | 1.10.3 |
 
 **1.11 — Aplicativo de computador:**
 
@@ -278,8 +279,8 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0.0`, `v1.8.2`…).
 
-- **1.x — geométrica** (atual: 1.10.0): montar com as peças e regras reais do kit e gerar as pranchas.
-- **2.x — arquitetônica**: o módulo extra ajustável.
+- **1.x — geométrica** (atual: 1.10.1): montar com as peças e regras reais do kit e gerar as pranchas.
+- **2.x — flexibilidade (Kit X)**: peças ajustáveis (barra, placa e RC de qualquer ângulo), catálogo próprio e arquivo `.kit` (§11). O módulo extra ajustável de arquitetura fica a confirmar nesta linha.
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
 O número tem três partes, **X.Y.Z**: X é a linha; Y sobe quando muda o assunto principal ou o jeito de usar (uma fase: 1.7 rigidez, 1.8 pranchas editáveis); Z conta cada entrega publicada dentro da fase, nova ou correção (1.8.0, 1.8.1, 1.8.2…). Toda entrega publicada ganha número. Em 28/10/2026 as versões 1.0 a 1.25 foram renumeradas nesse formato (1.25 virou 1.8.1); a equivalência está no `CHANGELOG.md`.
@@ -418,3 +419,71 @@ A ordem segue o que dá mais retorno com menos dado. A 3.0 não precisa de nenhu
 | Conflitos de geometria (mola de Ø 4 ou 6 mm; comprimento flexível de 75 ou 87 mm) | T1 resolve; os dois valores ficam na planilha com status |
 | Expectativa de precisão | o próprio kit varia ≈ 10 % (CV do TFG); o programa mostra valores arredondados e "≈" |
 | Mudança de comportamento na montagem (1.x) | nenhuma: a simulação só lê o modelo; não muda as regras de encaixe |
+
+## 11. Linha 2.x — Kit X, o kit ajustável (ideias da equipe, 07/11/2026)
+
+A 2.x é a fase da **flexibilidade**. O **Kit X** é um kit variável: ao escolhê-lo no estoque, o usuário tem **peças sem limite** de três famílias ajustáveis e pode guardar as peças que criar num catálogo próprio. As peças do Kit X são **pretas**; as criadas e guardadas no catálogo, **cinza-escuro** (mais escuro que as peças de hoje). O preto identifica o Kit X em toda a interface.
+
+### 11.1 Peças
+
+| Peça | Como se cria | O que a define |
+|---|---|---|
+| **Barra ajustável** | Como a mola de hoje, mas com o comprimento livre entre duas esferas | Comprimento em módulos. Existe à venda: **Barras de Comprimento Regulável** da Mola (8 barras, 2 de cada: AB B3-B4, AB B4-B6, AB B6-B9, AB B9-B12; gira-se um lado para mudar o comprimento; R$ 139 em 07/11/2026; um comprador avisa que perto do máximo ela fica menos firme) |
+| **Placa ajustável** | Clicar num plano definido por **três ou mais esferas**, sem obstruções: o programa gera a placa poligonal com esses lados | Polígono plano (lados e ângulos) |
+| **RC ajustável** | Clicar em **duas barras** (ou numa barra e numa GC): o programa gera uma ligação como a RC, mas com o **ângulo das duas peças** em vez de 90° | Ângulo em graus |
+
+### 11.2 Funções próprias (no resumo e no painel da peça)
+
+1. **Exportar** a peça num formato de modelo 3D (para modelar em outro programa ou imprimir em 3D): STL e 3MF para impressão, OBJ ou glTF para modelagem.
+2. **Salvar no catálogo**: a peça vira uma peça do catálogo e aparece entre as do Kit X, logo abaixo da peça que a gerou.
+   - Placa: **Px** (x = número de lados); outra com o mesmo número de lados vira **Pxn**.
+   - RC: **RCa** (a = ângulo em graus, ex.: RC45.2).
+   - Barra: **Bx** (x = comprimento em módulos, ex.: B2.34).
+3. **Pranchas e detalhamento** (resumo e pranchas):
+   - placas e RCs: um desenho técnico de cada peça, com as dimensões principais;
+   - barras ajustáveis: os comprimentos obtidos e, como há um kit comercial, **quantos kits comerciais** são precisos e **qual barra comercial** ajustar para cada comprimento (cada uma tem uma faixa).
+
+### 11.3 Aba Peças e aparência
+
+- As peças do Kit X e as criadas por ele aparecem **nas categorias de sempre** (barras, placas, ligações), não numa seção à parte.
+- Para **excluir** uma peça criada e guardada: passar o mouse sobre ela no menu de peças mostra um **×** no lugar do número de disponíveis; antes de apagar, uma confirmação.
+
+### 11.4 Arquivo `.kit`
+
+- O catálogo criado pode ser **salvo num arquivo `.kit`**. Abrir um `.kit` traz as peças dele.
+- Abrir vários `.kit` **acumula**. Na aba Estoque, cada um aparece como um kit criado a partir do Kit X:
+  ```
+  Kit 1   − 1 +
+  Kit 2   − 1 +
+  Kit 3   − 1 +
+  Kit X
+      nomedoarquivo.kit
+      nomedooutrokit.kit
+  ```
+  (os `.kit` abaixo do Kit X, menores e recuados).
+- Na barra de cima, antes dos botões do `.mola`, um grupo **`.kit`** com Abrir e Salvar.
+
+### 11.5 O que preparar ainda na 1.x (recomendação de 07/11/2026)
+
+O Kit X mexe em três coisas que hoje são fixas no programa: a **geometria** (tudo em módulos inteiros e planos ortogonais, com inclinadas em passos), o **catálogo** (vem só da `parametros.xlsx`) e a **placa** (sempre 4 cantos). Preparar isso antes evita que a 2.0 tenha de refazer a base.
+
+| Preparação | Por quê | Onde |
+|---|---|---|
+| **Fase 4 (geometria livre) antes da 2.0**: esferas em qualquer posição, molas fora dos planos ortogonais, planos inclinados quaisquer | A barra ajustável e a RC de qualquer ângulo produzem posições fora da grade; sem isso, encaixe, rigidez e pranchas não acompanham | `snapping.ts`, `rules.ts`, `mechanism.ts`, `views.ts` |
+| **Catálogo em camadas**: peças da planilha + peças do usuário (registro em tempo de execução), código de peça livre | Base do "salvar no catálogo" e do `.kit` | `catalog.ts`, `config.ts` |
+| **O `.mola` leva a definição das peças próprias que usa** | Um `.mola` enviado sem o `.kit` precisa abrir igual em outro computador | `serialization.ts` (regras A) |
+| **Placa com N cantos** no modelo, no desenho e nas pranchas | A placa ajustável é um polígono | `model.ts`, `render/pieces`, `drawings/` |
+| **Estoque sem limite por kit** (hoje o "sem limite" vale para tudo) e cor por kit | O Kit X é infinito ao lado de kits contados | `inventory.ts`, aba Estoque |
+| **Exportar a estrutura em 3D** (STL/glTF) já na 1.x | Útil hoje (impressão, apresentações) e é a mesma função da peça do Kit X | `render/`, via three.js |
+| **Folha de detalhamento de peças** nas pranchas | Serve já para a CC/CC90 e o Kit 3, e é onde entram os desenhos das peças do Kit X | `drawings/` |
+| **Medir as Barras de Comprimento Regulável** (mín./máx. em mm de cada uma, folga, rigidez perto do máximo) | Sem as faixas reais, a conta de "quantos kits comerciais" não fecha | protocolo da §9, `kit-mola-pecas.md` |
+
+### 11.6 Decisões da equipe (pendentes)
+
+1. **Nome da linha**: a §7b dizia "2.x — arquitetônica: o módulo extra ajustável". Com o Kit X, a 2.x vira "flexibilidade". O módulo ajustável de arquitetura continua na 2.x ou fica para depois?
+2. **Separador decimal nos códigos**: B2.34 e RC45.2 (ponto, como no pedido) ou B2,34 (vírgula, como no resto da interface)? E a precisão: 0,01 M e 0,1°?
+3. **Nome das placas repetidas**: "P42" pode ser lido como 42 lados. Sugestão: P4-2 ou P4b.
+4. **Barra fora das faixas comerciais** (menor que B3 ou maior que B12): permitir e marcar "impressão 3D", ou bloquear?
+5. **Excluir uma peça guardada que está na montagem**: bloquear, ou ela volta a ser ajustável (preta)?
+6. **A RC ajustável existe fisicamente?** Se for só impressa em 3D, as medidas de partida (furo, ímã, espessura) saem da RC90.
+7. **Placa ajustável**: o número máximo de lados, e se a placa pode ter furo ou ser côncava.

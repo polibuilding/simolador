@@ -7,14 +7,14 @@ A versão aparece bem de leve no canto inferior direito do programa e no `packag
 | Versão | Nome | O que traz |
 |---|---|---|
 | **1.x** | **Geométrica** | Montar a estrutura com as peças e as regras reais do kit e gerar as pranchas. É a que estamos fazendo. |
-| 2.x | Arquitetônica | O módulo extra ajustável (em breve). |
+| 2.x | Flexibilidade | O Kit X: barra, placa e ligação ajustáveis, catálogo próprio e arquivo `.kit` (em planejamento). |
 | 3.x | De engenharia | Ferramentas para analisar deformação, estaticidade e estabilidade. |
 
 ## Como numerar
 
 O número tem três partes, **X.Y.Z**:
 
-- **X** é a linha (1 geométrica, 2 arquitetônica, 3 de engenharia).
+- **X** é a linha (1 geométrica, 2 flexibilidade, 3 de engenharia).
 - **Y** é a fase: sobe quando muda o assunto principal ou o jeito de usar (ex.: 1.7 rigidez, 1.8 pranchas editáveis).
 - **Z** conta cada entrega publicada dentro da fase, seja novidade ou correção (1.8.0, 1.8.1, 1.8.2…).
 
@@ -23,6 +23,12 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 ---
 
 ## 1.10 — Pronto para usar fora do site
+
+### 1.10.1 — Pavimentos na capa, planta baixa a qualquer altura e mais liberdade nas pranchas · 08/11/2026
+- **Pavimentos na capa**: abaixo da lista de peças, um esquema da vista A só em linhas, com cada pavimento tracejado e o nome ao lado.
+- **Planta baixa a qualquer altura**: com **Corte** ligado, passe o cursor numa vista e clique na altura desejada. Sai uma planta baixa cortada ali, com o título "PLANTA BAIXA" e "ALTURA = 12,5 cm" embaixo. Para mudar a altura, é só editar esse texto: aceita cm, mm, m ou módulos ("8 M"). As molas cortadas aparecem como círculos pretos. As vistas não ganham marca; a planta aparece no esquema da capa como um andar a mais.
+- **Marcadores de vista (A–D) arrastáveis**: aproxime ou afaste cada triângulo da planta para que não fique em cima de uma cota.
+- **Escolher vários na prancha**: arraste no papel vazio para desenhar um retângulo, como na montagem. Depois, arraste um dos escolhidos para mover todos juntos, ou aperte Delete para tirar os desenhos da prancha. Shift soma à seleção.
 
 ### 1.10.0 — Arquivos de verdade, uso sem internet e aviso de versão nova · 05/11/2026
 - **Salvar no mesmo arquivo**: Ctrl+S grava por cima do arquivo aberto (no Chrome e no Edge), sem perguntar de novo. **Salvar como** (Ctrl+Shift+S) escolhe outro. Nos outros navegadores, Salvar continua baixando o arquivo.

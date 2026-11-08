@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
-import { buildSheets, levelsOf, newViewCell, newViewFrame, type SheetInput, type ViewSpec } from "../drawings/sheets";
+import { buildSheets, heightText, levelsOf, newViewCell, newViewFrame, parseHeight, type SheetInput, type ViewSpec } from "../drawings/sheets";
 import { profileLine, readProfile } from "./prefs";
 import { sheetToSvg, sheetsToDxf, sheetsToPdf } from "../drawings/export";
 import type { SheetLayout, SheetMeta, SheetPaper, SheetShow, SheetView } from "../core/serialization";
@@ -166,12 +166,30 @@ export function SheetsView() {
     const id = setTimeout(() => setNote(null), 3500);
     return () => clearTimeout(id);
   }, [note]);
-  const arm = (s: ViewSpec | null) => (setArmed(s), setGhost(null), setSelected(null), setCutting(null));
+  const arm = (s: ViewSpec | null) => (setArmed(s), setGhost(null), setSelected(null), setCutting(null), setPicked([]));
 
   // ---------- cortes: dois cliques numa planta baixa ----------
   const [cutting, setCutting] = useState<{ a?: [number, number]; screen?: [number, number] } | null>(null);
   const [mouse, setMouse] = useState<[number, number] | null>(null);
-  const startCut = () => (setArmed(null), setGhost(null), setSelected(null), setMouse(null), setCutting(cutting ? null : {}));
+  /** corte horizontal numa vista: a linha que segue o cursor (px na tela) e a altura dela (mm) */
+  const [hcut, setHcut] = useState<{ x0: number; x1: number; y: number; h: number } | null>(null);
+  const startCut = () => (setArmed(null), setGhost(null), setSelected(null), setMouse(null), setHcut(null), setPicked([]), setCutting(cutting ? null : {}));
+  const MOD = catalog.settings.modulo_mm;
+  /** altura (mm, de 5 em 5) sob o cursor, se ele estiver numa vista ou num corte; e a linha na tela */
+  const sideHit = (e: React.PointerEvent) => {
+    const g = (e.target as Element).closest('[data-group^="desenho:"]');
+    const id = g?.getAttribute("data-group")?.slice("desenho:".length);
+    const info = built.views.find((v) => v.view.id === id && v.toHeight);
+    const p = paperPoint(e);
+    if (!g || !info?.toHeight || !p) return null;
+    const h = Math.max(0, Math.round(info.toHeight(p.at) / 5) * 5);
+    // altura → ponto da folha (a conta é linear) → tela
+    const a = info.toHeight([0, 0]);
+    const b = info.toHeight([0, 1]);
+    const py = (a - h) / (a - b);
+    const r = g.getBoundingClientRect();
+    return { h, x0: r.left, x1: r.right, y: p.r.top + py / p.k };
+  };
   /** ponto do mundo [x, z] (mm) sob o cursor, se ele estiver numa planta */
   const planHit = (e: React.PointerEvent): [number, number] | null => {
     const g = (e.target as Element).closest('[data-group^="desenho:"]');
@@ -195,7 +213,18 @@ export function SheetsView() {
   const cutClick = (e: React.PointerEvent) => {
     if (!cutting) return;
     const w = planHit(e);
-    if (!w) return setNote("Clique numa planta baixa para marcar a linha de corte.");
+    if (!w && !cutting.a) {
+      // numa vista (A–D ou corte): um clique marca a altura e a planta baixa cortada vai para a mão
+      const s2 = sideHit(e);
+      if (s2) {
+        setCutting(null);
+        setHcut(null);
+        setMouse(null);
+        setArmed({ kind: "plan", level: s2.h, section: true });
+        return;
+      }
+    }
+    if (!w) return setNote(cutting.a ? "Clique numa planta baixa para marcar a linha de corte." : "Clique numa planta baixa (corte vertical) ou numa vista (planta baixa a uma altura).");
     if (!cutting.a) return setCutting({ a: snapCut(w), screen: [e.clientX, e.clientY] });
     const a = cutting.a;
     const b = snapCut(w, a);
@@ -219,7 +248,9 @@ export function SheetsView() {
   };
   const selInfo = built.views.find((v) => v.view.id === selected) ?? null;
   const armedName = armed
-    ? armed.kind === "plan"
+    ? armed.kind === "plan" && armed.section
+      ? `a planta baixa a ${heightText(armed.level, armed.unit, MOD).replace("ALTURA = ", "")}`
+      : armed.kind === "plan"
       ? `a planta ${(levels.find((l) => Math.abs(l.y - armed.level) < 0.5)?.name ?? "").toLowerCase().replace("pav. ", "")}`
       : armed.kind === "cut"
         ? `o ${(meta.cuts?.find((c) => c.id === armed.cut)?.name ?? "corte").toLowerCase()}`
@@ -245,7 +276,7 @@ export function SheetsView() {
     const cell = newViewCell(input, armed, used, p.at);
     const v: SheetView = {
       id: nextViewId(meta, [built.layout]), kind: armed.kind, page: p.sheet - 1, cell, n: used,
-      ...(armed.kind === "plan" ? { level: armed.level } : armed.kind === "cut" ? { cut: armed.cut } : armed.kind === "iso" ? { iso: armed.iso } : {}),
+      ...(armed.kind === "plan" ? { level: armed.level, ...(armed.section ? { section: true as const } : {}) } : armed.kind === "cut" ? { cut: armed.cut } : armed.kind === "iso" ? { iso: armed.iso } : {}),
     };
     saveLayout(addView(built.layout, v));
     setArmed(null);
@@ -257,26 +288,80 @@ export function SheetsView() {
     saveLayout(removeView(built.layout, selInfo.view.id));
     setSelected(null);
   };
+
+  // ---------- seleção de vários (retângulo na prancha, como na montagem) ----------
+  /** escolhidos: "b:<folha|bloco>" (desenho, título, tabela…) ou "l:<etiqueta>" (nome de peça, marcador de vista) */
+  const [picked, setPicked] = useState<string[]>([]);
+  const [box, setBox] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const boxStart = useRef<{ x: number; y: number; paper: Element; add: boolean } | null>(null);
+  const keyOf = (el: Element) => {
+    const tag = el.getAttribute("data-tag");
+    return tag ? `l:${tag}` : `b:${built.paper}|${el.getAttribute("data-group")}`;
+  };
+  const elementsOf = (key: string): SVGGraphicsElement[] => {
+    const [kind, rest] = [key.slice(0, 2), key.slice(2)];
+    const q = kind === "l:" ? `[data-tag="${CSS.escape(rest)}"]` : `[data-group="${CSS.escape(rest.slice(rest.indexOf("|") + 1))}"]`;
+    return [...document.querySelectorAll<SVGGraphicsElement>(`.sheet-paper ${q}`)];
+  };
+  const finishBox = (e: React.PointerEvent) => {
+    const b = boxStart.current!;
+    boxStart.current = null;
+    setBox(null);
+    const l = Math.min(b.x, e.clientX), r = Math.max(b.x, e.clientX), t = Math.min(b.y, e.clientY), bt = Math.max(b.y, e.clientY);
+    if (r - l < 4 && bt - t < 4) return;
+    // da esquerda para a direita: só o que fica todo dentro (janela); da direita para a esquerda: o que encosta (cruzamento)
+    const win = e.clientX >= b.x;
+    const hit = (el: Element) => {
+      const q = el.getBoundingClientRect();
+      return win ? q.left >= l && q.right <= r && q.top >= t && q.bottom <= bt : q.right >= l && q.left <= r && q.bottom >= t && q.top <= bt;
+    };
+    const keys = new Set(b.add ? picked : []);
+    const groups = [...b.paper.querySelectorAll("[data-group]")].filter(hit);
+    for (const g of groups) keys.add(keyOf(g));
+    // nomes e marcadores só contam sozinhos (com o desenho deles escolhido, eles já andam junto)
+    for (const el of b.paper.querySelectorAll("[data-tag]")) {
+      const g = el.closest("[data-group]");
+      if (g && groups.includes(g)) continue;
+      if (hit(el)) keys.add(keyOf(el));
+    }
+    setPicked([...keys]);
+    setSelected(null);
+  };
+  /** desenhos escolhidos (o bloco do desenho ou o título dele) */
+  const pickedViews = () => [...new Set(picked.map((k) => /^b:[^|]*\|(?:desenho|titulo):(.+)$/.exec(k)?.[1]).filter((x): x is string => !!x))];
+  const removePicked = () => {
+    const ids = pickedViews().filter((id) => built.layout.views.some((v) => v.id === id));
+    if (!ids.length) return setNote("Só os desenhos saem da prancha. Os títulos da capa e os nomes das peças ficam.");
+    saveLayout(ids.reduce((l, id) => removeView(l, id), built.layout));
+    setPicked([]);
+    setNote(`${ids.length} desenho${ids.length > 1 ? "s" : ""} tirado${ids.length > 1 ? "s" : ""} da prancha. Ctrl+Z desfaz.`);
+  };
   // destaque do desenho escolhido
   useEffect(() => {
     document.querySelectorAll(".sheet-paper .selected").forEach((el) => el.classList.remove("selected"));
+    for (const k of picked) elementsOf(k).forEach((el) => el.classList.add("selected"));
     if (!selected) return;
     const q = CSS.escape(selected);
     document.querySelectorAll(`.sheet-paper [data-group="desenho:${q}"], .sheet-paper [data-group="titulo:${q}"]`).forEach((el) => el.classList.add("selected"));
-  }, [svgs, selected]);
+  }, [svgs, selected, picked]);
   // Esc cancela a inserção e fecha o painel do desenho (antes de fechar as pranchas); Delete tira o desenho escolhido
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if ((t instanceof HTMLInputElement && t.type !== "checkbox") || t.tagName === "SELECT" || t.tagName === "TEXTAREA") return;
       if (document.querySelector(".sheet-pop")) return; // o menu aberto fecha primeiro
-      if (e.key === "Escape" && (armed || selected || cutting)) {
+      if (e.key === "Escape" && (armed || selected || cutting || picked.length)) {
         e.stopPropagation();
         setArmed(null);
         setGhost(null);
         setSelected(null);
         setCutting(null);
         setMouse(null);
+        setHcut(null);
+        setPicked([]);
+      } else if ((e.key === "Delete" || e.key === "Backspace") && picked.length) {
+        e.preventDefault();
+        removePicked();
       } else if ((e.key === "Delete" || e.key === "Backspace") && selInfo) {
         e.preventDefault();
         removeSelected();
@@ -320,6 +405,15 @@ export function SheetsView() {
   /** título/subtítulo de um desenho: vazio volta ao padrão */
   const setViewText = (id: string, field: "title" | "sub", value: string) => {
     const cur = useApp.getState().sheet;
+    const view = built.layout.views.find((v) => v.id === id);
+    if (field === "sub" && view?.kind === "plan" && view.section) {
+      // planta cortada: o subtítulo é a altura do corte; mudar o número muda o desenho
+      const h = parseHeight(value, MOD);
+      if (!h || h.mm < 0) return setNote("Escreva a altura do corte, por exemplo 12,5 cm, 125 mm ou 8 M (módulos).");
+      const layout = { ...built.layout, views: built.layout.views.map((v) => (v.id === id ? { ...v, level: Math.round(h.mm * 100) / 100, unit: h.unit } : v)) };
+      const next = withLayout(cur, built.paper, layout);
+      return setSheet({ ...next, views: { ...next.views, [id]: { ...next.views?.[id], sub: undefined } } });
+    }
     setSheet({ ...cur, views: { ...cur.views, [id]: { ...cur.views?.[id], [field]: value.trim() ? value : undefined } } });
   };
   /** o que o desenho mostra (`undefined`: volta a seguir a barra de cima) */
@@ -331,7 +425,13 @@ export function SheetsView() {
   // ---------- arrastar e clicar ----------
   // arrastar: durante o arraste só o bloco anda; ao soltar, a posição vai para o carimbo/arquivo e a folha é redesenhada.
   // clicar sem arrastar num texto editável abre a edição dele.
-  const press = useRef<{ el: SVGGraphicsElement | null; edit: Element | null; tag: string; kind: "label" | "block"; x: number; y: number; k: number } | null>(null);
+  const press = useRef<{
+    el: SVGGraphicsElement | null; edit: Element | null; tag: string; kind: "label" | "block"; x: number; y: number; k: number;
+    /** vários escolhidos andando juntos: cada elemento na tela e a chave da posição dele */
+    multi?: { key: string; els: SVGGraphicsElement[]; axis: string | null }[];
+  } | null>(null);
+  /** marcador de vista: anda só no eixo dele */
+  const along = (axis: string | null | undefined, dx: number, dy: number): [number, number] => (axis === "x" ? [dx, 0] : axis === "y" ? [0, dy] : [dx, dy]);
   const onDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
     if (armed) return placeAt(e);
@@ -343,8 +443,25 @@ export function SheetsView() {
     const el = label ?? block;
     const svg = (el ?? edit) && (target as SVGGraphicsElement).ownerSVGElement;
     if (!svg) {
+      const paper = target.closest(".sheet-paper");
+      if (paper) {
+        // papel vazio: começa o retângulo de seleção (Shift soma ao que já está escolhido)
+        e.preventDefault();
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        boxStart.current = { x: e.clientX, y: e.clientY, paper, add: e.shiftKey };
+        if (!e.shiftKey) setPicked([]);
+        setSelected(null);
+        return;
+      }
       // clique fora dos desenhos fecha o painel do desenho
-      if (!target.closest(".sheet-side")) setSelected(null);
+      if (!target.closest(".sheet-side")) (setSelected(null), setPicked([]));
+      return;
+    }
+    if (e.shiftKey && el) {
+      // Shift + clique: põe ou tira da seleção
+      const key = keyOf(el);
+      setPicked((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]));
+      setSelected(null);
       return;
     }
     e.preventDefault();
@@ -355,10 +472,24 @@ export function SheetsView() {
       tag: label ? label.getAttribute("data-tag")! : block ? `${built.paper}|${block.getAttribute("data-group")}` : "",
       x: e.clientX, y: e.clientY, k: vbW / svg.getBoundingClientRect().width,
     };
+    if (el && picked.length > 1 && picked.includes(keyOf(el))) {
+      press.current.multi = picked.map((key) => {
+        const els = elementsOf(key);
+        return { key, els, axis: els[0]?.getAttribute("data-axis") ?? null };
+      });
+      press.current.multi.forEach((m) => m.els.forEach((x) => x.classList.add("dragging")));
+    }
     el?.classList.add("dragging");
   };
   const onMove = (e: React.PointerEvent) => {
-    if (cutting) return setMouse([e.clientX, e.clientY]);
+    if (boxStart.current) {
+      const b = boxStart.current;
+      return setBox({ x0: b.x, y0: b.y, x1: e.clientX, y1: e.clientY });
+    }
+    if (cutting) {
+      setMouse([e.clientX, e.clientY]);
+      return setHcut(cutting.a || planHit(e) ? null : sideHit(e));
+    }
     if (armed) {
       // contorno do desenho que vai entrar, seguindo o cursor
       const p = paperPoint(e);
@@ -368,17 +499,31 @@ export function SheetsView() {
     }
     const d = press.current;
     if (!d?.el) return;
-    d.el.setAttribute("transform", `translate(${(e.clientX - d.x) * d.k} ${(e.clientY - d.y) * d.k})`);
+    const dx = (e.clientX - d.x) * d.k;
+    const dy = (e.clientY - d.y) * d.k;
+    if (d.multi) {
+      for (const m of d.multi) {
+        const [mx, my] = along(m.axis, dx, dy);
+        m.els.forEach((x) => x.setAttribute("transform", `translate(${mx} ${my})`));
+      }
+      return;
+    }
+    const [mx, my] = along(d.el.getAttribute("data-axis"), dx, dy);
+    d.el.setAttribute("transform", `translate(${mx} ${my})`);
   };
   const onUp = (e: React.PointerEvent) => {
+    if (boxStart.current) return finishBox(e);
     const d = press.current;
     press.current = null;
     if (!d) return;
     d.el?.classList.remove("dragging");
+    d.multi?.forEach((m) => m.els.forEach((x) => x.classList.remove("dragging")));
     const dx = (e.clientX - d.x) * d.k;
     const dy = (e.clientY - d.y) * d.k;
     if (Math.hypot(dx, dy) < 0.3) {
       d.el?.removeAttribute("transform");
+      d.multi?.forEach((m) => m.els.forEach((x) => x.removeAttribute("transform")));
+      setPicked([]);
       // clique num desenho ou no título dele: abre o painel do desenho
       const g = d.kind === "block" ? d.tag.slice(d.tag.indexOf("|") + 1) : "";
       const m = /^(desenho|titulo):(.+)$/.exec(g);
@@ -388,10 +533,19 @@ export function SheetsView() {
     }
     if (!d.el) return;
     const cur = useApp.getState().sheet;
-    const map = d.kind === "label" ? cur.labels : cur.blocks;
-    const prev = map?.[d.tag] ?? [0, 0];
-    const next = { ...map, [d.tag]: [prev[0] + dx, prev[1] + dy] as [number, number] };
-    setSheet(d.kind === "label" ? { ...cur, labels: next } : { ...cur, blocks: next });
+    const labels = { ...cur.labels };
+    const blocks = { ...cur.blocks };
+    const shift = (key: string, axis: string | null | undefined) => {
+      const [mx, my] = along(axis, dx, dy);
+      const map = key.startsWith("l:") ? labels : blocks;
+      const k = key.slice(2);
+      const prev = map[k] ?? [0, 0];
+      map[k] = [prev[0] + mx, prev[1] + my];
+    };
+    if (d.multi) d.multi.forEach((m) => shift(m.key, m.axis));
+    else shift(`${d.kind === "label" ? "l" : "b"}:${d.tag}`, d.el.getAttribute("data-axis"));
+    // tudo numa mudança só (um Ctrl+Z desfaz o arraste inteiro)
+    setSheet({ ...cur, labels, blocks });
   };
   const moved = Object.keys(meta.labels ?? {}).length + Object.keys(meta.blocks ?? {}).filter((k) => k.startsWith(`${built.paper}|`)).length;
   const empty = Object.keys(model.nodes).length === 0;
@@ -515,7 +669,7 @@ export function SheetsView() {
           onPointerDown={onDown}
           onPointerMove={onMove}
           onPointerUp={onUp}
-          onPointerLeave={() => (setGhost(null), setMouse(null))}
+          onPointerLeave={() => (setGhost(null), setMouse(null), setHcut(null))}
           onScroll={() => {
             if (editing) commitEdit(editing);
             // a linha elástica do corte perde a referência na tela
@@ -555,6 +709,13 @@ export function SheetsView() {
         </div>
       )}
       {ghost && <div className="sheet-ghost" style={{ left: ghost.x, top: ghost.y, width: ghost.w, height: ghost.h }} />}
+      {box && <div className={`select-box${box.x1 < box.x0 ? " crossing" : ""}`} style={{ left: Math.min(box.x0, box.x1), top: Math.min(box.y0, box.y1), width: Math.abs(box.x1 - box.x0), height: Math.abs(box.y1 - box.y0) }} />}
+      {cutting && !cutting.a && hcut && (
+        <svg className="sheet-cut-band" aria-hidden>
+          <line x1={hcut.x0} y1={hcut.y} x2={hcut.x1} y2={hcut.y} />
+          <text x={hcut.x1 + 6} y={hcut.y + 4}>{heightText(hcut.h, "cm", MOD).replace("ALTURA = ", "")}</text>
+        </svg>
+      )}
       {cutting?.screen && mouse && (
         <svg className="sheet-cut-band" aria-hidden>
           <line x1={cutting.screen[0]} y1={cutting.screen[1]} x2={mouse[0]} y2={mouse[1]} />
@@ -585,12 +746,16 @@ export function SheetsView() {
           (cutting
             ? cutting.a
               ? "Clique no segundo ponto da linha de corte. O corte olha para a esquerda de quem vai do 1º ao 2º ponto."
-              : "Clique no primeiro ponto da linha de corte, numa planta baixa. Esc cancela."
+              : hcut
+                ? `Clique para cortar a ${heightText(hcut.h, "cm", MOD).replace("ALTURA = ", "")} da chapa: sai uma planta baixa nessa altura. Esc cancela.`
+                : "Numa planta baixa, clique no primeiro ponto da linha de corte. Numa vista, clique na altura para uma planta baixa cortada. Esc cancela."
             : armed
             ? `Clique na prancha onde vai ${armedName} (escala ${fmt(used)}). Esc cancela.`
+            : picked.length
+              ? `${picked.length} ${picked.length > 1 ? "itens escolhidos" : "item escolhido"}: arraste um deles para mover todos. Delete tira os desenhos da prancha; Esc limpa.`
             : selInfo
               ? `${selInfo.entry}: arraste para mudar de lugar. Delete tira da prancha; Esc fecha.`
-              : "Clique num desenho para ajustar; clique num título para editar. Arraste desenhos, títulos e nomes das peças.")}
+              : "Clique num desenho para ajustar ou num título para editar. Arraste o que quiser mover; no papel vazio, arraste para escolher vários.")}
       </p>
       {editing && (
         <input

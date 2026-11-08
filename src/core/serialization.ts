@@ -29,8 +29,12 @@ export interface SheetView {
   kind: "plan" | "A" | "B" | "C" | "D" | "cut" | "iso";
   /** isométrica: canto de onde se olha */
   iso?: IsoCorner;
-  /** planta: altura do pavimento (mm, acima da chapa) */
+  /** planta: altura do pavimento (mm, acima da chapa); na planta cortada (`section`), a altura do corte */
   level?: number;
+  /** planta baixa cortada a uma altura qualquer (criada por um corte horizontal numa vista, desde 1.10.1) */
+  section?: true;
+  /** unidade em que a altura da planta cortada aparece no subtítulo: cm (padrão) ou módulos */
+  unit?: "cm" | "M";
   /** corte: id do corte */
   cut?: string;
   /** prancha (0 = a primeira depois da capa) */
@@ -140,6 +144,7 @@ export function cleanSheet(raw: unknown): SheetMeta | undefined {
           !!v.cell && [v.cell.x, v.cell.y, v.cell.w, v.cell.h].every(isNum) &&
           (v.level === undefined || isNum(v.level)) && (v.n === undefined || (isNum(v.n) && v.n > 0)) &&
           (v.cut === undefined || typeof v.cut === "string") &&
+          (v.section === undefined || v.section === true) && (v.unit === undefined || v.unit === "cm" || v.unit === "M") &&
           (v.kind !== "iso" || ISO_CORNERS.includes(v.iso as IsoCorner)),
       );
       layouts[p] = { pages: Math.max(0, Math.round(l.pages)), views };

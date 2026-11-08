@@ -134,7 +134,7 @@ export function InsertBar({ levels, cuts, armed, onArm, cutting, onCut, onDelete
         </span>
       ))}
       <span className="st-sep" />
-      <button className={`st-btn${cutting ? " on" : ""}`} onClick={onCut} title="Novo corte: clique no primeiro e no segundo ponto da linha de corte numa planta baixa">
+      <button className={`st-btn${cutting ? " on" : ""}`} onClick={onCut} title="Novo corte: numa planta baixa, dois cliques marcam a linha de corte (corte vertical); numa vista, um clique na altura dá uma planta baixa cortada nessa altura">
         <CutIcon />
         <small>Corte</small>
       </button>

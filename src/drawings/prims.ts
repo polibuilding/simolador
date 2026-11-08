@@ -15,6 +15,10 @@ export interface Style {
   fill?: string | null; // cinza, ex. "#bababa"
   stroke?: string | null;
   dash?: "center" | "hidden";
+  /** peça arrastável inteira dentro do bloco (marcador de vista): as primitivas seguidas com a mesma chave andam juntas */
+  handle?: string;
+  /** o arraste do `handle` anda só neste eixo do papel (aproximar ou afastar do desenho) */
+  handleAxis?: "x" | "y";
 }
 
 export type Prim =

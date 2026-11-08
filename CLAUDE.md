@@ -10,7 +10,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 
 - **No ar:** https://polibuilding.github.io/simolador/
 - **Repositório:** `polibuilding/simolador`, branch `main`. A publicação é por GitHub Actions no GitHub Pages (`.github/workflows/pages.yml`).
-- **Versão atual:** 1.10.0. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
+- **Versão atual:** 1.10.1. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
 - **Usuários:** estudantes de engenharia e arquitetura, que montam e documentam estruturas para a competição.
 
 ## Como trabalhar com a equipe
@@ -26,7 +26,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 npm install
 npm run dados     # data/parametros.xlsx → data/catalog.json e data/kits.json (nunca edite os .json à mão)
 npm run dev       # http://localhost:5173/simolador/
-npm test          # Vitest (núcleo); hoje 160 testes, todos passando
+npm test          # Vitest (núcleo); hoje 176 testes, todos passando
 npm run typecheck
 npm run build     # tsc + vite build
 npx vite preview --port 4173 --strictPort   # testar o build em http://localhost:4173/simolador/
@@ -135,7 +135,7 @@ A **GC como rótula** está **a conferir pela equipe**. O TFG da UPC (jan. 2026,
 | Linha | Nome | Escopo |
 |---|---|---|
 | **1.x** | Geométrica (atual) | Montar com as regras reais e gerar pranchas |
-| **2.x** | Arquitetônica | O módulo extra ajustável |
+| **2.x** | Flexibilidade | O **Kit X** (barra, placa e RC ajustáveis, catálogo próprio, arquivo `.kit`): plano em `plano-simolador.md` §11, com o que preparar ainda na 1.x (§11.5) |
 | **3.x** | De engenharia | Deformação, estaticidade e estabilidade (botão **Simolar**, hoje "em breve") |
 
 O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o assunto principal ou o jeito de usar (uma fase: 1.7 rigidez, 1.8 pranchas editáveis); **Z** conta cada entrega publicada dentro da fase, novidade ou correção (1.8.0, 1.8.1, 1.8.2…). Toda entrega publicada ganha número. Em 28/10/2026 as antigas 1.0–1.25 foram renumeradas (1.25 = 1.8.1); a equivalência está no fim do `CHANGELOG.md`.
@@ -169,12 +169,12 @@ O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o as
 
 ### Outros
 - **Geometria livre:** geodésicas e barras fora dos planos ortogonais (E19). É a fase 4 do plano.
-- **App local:** fase 5, plano em `plano-simolador.md` §7c. Feito na 1.10.0: arquivos, sem internet, PWA, Sobre e relatório. Próximos: 1.10.1 impressão das pranchas, 1.10.2 modo leve, 1.11 Tauri (instaladores, atualizador, página de download).
+- **App local:** fase 5, plano em `plano-simolador.md` §7c. Feito na 1.10.0: arquivos, sem internet, PWA, Sobre e relatório. Feito na 1.10.1: pavimentos na capa, planta baixa cortada a uma altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20). Próximos: 1.10.2 impressão das pranchas, 1.10.3 modo leve, 1.11 Tauri (instaladores, atualizador, página de download).
 - **Medições pendentes:** o protocolo está em `plano-simolador.md` §9.
 - **Responsáveis por frente** (Q08): falta definir.
 
 ## Plano maior
 
-O objetivo da 1.x é que a equipe monte **qualquer estrutura do manual e do Desafio** com as regras reais do kit e saia com as pranchas prontas para entregar. A 2.x abre para projetos arquitetônicos, com o módulo extra ajustável. A 3.x transforma o programa em ferramenta de engenharia: estabilidade, estaticidade e deformação, a partir do modelo cinemático que já existe.
+O objetivo da 1.x é que a equipe monte **qualquer estrutura do manual e do Desafio** com as regras reais do kit e saia com as pranchas prontas para entregar. A 2.x traz a flexibilidade: o Kit X, com peças ajustáveis (barra, placa e RC de qualquer ângulo), catálogo próprio e arquivo `.kit`. Ela depende da geometria livre (fase 4) e do catálogo em camadas (§11.5 do plano). A 3.x transforma o programa em ferramenta de engenharia: estabilidade, estaticidade e deformação, a partir do modelo cinemático que já existe.
 
 O modelo é um **grafo**, não um monte de malhas. O encaixe vira conta, as pranchas saem vetoriais e a lista de peças é uma contagem. Mantenha isso ao estender o programa.

@@ -60,7 +60,17 @@ export function sheetToSvg(sheet: Sheet, opts: { interactive?: boolean } = {}): 
     for (const p of sheet.prims) if (p.group) (by.get(p.group) ?? by.set(p.group, []).get(p.group)!).push(p);
     for (const [g, ps] of by) groupBox.set(g, boxOf(ps));
   }
-  for (const p of sheet.prims) {
+  // peças arrastáveis dentro de um bloco (marcadores de vista) viram <g data-tag> dentro do <g data-group>
+  let hand: string | undefined;
+  const closeHand = () => {
+    if (hand) parts.push("</g>");
+    hand = undefined;
+  };
+  const prims = sheet.prims;
+  for (let i = 0; i < prims.length; i++) {
+    const p = prims[i];
+    const h = opts.interactive ? p.handle : undefined;
+    if (p.group !== cur || h !== hand) closeHand();
     if (p.group !== cur) {
       if (cur) parts.push("</g>");
       if (p.group) {
@@ -70,8 +80,17 @@ export function sheetToSvg(sheet: Sheet, opts: { interactive?: boolean } = {}): 
       }
       cur = p.group;
     }
+    if (h && h !== hand) {
+      let j = i;
+      while (j < prims.length && prims[j].handle === h && prims[j].group === p.group) j++;
+      const bx = boxOf(prims.slice(i, j));
+      parts.push(`<g data-tag="${esc(h)}"${p.handleAxis ? ` data-axis="${p.handleAxis}"` : ""} style="cursor:${p.handleAxis === "x" ? "ew-resize" : p.handleAxis === "y" ? "ns-resize" : "move"}">`);
+      parts.push(`<rect class="grab" x="${f(bx.x0 - 0.8)}" y="${f(bx.y0 - 0.8)}" width="${f(bx.x1 - bx.x0 + 1.6)}" height="${f(bx.y1 - bx.y0 + 1.6)}" fill="#fff" fill-opacity="0"/>`);
+      hand = h;
+    }
     parts.push(one(p));
   }
+  closeHand();
   if (cur) parts.push("</g>");
   const { w, h } = sheet.size;
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}mm" height="${h}mm" viewBox="0 0 ${w} ${h}"><rect x="0" y="0" width="${w}" height="${h}" fill="#fff"/>\n${parts.join("\n")}\n</svg>`;

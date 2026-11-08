@@ -4,7 +4,7 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 
 **Abrir o programa:** https://polibuilding.github.io/simolador/ · funciona no navegador, sem instalar nada. Depois da primeira visita, abre **sem internet**. No Chrome e no Edge, dá para **instalar como aplicativo** (Configurações › Sobre).
 
-**Versão atual:** **1.10.0** (linha 1.x, "geométrica"). O que mudou em cada versão está no [CHANGELOG.md](CHANGELOG.md).
+**Versão atual:** **1.10.1** (linha 1.x, "geométrica"). O que mudou em cada versão está no [CHANGELOG.md](CHANGELOG.md).
 
 ## O que dá para fazer
 
@@ -107,7 +107,7 @@ Nunca edite os `.json` à mão.
 - **App local:** o instalador para baixar no site da equipe (fase 5, versão 1.11; plano em `docs/plano-simolador.md` §7c).
 
 **Depois da linha 1.x:**
-- **2.x (arquitetônica):** o módulo extra ajustável.
+- **2.x (flexibilidade):** o Kit X, com barra, placa e ligação ajustáveis, catálogo próprio e arquivo `.kit` (em planejamento).
 - **3.x (de engenharia):** deformação, estaticidade e estabilidade, a partir do modelo de rigidez que já existe (botão **Simolar**).
 
 O plano completo está em [docs/plano-simolador.md](docs/plano-simolador.md), e as regras de montagem em [docs/regras-de-encaixe.md](docs/regras-de-encaixe.md).
