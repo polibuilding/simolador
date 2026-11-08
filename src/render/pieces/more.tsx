@@ -6,6 +6,10 @@ import { continuousOutline } from "../../core/shapes";
 import { insetPolygon2, isRectangle, polyTo2D } from "../../core/geom";
 import type { Vec3 } from "../../core/model";
 import { COLORS } from "../units";
+import { resolvedTheme } from "../../ui/prefs";
+
+/** tema escuro: cabos e diagonais (finos e escuros) clareiam para não sumir no fundo grafite */
+const DARK = resolvedTheme() === "dark";
 import { pickProps, SPHERE_R, useMaterial, type Look, type Pickable } from "./pieces";
 import { ropeSpec, segmentBallOffsets, sphereEnd, type RopeEnd } from "../../core/rope";
 import { useEffect, useRef } from "react";
@@ -63,7 +67,7 @@ export function Cable({ a, b, look = "normal", nominal, ...p }: { a: THREE.Vecto
       len: dir.length(),
     };
   }, [a, b]);
-  const cable = useMaterial(look, "#3b4146", 0.6, 0.4);
+  const cable = useMaterial(look, DARK ? "#b4bcc1" : "#3b4146", 0.6, 0.4);
   const cap = useMaterial(look, COLORS.cap, 0.8, 0.3);
   const hit = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
   const inner = len - 2 * (SPHERE_R + term);
@@ -120,7 +124,7 @@ export function Rope({ a, b, ends = ["sphere", "sphere"], look = "normal", ...p 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [a, b, sp.pitch, sp.end, sp.tap, sp.multi, sp.ringP, sp.ringM, ea, eb]);
   const steel = useMaterial(look, "#aeb5bb", 0.9, 0.25);
-  const dark = useMaterial(look, "#7c858c", 0.85, 0.3);
+  const dark = useMaterial(look, DARK ? "#a9b2b8" : "#7c858c", 0.85, 0.3);
   const hit = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
   const ref = useRef<THREE.InstancedMesh>(null);
   useEffect(() => {
@@ -206,7 +210,7 @@ export function RopeRing({ position, code, look = "normal", ...p }: { position: 
 }
 
 export function RopeClip({ position, look = "normal", ...p }: { position: THREE.Vector3; look?: Look } & Pickable) {
-  const mat = useMaterial(look, "#5d666d", 0.85, 0.3);
+  const mat = useMaterial(look, DARK ? "#a3acb2" : "#5d666d", 0.85, 0.3);
   const hit = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
   return (
     <group position={position} {...pickProps(p)}>

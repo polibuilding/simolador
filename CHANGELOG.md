@@ -24,6 +24,13 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 ## 1.10 — Pronto para usar fora do site
 
+### 1.10.5 — Pranchas em inglês e espanhol, diagonais visíveis no escuro e título que acompanha o desenho · 08/11/2026
+- **Pranchas no idioma escolhido**: capa, plantas, vistas, carimbo e PDF/DXF/SVG saem em inglês ou espanhol quando a interface está nesse idioma (o nome do projeto e os textos que você digitou ficam como estão).
+- **Muito mais texto traduzido**: as mensagens das regras de encaixe, as dicas do rodapé com números, o painel das peças, os cabos, as chapas, os arquivos e o "sem limite" do estoque. As traduções ficam numa tabela (`i18n-textos.tsv`) que abre em qualquer planilha.
+- **Modo escuro**: diagonais e cabos ficaram mais claros e não somem mais no fundo escuro.
+- **Chave "Ajustável"** agora fica ao lado da barra de baixo, na mesma altura.
+- **Pranchas**: arrastar um desenho leva o título dele junto; arrastar só o título continua movendo só o título.
+
 ### 1.10.4 — Modo escuro, inglês e espanhol, e a RC90 na base como a equipe confirmou · 08/11/2026
 - **Modo escuro** (Configurações › Aparência › Tema): fundo grafite, painéis e menus escuros, letras claras. A chapa fica clara para contrastar com o fundo (opção "Do tema"; dá para escolher outra cor). "Do sistema" segue o modo escuro do computador. As folhas das pranchas continuam brancas.
 - **Idiomas** (Configurações › Idioma): **English** e **Español**, além do português. A troca é na hora, sem recarregar, e fica guardada neste navegador. Menus, paleta, resumo, painel da peça, configurações, atalhos, barra das pranchas e as dicas mais comuns estão traduzidos; o que ainda não estiver aparece em português. As pranchas continuam em português (padrão do Desafio).

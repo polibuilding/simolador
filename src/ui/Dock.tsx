@@ -1,3 +1,4 @@
+import { AdjustSwitch } from "./AdjustSwitch";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
 import { panelOpen, useApp } from "./store";
@@ -40,7 +41,8 @@ export function Dock() {
   // os textos encolhem com transição, junto com a paleta e o resumo deslizando
   const propsOpen = useApp(panelOpen);
   const mini = useApp((s) => s.paletteMini);
-  const ref = useRef<HTMLElement>(null);
+  // a barra de baixo e a chave Ajustável ficam lado a lado, na mesma altura (bar = as duas juntas)
+  const ref = useRef<HTMLDivElement>(null);
   const full = useRef(0);
   const [view, setView] = useState(0);
   useEffect(() => {
@@ -59,7 +61,8 @@ export function Dock() {
     if (!narrow && ref.current) full.current = Math.max(full.current, ref.current.scrollWidth);
   });
   return (
-    <nav ref={ref} className={`dock${narrow ? " narrow" : ""}`} aria-label="Encaixe, barras e vista" onPointerDown={(e) => e.stopPropagation()}>
+    <div ref={ref} className={`dock-bar${narrow ? " narrow" : ""}`}>
+    <nav className={`dock${narrow ? " narrow" : ""}`} aria-label="Encaixe, barras e vista" onPointerDown={(e) => e.stopPropagation()}>
       <span className="lbl">Encaixe</span>
       <Toggle on={snap} onClick={() => st.setSnap(!snap)} title="Grade: pontos verdes de encaixe e grade da chapa para a GC (1)" icon={<i className="dock-dot green" />} />
       <Toggle on={guides.blue} onClick={() => st.setGuides({ ...guides, blue: !guides.blue })} title="Vão: GC a um vão de barra de outra GC, em X ou Y (2)" icon={<i className="dock-dot blue" />} />
@@ -91,5 +94,7 @@ export function Dock() {
       <span className="sep thin" />
       <Toggle onClick={() => st.setHelpOpen(true)} title="Atalhos do teclado (? ou H)" icon={I.keys} />
     </nav>
+      <AdjustSwitch />
+    </div>
   );
 }

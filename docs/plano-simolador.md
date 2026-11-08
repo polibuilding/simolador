@@ -245,8 +245,9 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 | Base para a 2.x, por dentro e sem mudar o uso (pedido da equipe, 08/11): catálogo em camadas, peças criadas no `.mola`, arquivo `.kit`, kit sem limite, placa de N cantos, parâmetros do Kit X na planilha (§11.5) | 1.10.2 ✅ |
 | Chave **Ajustável** desativada ("em breve") no canto de baixo, Kit X no lugar do Kit A no Estoque, tirante entre as peças criadas (§11.0, X8–X11) | 1.10.3 ✅ |
 | Modo escuro, inglês e espanhol (pedido da equipe, 08/11), RC90 na base só no plano dela (equipe confirmou GC = rótula) | 1.10.4 ✅ |
-| Impressão direta das pranchas e revisão das exportações | 1.10.5 |
-| Modo leve para computador fraco (sem sombras nem renderizado, menos resolução) e teste num notebook com vídeo integrado | 1.10.6 |
+| Pranchas traduzidas, dicionário completo (regras e dicas), diagonais claras no escuro, chave Ajustável ao lado da barra, título acompanha o desenho | 1.10.5 ✅ |
+| Impressão direta das pranchas e revisão das exportações | 1.10.6 |
+| Modo leve para computador fraco (sem sombras nem renderizado, menos resolução) e teste num notebook com vídeo integrado | 1.10.7 |
 
 **1.11 — Aplicativo de computador:**
 
@@ -282,7 +283,7 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0.0`, `v1.8.2`…).
 
-- **1.x — geométrica** (atual: 1.10.4): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.10.5): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: flexibilidade, ajustabilidade e criação de peças próprias para representar e simular estruturas que fogem das limitações das peças atuais do kit. O instrumento é o **Kit X** (barra, placa e RC de qualquer ângulo, catálogo próprio e arquivo `.kit`, §11).
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 

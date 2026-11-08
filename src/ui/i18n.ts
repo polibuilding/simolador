@@ -55,10 +55,14 @@ const norm = (s: string) => s.replace(/\s+/g, " ").trim();
 /** Tradução de um texto (para avisos e confirmações feitos fora da tela, como window.confirm). */
 export function tr(pt: string): string {
   if (!dict) return pt;
+  // listas do carimbo ("ISOMÉTRICA  ·  LISTA DE PEÇAS"): cada parte separada
+  if (pt.includes("  ·  ")) return pt.split("  ·  ").map(tr).join("  ·  ");
   const k = norm(pt);
   if (!k) return pt;
   const t = trKey(k, 0);
-  return t === k ? pt : pt.replace(k, t);
+  if (t === k) return pt;
+  // mantém os espaços de antes e de depois (o texto pode ter espaços duplos no meio, como "  ·  ")
+  return (pt.match(/^\s*/)?.[0] ?? "") + t + (pt.match(/\s*$/)?.[0] ?? "");
 }
 
 /** texto normalizado → tradução; as partes variáveis de um modelo também são traduzidas (ex.: "Barra B4 · …") */
@@ -70,7 +74,7 @@ function trKey(k: string, depth: number): string {
     if (!m) continue;
     return to.replace(/\$(\d)/g, (_, i: string) => {
       const g = m[Number(i)] ?? "";
-      return depth < 2 ? trKey(g, depth + 1) : g;
+      return depth < 8 ? trKey(g, depth + 1) : g;
     });
   }
   return k;

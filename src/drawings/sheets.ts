@@ -3,6 +3,7 @@
 // O arranjo nasce automático (plantas 2×2 por folha, vistas 2 por folha) e o usuário pode mexer nele: inserir, tirar
 // e mudar desenhos de prancha. O arranjo mexido fica no carimbo do projeto (SheetMeta.layouts), por tamanho de folha.
 import type { Catalog } from "../core/catalog";
+import { currentLang, tr } from "../ui/i18n";
 import type { InventoryConfig } from "../core/inventory";
 import { ballsPerRoll, ropePlan, ropeSpec } from "../core/rope";
 import { minKits, usage } from "../core/inventory";
@@ -1359,7 +1360,10 @@ export function buildSheets(input: SheetInput): BuiltSheets {
       ...titleBlock(input, { number: i + 1, total, entries: p.entries, scales: p.scales }),
     ],
   }));
-  return { sheets, scale: n, layout, manual: !!saved, views, paper: PAPER_NAME, size: { ...PG }, renderRequests: ctx.requests };
+  // idioma (1.10.5): os textos da folha saem no idioma da interface (português sem tradução = como sempre)
+  const lang = currentLang();
+  const shown = lang === "pt" ? sheets : sheets.map((sh) => ({ ...sh, prims: sh.prims.map((p) => (p.t === "text" ? { ...p, s: tr(p.s) } : p)) }));
+  return { sheets: shown, scale: n, layout, manual: !!saved, views, paper: PAPER_NAME, size: { ...PG }, renderRequests: ctx.requests };
 }
 
 /** O que inserir: planta de um pavimento, vista A–D ou corte. */

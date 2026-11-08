@@ -20,7 +20,7 @@ function AdjustInfo({ onClose }: { onClose: () => void }) {
 export function AdjustSwitch() {
   const [open, setOpen] = useState(false);
   return (
-    <div className="adjust-switch">
+    <div className="adjust-switch" onPointerDown={(e) => e.stopPropagation()}>
       <button
         className="adjust-btn"
         role="switch"

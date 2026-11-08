@@ -1,0 +1,567 @@
+pt	en	es
+Pontos azuis (vão) {1} (2).	Blue points (span) {1} (2).	Puntos azules (luz) {1} (2).
+Pontos amarelos e laranja (triângulos) {1} (3).	Yellow and orange points (triangles) {1} (3).	Puntos amarillos y naranjas (triángulos) {1} (3).
+As configurações novas não abriram direito e foram desfeitas: o programa voltou ao padrão.	The new settings did not open properly and were undone: the program went back to the defaults.	La nueva configuración no abrió bien y se deshizo: el programa volvió a los valores por defecto.
+Configurações deixadas de lado: {1}	Settings set aside: {1}	Configuración dejada de lado: {1}
+Configurações aplicadas.	Settings applied.	Configuración aplicada.
+Valores ignorados nas configurações: {1}{2}.	Values ignored in the settings: {1}{2}.	Valores ignorados en la configuración: {1}{2}.
+Chapa não encontrada.	Board not found.	Tablero no encontrado.
+Já existe uma chapa desse lado.	There is already a board on that side.	Ya hay un tablero de ese lado.
+Uma estrutura liga estas chapas a outra que não está selecionada: selecione as duas (Ctrl+clique).	A structure joins these boards to another one that is not selected: select both (Ctrl+click).	Una estructura une estos tableros a otro que no está seleccionado: selecciona los dos (Ctrl+clic).
+Uma estrutura liga esta chapa a outra: selecione as duas (Ctrl+clique) para mover juntas.	A structure joins this board to another: select both (Ctrl+click) to move them together.	Una estructura une este tablero a otro: selecciona los dos (Ctrl+clic) para moverlos juntos.
+Chapa {1}	Board {1}	Tablero {1}
+Coordenadas em módulos (ex.: 12,5).	Coordinates in modules (e.g. 12.5).	Coordenadas en módulos (ej.: 12,5).
+Selecione duas chapas ou mais (Ctrl+clique).	Select two or more boards (Ctrl+click).	Selecciona dos tableros o más (Ctrl+clic).
+Distância entre 0 e 500 módulos.	Distance between 0 and 500 modules.	Distancia entre 0 y 500 módulos.
+Para girar sem bater em {1}, {2} se afastou {3} módulos.	To rotate without hitting {1}, {2} moved {3} modules away.	Para girar sin chocar con {1}, {2} se alejó {3} módulos.
+É a única chapa.	It is the only board.	Es el único tablero.
+Uma estrutura liga esta chapa a outra: desfaça a ligação antes de apagar.	A structure joins this board to another: undo the connection before deleting.	Una estructura une este tablero a otro: deshaz la unión antes de borrar.
+As configurações guardadas estavam ilegíveis.	The saved settings were unreadable.	La configuración guardada era ilegible.
+A cópia iria para baixo da chapa.	The copy would go below the board.	La copia quedaría debajo del tablero.
+Uma esfera da cópia cairia em cima de outra.	A sphere of the copy would land on top of another.	Una esfera de la copia caería encima de otra.
+Faltariam {1} {2} no estoque.	{1} {2} would be missing from the stock.	Faltarían {1} {2} en el inventario.
+Nada novo: a cópia cairia em cima das peças que já existem.	Nothing new: the copy would land on top of existing pieces.	Nada nuevo: la copia caería encima de las piezas que ya existen.
+Cópia {1}: {2}	Copy {1}: {2}	Copia {1}: {2}
+número	number	número
+número inteiro	whole number	número entero
+A esfera ({1} mm) não cabe no menor vão ({2} mm): aumente o módulo ou diminua a esfera.	The sphere ({1} mm) does not fit in the smallest span ({2} mm): increase the module or reduce the sphere.	La esfera ({1} mm) no cabe en la menor luz ({2} mm): aumenta el módulo o reduce la esfera.
+A mola precisa ser mais fina que a esfera.	The bar must be thinner than the sphere.	La barra tiene que ser más delgada que la esfera.
+A bolinha do cabo não pode ser maior que a distância entre bolinhas.	The cable bead cannot be larger than the bead pitch.	La bolita del cable no puede ser mayor que la distancia entre bolitas.
+A tolerância de encaixe precisa ser bem menor que o módulo.	The fit tolerance must be much smaller than the module.	La tolerancia de encaje tiene que ser mucho menor que el módulo.
+A GC não cabe na chapa.	The GC does not fit on the board.	La GC no cabe en el tablero.
+Não há outra direção livre para girar esta peça.	There is no other free direction to rotate this piece.	No hay otra dirección libre para girar esta pieza.
+Não há outra posição livre para esta placa.	There is no other free position for this plate.	No hay otra posición libre para esta placa.
+Esta ligação não tem outro canto livre nesta esfera.	This connector has no other free corner on this sphere.	Esta conexión no tiene otra esquina libre en esta esfera.
+O pendural já está no mínimo de bolinhas.	The hanger is already at the minimum number of beads.	El péndulo ya está en el mínimo de bolitas.
+O ponto iria para baixo da chapa.	The point would go below the board.	El punto quedaría debajo del tablero.
+Nó não encontrado.	Node not found.	Nodo no encontrado.
+Esse nó não está preso a nenhuma parte fixa: use Mover estrutura.	This node is not attached to any fixed part: use Move structure.	Este nodo no está sujeto a ninguna parte fija: usa Mover estructura.
+A placa {1} prende esse nó às partes fixas: tire a placa para mover só o nó.	Plate {1} holds this node to the fixed parts: remove the plate to move only the node.	La placa {1} sujeta este nodo a las partes fijas: quita la placa para mover solo el nodo.
+A {1} em {2} trava esse ângulo: tire a ligação para mover só o nó.	The {1} at {2} locks this angle: remove the connector to move only the node.	La {1} en {2} traba este ángulo: quita la conexión para mover solo el nodo.
+A barra é vertical e do tamanho da altura: a ligação de base não tem para onde ir sozinha.	The bar is vertical and as long as the height: the ground connection has nowhere to go on its own.	La barra es vertical y del tamaño de la altura: la conexión de base no tiene adónde ir sola.
+As barras não deixam esse nó sair do lugar.	The bars do not let this node leave its place.	Las barras no dejan que este nodo se mueva.
+O nó iria para baixo da chapa.	The node would go below the board.	El nodo quedaría debajo del tablero.
+Ângulo de {1}° entre barras em {2} (mínimo {3}°).	Angle of {1}° between bars at {2} (minimum {3}°).	Ángulo de {1}° entre barras en {2} (mínimo {3}°).
+Uma barra atravessaria uma placa.	A bar would go through a plate.	Una barra atravesaría una placa.
+As barras não deixam esse nó ir para lá.	The bars do not let this node go there.	Las barras no dejan que este nodo vaya allí.
+{1} não é mola nem diagonal.	{1} is neither a bar nor a diagonal.	{1} no es barra ni diagonal.
+Já existe uma peça entre essas duas esferas.	There is already a piece between these two spheres.	Ya hay una pieza entre estas dos esferas.
+A segunda esfera não pode andar: {1}{2}	The second sphere cannot move: {1}{2}	La segunda esfera no puede moverse: {1}{2}
+As barras presas à segunda esfera não deixam ela chegar a {1} M da primeira (a {2} tem {3} M; estão a {4} M).	The bars attached to the second sphere do not let it get within {1} M of the first (the {2} is {3} M; they are {4} M apart).	Las barras sujetas a la segunda esfera no la dejan llegar a {1} M de la primera (la {2} mide {3} M; están a {4} M).
+As barras presas à segunda esfera não deixam ela ir para lá.	The bars attached to the second sphere do not let it go there.	Las barras sujetas a la segunda esfera no la dejan ir allí.
+A primeira esfera anda junto com a segunda: escolha outra esfera, ou clique na ordem inversa.	The first sphere moves along with the second: pick another sphere, or click in the reverse order.	La primera esfera se mueve junto con la segunda: elige otra esfera o haz clic en el orden inverso.
+Circunferência na mesma altura (a mola mantém a inclinação)	Circle at the same height (the bar keeps its tilt)	Circunferencia a la misma altura (la barra mantiene la inclinación)
+Circunferência vertical no mesmo rumo (a mola mantém a direção em planta)	Vertical circle on the same heading (the bar keeps its plan direction)	Circunferencia vertical en el mismo rumbo (la barra mantiene la dirección en planta)
+Circunferência horizontal (mola deitada)	Horizontal circle (bar lying down)	Circunferencia horizontal (barra acostada)
+Circunferência vertical no plano X–Z	Vertical circle in the X–Z plane	Circunferencia vertical en el plano X–Z
+Circunferência vertical no plano Y–Z	Vertical circle in the Y–Z plane	Circunferencia vertical en el plano Y–Z
+Peça não encontrada.	Piece not found.	Pieza no encontrada.
+A peça liga duas GC: não tem como girar.	The piece joins two GCs: it cannot rotate.	La pieza une dos GC: no puede girar.
+Esse conjunto não está preso em nenhuma GC: segure e arraste para mover a estrutura.	This group is not attached to any GC: hold and drag to move the structure.	Este conjunto no está sujeto a ninguna GC: mantén y arrastra para mover la estructura.
+A RC90 na base da GC em {1} trava o giro nesse sentido: tire a ligação para girar o conjunto.	The RC90 at the base of the GC at {1} locks rotation that way: remove the connector to rotate the group.	La RC90 en la base de la GC en {1} traba el giro en ese sentido: quita la conexión para girar el conjunto.
+Apoiado em {1} GC fora de uma linha: o conjunto não gira como um bloco (só um mecanismo mexeria).	Resting on {1} GCs not in a line: the group does not rotate as a block (only a mechanism would move).	Apoyado en {1} GC fuera de una línea: el conjunto no gira como un bloque (solo se movería un mecanismo).
+Ângulo de {1}° entre molas na GC em {2} (mínimo {3}°).	Angle of {1}° between bars on the GC at {2} (minimum {3}°).	Ángulo de {1}° entre barras en la GC en {2} (mínimo {3}°).
+O meio da peça está em cima do eixo de giro: dê duplo clique em outra peça do conjunto.	The middle of the piece is on the rotation axis: double-click another piece of the group.	El centro de la pieza está sobre el eje de giro: haz doble clic en otra pieza del conjunto.
+A peça está em cima da GC.	The piece is on top of the GC.	La pieza está sobre la GC.
+na horizontal	horizontal	en horizontal
+na vertical	vertical	en vertical
+Duas molas ficariam a {1}° numa esfera (mínimo {2}°).	Two bars would be at {1}° on a sphere (minimum {2}°).	Dos barras quedarían a {1}° en una esfera (mínimo {2}°).
+Uma peça atravessaria uma placa.	A piece would go through a plate.	Una pieza atravesaría una placa.
+{1} esticaria: diagonais e cabos só trabalham à tração (seguram esse sentido).	{1} would stretch: diagonals and cables work in tension only (they hold this way).	{1} se estiraría: diagonales y cables solo trabajan a tracción (sostienen en ese sentido).
+O cabo	The cable	El cable
+Essa estrutura não está presa em nenhuma GC: segure e arraste para mover a estrutura inteira.	This structure is not attached to any GC: hold and drag to move the whole structure.	Esta estructura no está sujeta a ninguna GC: mantén y arrastra para mover toda la estructura.
+Essa peça está presa na chapa (GC) ou engastada por RC90 na base.	This piece is fixed to the board (GC) or clamped by an RC90 at the base.	Esta pieza está sujeta al tablero (GC) o empotrada por una RC90 en la base.
+Essa peça está presa na chapa (GC).	This piece is fixed to the board (GC).	Esta pieza está sujeta al tablero (GC).
+{1} RC90 na base	{1} RC90 at the base	{1} RC90 en la base
+a forma da etapa anterior	the shape of the previous stage	la forma de la etapa anterior
+Travado: o conjunto não deixa essa peça mexer{1}. M leva a peça para outro lugar.	Locked: the group does not let this piece move{1}. M takes the piece somewhere else.	Trabado: el conjunto no deja que esta pieza se mueva{1}. M lleva la pieza a otro lugar.
+só a peça (as vizinhas paradas)	the piece only (neighbors still)	solo la pieza (las vecinas quietas)
+a peça e as esferas vizinhas	the piece and its neighbor spheres	la pieza y las esferas vecinas
+a peça e {1} anéis de vizinhas	the piece and {1} rings of neighbors	la pieza y {1} anillos de vecinas
+só a peça	the piece only	solo la pieza
++ {1} anéis de vizinhas	+ {1} rings of neighbors	+ {1} anillos de vecinas
+o pavimento: tudo de Z = {1} M para cima (o de baixo parado)	the floor: everything from Z = {1} M up (below stays still)	el piso: todo desde Z = {1} M hacia arriba (lo de abajo quieto)
+a estrutura toda, até as GC	the whole structure, down to the GCs	toda la estructura, hasta las GC
+só a esfera (as molas dela giram em volta das vizinhas)	the sphere only (its bars turn around the neighbors)	solo la esfera (sus barras giran alrededor de las vecinas)
+só a esfera	the sphere only	solo la esfera
+travada (o conjunto não deixa mexer)	locked (the group does not let it move)	trabada (el conjunto no deja moverla)
+1 grau de liberdade: anda num caminho	1 degree of freedom: moves along a path	1 grado de libertad: se mueve por un camino
+livre: {1} graus de liberdade aqui	free: {1} degrees of freedom here	libre: {1} grados de libertad aquí
+cabe uma {1} até a esfera {2}	a {1} fits up to sphere {2}	cabe una {1} hasta la esfera {2}
+a {1} pendurada em {2} desce até aqui	the {1} hanging from {2} comes down to here	la {1} colgada de {2} baja hasta aquí
+A mola não chega até aqui.	The bar does not reach here.	La barra no llega hasta aquí.
+na vertical {1} {2}	vertical {1} {2}	en vertical {1} {2}
+do anel	from the ring	del anillo
+da esfera	from the sphere	de la esfera
+meio do cabo (bolinha {1} de {2})	middle of the cable (bead {1} of {2})	medio del cable (bolita {1} de {2})
+pendural perpendicular ao cabo	hanger perpendicular to the cable	péndulo perpendicular al cable
+um cabo	a cable	un cable
+uma diagonal	a diagonal	una diagonal
+Acabaram as {1} do estoque.	The {1} ran out.	Se acabaron las {1} del inventario.
+Acabaram as {1} do estoque ({2} nos kits escolhidos). Aumente os kits no Estoque.	The {1} ran out ({2} in the chosen kits). Add kits in Stock.	Se acabaron las {1} del inventario ({2} en los kits elegidos). Aumenta los kits en Inventario.
+Acabaram as esferas (C) do estoque ({1} nos kits escolhidos): a {2} só entra ligando duas esferas que já existem. Aumente os kits no Estoque.	The spheres (C) ran out ({1} in the chosen kits): the {2} only goes in joining two existing spheres. Add kits in Stock.	Se acabaron las esferas (C) del inventario ({1} en los kits elegidos): la {2} solo entra uniendo dos esferas que ya existen. Aumenta los kits en Inventario.
+A ligação de base fica sobre a chapa.	The ground connection sits on the board.	La conexión de base va sobre el tablero.
+O centro da ligação de base precisa ficar dentro da chapa.	The center of the ground connection must be inside the board.	El centro de la conexión de base tiene que quedar dentro del tablero.
+Encosta em outra ligação de base.	It touches another ground connection.	Toca otra conexión de base.
+Já existe uma esfera nesse ponto.	There is already a sphere at this point.	Ya hay una esfera en ese punto.
+Ângulo de {1}° com outra barra na {2} (mínimo {3}°).	Angle of {1}° with another bar on the {2} (minimum {3}°).	Ángulo de {1}° con otra barra en la {2} (mínimo {3}°).
+A ponta cairia a {1} mm de outra esfera. Para ligar nela, as esferas teriam de estar a {2} mm; estão a {3} mm.	The end would land {1} mm from another sphere. To join it, the spheres would have to be {2} mm apart; they are {3} mm apart.	El extremo caería a {1} mm de otra esfera. Para unirla, las esferas tendrían que estar a {2} mm; están a {3} mm.
+A peça atravessaria uma esfera.	The piece would go through a sphere.	La pieza atravesaría una esfera.
+O cabo cruzaria uma barra.	The cable would cross a bar.	El cable cruzaría una barra.
+A diagonal cruzaria uma barra.	The diagonal would cross a bar.	La diagonal cruzaría una barra.
+A barra cruzaria {1}.	The bar would cross {1}.	La barra cruzaría {1}.
+A barra cruzaria outra barra.	The bar would cross another bar.	La barra cruzaría otra barra.
+Já existe uma peça nesse trecho.	There is already a piece on this stretch.	Ya hay una pieza en ese tramo.
+Na ligação de base (GC) a mola faz no mínimo {1}° com a chapa (até {2}° a partir da vertical); aqui seriam {3}° com a chapa.	On the ground connection (GC) the bar makes at least {1}° with the board (up to {2}° from vertical); here it would be {3}° with the board.	En la conexión de base (GC) la barra forma como mínimo {1}° con el tablero (hasta {2}° desde la vertical); aquí serían {3}° con el tablero.
+A esfera ficaria em cima de {1}.	The sphere would sit on {1}.	La esfera quedaría encima de {1}.
+A esfera ficaria em cima de uma barra.	The sphere would sit on a bar.	La esfera quedaría encima de una barra.
+{1} não é barra nem diagonal.	{1} is neither a bar nor a diagonal.	{1} no es barra ni diagonal.
+Nó de origem não existe.	The starting node does not exist.	El nodo de origen no existe.
+O ponto de cabo só recebe cabos.	The cable point only takes cables.	El punto de cable solo recibe cables.
+O anel de cabo só recebe cabos.	The cable ring only takes cables.	El anillo de cable solo recibe cables.
+A peça precisa de duas pontas diferentes.	The piece needs two different ends.	La pieza necesita dos extremos distintos.
+A {1} vence {2} módulos; a distância é {3}.	The {1} spans {2} modules; the distance is {3}.	La {1} cubre {2} módulos; la distancia es {3}.
+Barra inclinada só em passos de {1}° nos planos da estrutura, ou fechando numa esfera.	Tilted bar only in {1}° steps in the structure's planes, or closing on a sphere.	Barra inclinada solo en pasos de {1}° en los planos de la estructura, o cerrando en una esfera.
+Barra só na direção dos eixos, ou fechando numa esfera.	Bar only along the axes, or closing on a sphere.	Barra solo en la dirección de los ejes, o cerrando en una esfera.
+A {1} tem {2} mm entre esferas (vão de {3} × {4}); aqui são {5} mm.	The {1} is {2} mm between spheres ({3} × {4} span); here it is {5} mm.	La {1} mide {2} mm entre esferas (luz de {3} × {4}); aquí son {5} mm.
+A peça iria para baixo da chapa.	The piece would go below the board.	La pieza quedaría debajo del tablero.
+Nada pode ficar deitado na chapa: comece pelos pilares.	Nothing can lie flat on the board: start with the columns.	Nada puede quedar acostado sobre el tablero: empieza por los pilares.
+A diagonal liga duas esferas que já existem.	The diagonal joins two existing spheres.	La diagonal une dos esferas que ya existen.
+As duas pontas estão no mesmo nó.	Both ends are on the same node.	Los dos extremos están en el mismo nodo.
+Esse lado da esfera está ocupado por uma ligação contínua.	This side of the sphere is taken by a continuous connector.	Ese lado de la esfera está ocupado por una conexión continua.
+Há uma placa nesse vão: placa e diagonal usam os mesmos pontos das esferas.	There is a plate in this span: plate and diagonal use the same points on the spheres.	Hay una placa en esa luz: placa y diagonal usan los mismos puntos de las esferas.
+A peça atravessaria uma placa.	The piece would go through a plate.	La pieza atravesaría una placa.
+A diagonal usaria o mesmo ponto de ligação da placa na esfera.	The diagonal would use the same connection point as the plate on the sphere.	La diagonal usaría el mismo punto de unión que la placa en la esfera.
+A diagonal passaria por dentro de uma RC90.	The diagonal would pass through an RC90.	La diagonal pasaría por dentro de una RC90.
+A barra passaria por dentro de uma RC90.	The bar would pass through an RC90.	La barra pasaría por dentro de una RC90.
+A diagonal sairia pelo canto de uma RC90: tire a RC90 ou use outro canto.	The diagonal would come out through an RC90 corner: remove the RC90 or use another corner.	La diagonal saldría por la esquina de una RC90: quita la RC90 o usa otra esquina.
+Acabaram as esferas (C) do estoque.	The spheres (C) ran out.	Se acabaron las esferas (C) del inventario.
+Esfera apoiada direto na chapa, sem ligação de base.	Sphere resting directly on the board, with no ground connection.	Esfera apoyada directo en el tablero, sin conexión de base.
+{1} não é placa.	{1} is not a plate.	{1} no es una placa.
+A placa precisa de uma esfera em cada um dos 4 cantos.	The plate needs a sphere at each of the 4 corners.	La placa necesita una esfera en cada una de las 4 esquinas.
+A placa precisa de esferas nos cantos (anel e ponto de cabo só recebem cabos).	The plate needs spheres at the corners (ring and cable point only take cables).	La placa necesita esferas en las esquinas (anillo y punto de cable solo reciben cables).
+A placa iria para baixo da chapa.	The plate would go below the board.	La placa quedaría debajo del tablero.
+Nada pode ficar deitado na chapa.	Nothing can lie flat on the board.	Nada puede quedar acostado sobre el tablero.
+A {1} precisa de 4 esferas num retângulo de {2} × {3} módulos.	The {1} needs 4 spheres in a {2} × {3} module rectangle.	La {1} necesita 4 esferas en un rectángulo de {2} × {3} módulos.
+Já existe uma placa nesse vão.	There is already a plate in this span.	Ya hay una placa en esa luz.
+Encosta em outra placa no mesmo plano.	It touches another plate in the same plane.	Toca otra placa en el mismo plano.
+Há uma diagonal nesse vão: placa e diagonal usam os mesmos pontos das esferas.	There is a diagonal in this span: plate and diagonal use the same points on the spheres.	Hay una diagonal en esa luz: placa y diagonal usan los mismos puntos de las esferas.
+Um cabo atravessa esse vão.	A cable crosses this span.	Un cable atraviesa esa luz.
+Uma barra atravessa esse vão.	A bar crosses this span.	Una barra atraviesa esa luz.
+Uma diagonal já usa o ponto da esfera onde a placa encostaria.	A diagonal already uses the sphere point where the plate would rest.	Una diagonal ya usa el punto de la esfera donde se apoyaría la placa.
+Há uma {1} nesse canto da placa: tire a ligação ou use outro vão.	There is a {1} at this corner of the plate: remove the connector or use another span.	Hay una {1} en esa esquina de la placa: quita la conexión o usa otra luz.
+Placa sem barras em todo o contorno: menos estável.	Plate without bars all around its edge: less stable.	Placa sin barras en todo el contorno: menos estable.
+Escolha uma esfera.	Choose a sphere.	Elige una esfera.
+As ligações vão nas esferas (anel e ponto de cabo só recebem cabos).	Connectors go on spheres (ring and cable point only take cables).	Las conexiones van en las esferas (anillo y punto de cable solo reciben cables).
+Na ligação de base, a RC90 precisa de um pilar subindo.	On the ground connection, the RC90 needs a column going up.	En la conexión de base, la RC90 necesita un pilar que suba.
+A RC90 vai no canto entre duas barras a 90°.	The RC90 goes in the corner between two bars at 90°.	La RC90 va en la esquina entre dos barras a 90°.
+Esse canto já tem uma RC90.	This corner already has an RC90.	Esa esquina ya tiene una RC90.
+{1} passa por esse canto: a RC90 não cabe.	{1} passes through this corner: the RC90 does not fit.	{1} pasa por esa esquina: la RC90 no cabe.
+Uma barra passa por esse canto: a RC90 não cabe.	A bar passes through this corner: the RC90 does not fit.	Una barra pasa por esa esquina: la RC90 no cabe.
+Nesse canto sai {1}: a RC90 não cabe.	{1} comes out of this corner: the RC90 does not fit.	En esa esquina sale {1}: la RC90 no cabe.
+A {1} precisa de duas barras alinhadas no nó.	The {1} needs two aligned bars at the node.	La {1} necesita dos barras alineadas en el nodo.
+Escolha um lado da esfera perpendicular às barras.	Choose a side of the sphere perpendicular to the bars.	Elige un lado de la esfera perpendicular a las barras.
+Esse lado tem uma barra transversal: a ligação não cabe.	This side has a crossing bar: the connector does not fit.	Ese lado tiene una barra transversal: la conexión no cabe.
+Esse lado já tem uma CC.	This side already has a CC.	Ese lado ya tiene una CC.
+Nesse lado já há uma CC no outro par: use a CC90 por cima dela.	This side already has a CC on the other pair: use the CC90 on top of it.	En ese lado ya hay una CC en el otro par: usa la CC90 encima de ella.
+A CC90 vai por cima de uma CC, no mesmo lado, travando o par perpendicular.	The CC90 goes on top of a CC, on the same side, locking the perpendicular pair.	La CC90 va encima de una CC, del mismo lado, trabando el par perpendicular.
+Esse lado já tem uma CC90.	This side already has a CC90.	Ese lado ya tiene una CC90.
+{1} não é uma ligação.	{1} is not a connector.	{1} no es una conexión.
+Nesse canto há uma placa: a RC90 não cabe.	There is a plate at this corner: the RC90 does not fit.	En esa esquina hay una placa: la RC90 no cabe.
+Nesse lado há uma placa: a {1} não cabe.	There is a plate on this side: the {1} does not fit.	En ese lado hay una placa: la {1} no cabe.
+A estrutura iria para baixo da chapa.	The structure would go below the board.	La estructura quedaría debajo del tablero.
+Bateria em outra esfera.	It would hit another sphere.	Chocaría con otra esfera.
+Uma RC90 cruzaria outra RC90.	An RC90 would cross another RC90.	Una RC90 cruzaría otra RC90.
+Uma peça passaria por dentro de uma RC90.	A piece would pass through an RC90.	Una pieza pasaría por dentro de una RC90.
+Uma peça ficaria deitada na chapa.	A piece would lie flat on the board.	Una pieza quedaría acostada sobre el tablero.
+Um cabo ficaria curto demais para as ligações das pontas.	A cable would be too short for the end connectors.	Un cable quedaría demasiado corto para las conexiones de los extremos.
+Escolha outra esfera para a outra ponta do cabo.	Choose another sphere for the other end of the cable.	Elige otra esfera para el otro extremo del cable.
+Essa bolinha já prende outro cabo: escolha outra bolinha.	This bead already holds another cable: choose another bead.	Esa bolita ya sujeta otro cable: elige otra bolita.
+As duas pontas ficariam no mesmo cabo.	Both ends would be on the same cable.	Los dos extremos quedarían en el mismo cable.
+Curto demais para um cabo: as ligações das pontas pedem {1} mm entre os centros; aqui são {2} mm.	Too short for a cable: the end connectors need {1} mm between centers; here it is {2} mm.	Demasiado corto para un cable: las conexiones de los extremos piden {1} mm entre centros; aquí son {2} mm.
+O cabo ficaria a {1}° de outra peça na esfera (mínimo {2}°): a ligação de cabo não teria lugar.	The cable would be {1}° from another piece on the sphere (minimum {2}°): the cable connector would have no room.	El cable quedaría a {1}° de otra pieza en la esfera (mínimo {2}°): la conexión de cable no tendría lugar.
+O cabo sairia pelo canto de uma RC90.	The cable would come out through an RC90 corner.	El cable saldría por la esquina de una RC90.
+O cabo atravessaria uma placa.	The cable would go through a plate.	El cable atravesaría una placa.
+O cabo passaria por dentro de uma RC90.	The cable would pass through an RC90.	El cable pasaría por dentro de una RC90.
+Não há cabo no estoque: o cabo vem no Kit 3.	There is no cable in stock: the cable comes in Kit 3.	No hay cable en el inventario: el cable viene en el Kit 3.
+Esse cabo pede {1} bolinhas; um rolo inteiro tem {2} (com emenda, precisa de mais rolos).	This cable needs {1} beads; a whole roll has {2} (with a splice, it needs more rolls).	Ese cable pide {1} bolitas; un rollo entero tiene {2} (con empalme, necesita más rollos).
+Acabou o cabo: esse pedaço ({1} bolinhas) não cabe no que sobrou {2}.	Out of cable: this piece ({1} beads) does not fit in what is left {2}.	Se acabó el cable: ese tramo ({1} bolitas) no cabe en lo que sobró {2}.
+do rolo	of the roll	del rollo
+Acabaram as {1} do estoque ({2} nos kits escolhidos).	The {1} ran out ({2} in the chosen kits).	Se acabaron las {1} del inventario ({2} en los kits elegidos).
+Clique numa mola.	Click a bar.	Haz clic en una barra.
+O enrijecedor vai numa mola, não no cabo.	The stiffener goes on a bar, not on the cable.	El rigidizador va en una barra, no en el cable.
+O enrijecedor vai numa mola, não na diagonal.	The stiffener goes on a bar, not on the diagonal.	El rigidizador va en una barra, no en la diagonal.
+Não há enrijecedor para a {1} (só para B6 e B12).	There is no stiffener for the {1} (only for B6 and B12).	No hay rigidizador para la {1} (solo para B6 y B12).
+Acabaram os enrijecedores {1} do estoque.	The {1} stiffeners ran out.	Se acabaron los rigidizadores {1} del inventario.
+O anel fica no ar: pelo menos 1 módulo acima da chapa.	The ring floats: at least 1 module above the board.	El anillo queda en el aire: al menos 1 módulo sobre el tablero.
+Encostaria numa esfera ou em outro anel.	It would touch a sphere or another ring.	Tocaría una esfera u otro anillo.
+Este arquivo não é um projeto do siMOLAdor.	This file is not a siMOLAdor project.	Este archivo no es un proyecto de siMOLAdor.
+Arquivo sem o número do formato: não é um projeto do siMOLAdor ou está corrompido.	File without a format number: it is not a siMOLAdor project or it is corrupted.	Archivo sin número de formato: no es un proyecto de siMOLAdor o está dañado.
+Arquivo salvo numa versão mais nova do siMOLAdor{1}.	File saved in a newer version of siMOLAdor{1}.	Archivo guardado en una versión más nueva de siMOLAdor{1}.
+Nó inválido no arquivo.	Invalid node in the file.	Nodo inválido en el archivo.
+Peça {1} liga um nó que não existe.	Piece {1} joins a node that does not exist.	La pieza {1} une un nodo que no existe.
+Placa {1} com cantos inválidos.	Plate {1} has invalid corners.	Placa {1} con esquinas inválidas.
+Ligação {1} num nó que não existe.	Connector {1} on a node that does not exist.	Conexión {1} en un nodo que no existe.
+Ligação {1} inválida.	Invalid connector {1}.	Conexión {1} inválida.
+Chapa inválida no arquivo.	Invalid board in the file.	Tablero inválido en el archivo.
+A {1} M da GC {2}: cabe uma {3} entre os pilares.	{1} M from GC {2}: a {3} fits between the columns.	A {1} M de la GC {2}: cabe una {3} entre los pilares.
+triângulo equilátero de {1}	equilateral triangle of {1}	triángulo equilátero de {1}
+triângulo {1}–{2}–{3}	triangle {1}–{2}–{3}	triángulo {1}–{2}–{3}
+Vértice de {1} com as GC {2} e {3}.	Vertex of {1} with GCs {2} and {3}.	Vértice de {1} con las GC {2} y {3}.
+triângulo {1}{2}–{3}–{4}	triangle {1}{2}–{3}–{4}	triángulo {1}{2}–{3}–{4}
+isósceles	isosceles	isósceles
+{1} com a esfera {2}	{1} with sphere {2}	{1} con la esfera {2}
+pirâmide (ou treliça) com {1} esferas vizinhas	pyramid (or truss) with {1} neighbor spheres	pirámide (o celosía) con {1} esferas vecinas
+peça ilegível	unreadable piece	pieza ilegible
+código "{1}" inválido	invalid code "{1}"	código "{1}" inválido
+{1}: tipo "{2}" não é de peça criada	{1}: type "{2}" is not a created piece	{1}: el tipo "{2}" no es de pieza creada
+{1}: medidas inválidas	{1}: invalid sizes	{1}: medidas inválidas
+{1}: contorno da placa inválido	{1}: invalid plate outline	{1}: contorno de placa inválido
+{1}: barra sem comprimento	{1}: bar without a length	{1}: barra sin largo
+{1} já é uma peça do kit	{1} is already a kit piece	{1} ya es una pieza del kit
+{1} não é uma peça criada.	{1} is not a created piece.	{1} no es una pieza creada.
+{1} ainda está na montagem ({2} {3}).	{1} is still in the assembly ({2} {3}).	{1} todavía está en el montaje ({2} {3}).
+Este arquivo não é um catálogo de peças (.kit) do siMOLAdor.	This file is not a siMOLAdor piece catalog (.kit).	Este archivo no es un catálogo de piezas (.kit) de siMOLAdor.
+Catálogo de peças de uma versão mais nova do siMOLAdor.	Piece catalog from a newer version of siMOLAdor.	Catálogo de piezas de una versión más nueva de siMOLAdor.
+Catálogo de peças sem a lista de peças.	Piece catalog without the list of pieces.	Catálogo de piezas sin la lista de piezas.
+LIGAÇÃO	CONNECTOR	CONEXIÓN
+LIGAÇÃO DE BASE	GROUND CONNECTION	CONEXIÓN DE BASE
+LIGAÇÃO RÍGIDA	RIGID CONNECTOR	CONEXIÓN RÍGIDA
+LIGAÇÃO CONTÍNUA	CONTINUOUS CONNECTOR	CONEXIÓN CONTINUA
+CABO	CABLE	CABLE
+PAV. TÉRREO	GROUND FLOOR	PLANTA BAJA
+PLANTA DE	PLAN OF	PLANTA DE
+VISTA	VIEW	VISTA
+MEDIDAS EM MILÍMETRO (mm)	DIMENSIONS IN MILLIMETERS (mm)	MEDIDAS EN MILÍMETROS (mm)
+NÍVEL +{1}	LEVEL +{1}	NIVEL +{1}
+ISOMÉTRICA {1}	ISOMETRIC {1}	ISOMÉTRICA {1}
+VISTA - {1}	VIEW - {1}	VISTA - {1}
+DADOS DA ESTRUTURA	STRUCTURE DATA	DATOS DE LA ESTRUCTURA
+LISTA DE PEÇAS	PARTS LIST	LISTA DE PIEZAS
+CÓDIGO	CODE	CÓDIGO
+PEÇA	PIECE	PIEZA
+NO ESTOQUE	IN STOCK	EN INVENTARIO
+Cabo: {1} cm | {2} bolinhas	Cable: {1} cm | {2} beads	Cable: {1} cm | {2} bolitas
+TOTAL DE PEÇAS	TOTAL PIECES	TOTAL DE PIEZAS
+Cortes do cabo, rolo {1} (bolinhas): {2}	Cable cuts, roll {1} (beads): {2}	Cortes del cable, rollo {1} (bolitas): {2}
+vista {1}	view {1}	vista {1}
+PLANO DE CORTE DO CABO · RÉGUA 1:1	CABLE CUTTING PLAN · 1:1 RULER	PLAN DE CORTE DEL CABLE · REGLA 1:1
+PLANO DE CORTE DO CABO	CABLE CUTTING PLAN	PLAN DE CORTE DEL CABLE
+RÉGUA 1:1	1:1 RULER	REGLA 1:1
+PLANO DE CORTE DO CABO · RÉGUA DE BOLINHAS EM TAMANHO REAL (imprima em 100%, sem ajustar à página)	CABLE CUTTING PLAN · FULL-SIZE BEAD RULER (print at 100%, without fitting to page)	PLAN DE CORTE DEL CABLE · REGLA DE BOLITAS EN TAMAÑO REAL (imprime al 100%, sin ajustar a la página)
+pedaço	piece	tramo
+pedaços	pieces	tramos
+Pedaço {1}{2}{3}: {4} bolinhas · {5} cm	Piece {1}{2}{3}: {4} beads · {5} cm	Tramo {1}{2}{3}: {4} bolitas · {5} cm
+· parte {1} de {2} (emenda)	· part {1} of {2} (splice)	· parte {1} de {2} (empalme)
+100 mm: confira com uma régua antes de cortar	100 mm: check with a ruler before cutting	100 mm: comprueba con una regla antes de cortar
+ISOMÉTRICA	ISOMETRIC	ISOMÉTRICA
+Prancha vazia	Empty sheet	Lámina vacía
+Solte a peça sobre a cena.	Drop the piece on the scene.	Suelta la pieza sobre la escena.
+Aponte para a chapa.	Point at the board.	Apunta al tablero.
+Movimento cancelado: o lugar não era válido.	Move canceled: the spot was not valid.	Movimiento cancelado: el lugar no era válido.
+Ligado. A segunda esfera andou {1} M e as molas dela giraram (Ctrl+Z desfaz).	Joined. The second sphere moved {1} M and its bars turned (Ctrl+Z undoes).	Unido. La segunda esfera se movió {1} M y sus barras giraron (Ctrl+Z deshace).
+apertar o botão	pressing the button	apretar el botón
+{1}° em planta (a partir de X)	{1}° in plan (from X)	{1}° en planta (desde X)
+{1}° com a horizontal	{1}° to the horizontal	{1}° con la horizontal
+Posição	Position	Posición
+Limite do trecho azul	End of the blue stretch	Límite del tramo azul
+Barra livre: passe o cursor numa esfera para começar e puxe em qualquer direção.	Free bar: move the cursor over a sphere to start and pull in any direction.	Barra libre: pasa el cursor sobre una esfera para empezar y tira en cualquier dirección.
+fecha na esfera ({1})	closes on the sphere ({1})	cierra en la esfera ({1})
+no eixo	on the axis	en el eje
+passo de 15°	15° step	paso de 15°
+fecha triângulo com a esfera ({1}) usando {2}	closes a triangle with sphere ({1}) using {2}	cierra un triángulo con la esfera ({1}) usando {2}
+na altura z = {1} M	at height z = {1} M	a la altura z = {1} M
+{1}{2}° com a horizontal, {3}° em planta · ponta em z = {4} M	{1}{2}° to the horizontal, {3}° in plan · end at z = {4} M	{1}{2}° con la horizontal, {3}° en planta · extremo en z = {4} M
+(ponto {1} de {2}: Tab próximo, Shift+Tab volta)	(point {1} of {2}: Tab next, Shift+Tab back)	(punto {1} de {2}: Tab siguiente, Shift+Tab vuelve)
+{1}: {2}. Clique: a {3} e {4}. R: só a {5}.{6}	{1}: {2}. Click: the {3} and {4}. R: the {5} only.{6}	{1}: {2}. Clic: la {3} y {4}. R: solo la {5}.{6}
+{1}: só a {2} até {3} ({4}). R: com {5}.{6}	{1}: only the {2} up to {3} ({4}). R: with {5}.{6}	{1}: solo la {2} hasta {3} ({4}). R: con {5}.{6}
+Primeira esfera {1}: clique na outra esfera. Clique de novo nesta (ou Esc) cancela.	First sphere {1}: click the other sphere. Clicking this one again (or Esc) cancels.	Primera esfera {1}: haz clic en la otra esfera. Otro clic en esta (o Esc) cancela.
+Clique para começar a ligação nesta esfera; depois clique na outra esfera. Ou leve o cursor até um ponto verde, amarelo ou laranja.	Click to start the connection at this sphere; then click the other sphere. Or move the cursor to a green, yellow or orange point.	Haz clic para empezar la unión en esta esfera; luego haz clic en la otra esfera. O lleva el cursor hasta un punto verde, amarillo o naranja.
+Não dá para ligar essas esferas.	These spheres cannot be joined.	No se pueden unir esas esferas.
+A segunda esfera anda {1} M e as molas dela giram para a {2} caber.	The second sphere moves {1} M and its bars turn so the {2} fits.	La segunda esfera se mueve {1} M y sus barras giran para que quepa la {2}.
+Clique para ligar {1} a {2} com a {3}.{4}	Click to join {1} to {2} with the {3}.{4}	Haz clic para unir {1} con {2} usando la {3}.{4}
+{1} peças selecionadas.	{1} pieces selected.	{1} piezas seleccionadas.
+Nenhuma peça no retângulo.	No pieces in the rectangle.	Ninguna pieza en el rectángulo.
+Clique para deixar aqui (a peça anda {1} M; mexem {2} {3}).{4}{5}	Click to leave it here (the piece moves {1} M; {2} {3} move).{4}{5}	Haz clic para dejarla aquí (la pieza se mueve {1} M; se mueven {2} {3}).{4}{5}
+Esse caminho não tem limites nem posições na horizontal/vertical.	This path has no limits or horizontal/vertical positions.	Este camino no tiene límites ni posiciones horizontales/verticales.
+{1} ({2} de {3}): Tab próximo, Shift+Tab volta.	{1} ({2} of {3}): Tab next, Shift+Tab back.	{1} ({2} de {3}): Tab siguiente, Shift+Tab vuelve.
+Leve o cursor pelo caminho azul: é por ali que o conjunto pode andar.	Move the cursor along the blue path: that is where the group can move.	Lleva el cursor por el camino azul: por ahí puede moverse el conjunto.
+Leve o cursor pelo caminho azul: é por ali que a esfera pode andar.	Move the cursor along the blue path: that is where the sphere can move.	Lleva el cursor por el camino azul: por ahí puede moverse la esfera.
+Tab: referências do caminho.	Tab: path references.	Tab: referencias del camino.
+Clique para deixar aqui (a peça anda {1} M; mexem {2} {3}).{4}	Click to leave it here (the piece moves {1} M; {2} {3} move).{4}	Haz clic para dejarla aquí (la pieza se mueve {1} M; se mueven {2} {3}).{4}
+Clique para deixar o nó em {1} (anda {2} M).	Click to leave the node at {1} (moves {2} M).	Haz clic para dejar el nodo en {1} (se mueve {2} M).
+Tab pula para os limites do trecho azul.	Tab jumps to the ends of the blue stretch.	Tab salta a los límites del tramo azul.
+Abaixo da chapa: ↑ sobe.	Below the board: ↑ raises it.	Debajo del tablero: ↑ sube.
+{1} peças · altura {2}{3} M{4}{5}. ↑/↓ altura (Shift: 6 M), R gira, X/Y espelha.	{1} pieces · height {2}{3} M{4}{5}. ↑/↓ height (Shift: 6 M), R rotates, X/Y mirrors.	{1} piezas · altura {2}{3} M{4}{5}. ↑/↓ altura (Shift: 6 M), R gira, X/Y refleja.
+Comece por uma ligação de base: as outras peças saem das esferas.	Start with a ground connection: the other pieces come out of the spheres.	Empieza por una conexión de base: las demás piezas salen de las esferas.
+Nenhuma posição válida neste ponto.	No valid position at this point.	Ninguna posición válida en este punto.
+{1}. Puxe o cursor para mudar o ângulo{2}.	{1}. Pull the cursor to change the angle{2}.	{1}. Tira del cursor para cambiar el ángulo{2}.
+Na direção do eixo	Along the axis	En la dirección del eje
+; solte o Shift para voltar aos eixos	; release Shift to go back to the axes	; suelta Shift para volver a los ejes
+{1} opções neste ponto: R alterna.{2}	{1} options at this point: R switches.{2}	{1} opciones en este punto: R alterna.{2}
+Shift: barra inclinada.	Shift: tilted bar.	Shift: barra inclinada.
+Clique na outra ponta: uma esfera ou uma bolinha de outro cabo. Esc cancela.	Click the other end: a sphere or a bead of another cable. Esc cancels.	Haz clic en el otro extremo: una esfera o una bolita de otro cable. Esc cancela.
+{1}bolinha {2} de {3} do cabo	{1}bead {2} of {3} of the cable	{1}bolita {2} de {3} del cable
+nesta esfera	on this sphere	en esta esfera
+Clique na outra ponta. Clique de novo nesta (ou Esc) cancela.	Click the other end. Clicking this one again (or Esc) cancels.	Haz clic en el otro extremo. Otro clic en este (o Esc) cancela.
+Clique para prender o cabo {1}; depois clique na outra ponta.	Click to attach the cable {1}; then click the other end.	Haz clic para sujetar el cable {1}; luego haz clic en el otro extremo.
+preso na {1}	attached to the {1}	sujeto a la {1}
+preso no outro cabo	attached to the other cable	sujeto al otro cable
+{1} de {2}{3}. Clique para colocar.	{1} of {2}{3}. Click to place.	{1} de {2}{3}. Haz clic para colocar.
+Clique numa mola B6 ou B12 para pôr o enrijecedor (numa mola enrijecida, tira).	Click a B6 or B12 bar to add the stiffener (on a stiffened bar, it removes it).	Haz clic en una barra B6 o B12 para poner el rigidizador (en una barra rigidizada, lo quita).
+Clique para tirar o enrijecedor desta {1}.	Click to remove the stiffener from this {1}.	Haz clic para quitar el rigidizador de esta {1}.
+Clique para pôr o enrijecedor {1} nesta {2}.	Click to add the {1} stiffener to this {2}.	Haz clic para poner el rigidizador {1} en esta {2}.
+Aponte para onde vai o anel (↑/↓ mudam a altura).	Point where the ring goes (↑/↓ change the height).	Apunta adonde va el anillo (↑/↓ cambian la altura).
+Clique para deixar o anel aqui (altura {1} M; ↑/↓ mudam). Os cabos acompanham.	Click to leave the ring here (height {1} M; ↑/↓ change it). The cables follow.	Haz clic para dejar el anillo aquí (altura {1} M; ↑/↓ la cambian). Los cables lo siguen.
+Anel {1} em {2}. ↑/↓ muda a altura (Shift: 6 M). Depois, ligue cabos nele com o CABLE.	Ring {1} at {2}. ↑/↓ changes the height (Shift: 6 M). Then attach cables to it with the CABLE.	Anillo {1} en {2}. ↑/↓ cambia la altura (Shift: 6 M). Luego une cables a él con el CABLE.
+médio	medium	mediano
+Clique numa esfera com 2 ou mais cabos para juntá-los num clip de múltiplos cabos (até 5 por clip).	Click a sphere with 2 or more cables to gather them in a multiple cable clip (up to 5 per clip).	Haz clic en una esfera con 2 o más cables para juntarlos en un clip de varios cables (hasta 5 por clip).
+Essa esfera tem {1}: o clip múltiplo junta 2 ou mais.	This sphere has {1}: the multiple clip gathers 2 or more.	Esa esfera tiene {1}: el clip múltiple junta 2 o más.
+só um cabo	only one cable	solo un cable
+nenhum cabo	no cable	ningún cable
+Acabaram os clips de múltiplos cabos (M CABLE CLIP C): {1} nos kits escolhidos.	The multiple cable clips (M CABLE CLIP C) ran out: {1} in the chosen kits.	Se acabaron los clips de varios cables (M CABLE CLIP C): {1} en los kits elegidos.
+Clique para separar: cada um dos {1} cabos volta a ter a sua CABLE C e o seu clip.	Click to split: each of the {1} cables gets its own CABLE C and clip back.	Haz clic para separar: cada uno de los {1} cables vuelve a tener su CABLE C y su clip.
+Clique: os {1} cabos desta esfera num clip múltiplo (usa {2} CABLE C em vez de {3}{4}).	Click: the {1} cables on this sphere in a multiple clip (uses {2} CABLE C instead of {3}{4}).	Clic: los {1} cables de esta esfera en un clip múltiple (usa {2} CABLE C en vez de {3}{4}).
+; até {1} por clip	; up to {1} per clip	; hasta {1} por clip
+Grade desligada: leve o cursor até um ponto {1}.	Grid off: move the cursor to a {1} point.	Cuadrícula apagada: lleva el cursor hasta un punto {1}.
+Ainda não há pontos azuis/amarelos: a GC vai livre. Coloque duas GC a um vão de barra para surgirem os triângulos.	No blue/yellow points yet: the GC goes free. Place two GCs one bar span apart for the triangles to appear.	Aún no hay puntos azules/amarillos: la GC va libre. Coloca dos GC a una luz de barra para que aparezcan los triángulos.
+próxima opção	next option	siguiente opción
+Clique: {1} (a ponta vira a GC).	Click: {1} (the end becomes the GC).	Clic: {1} (el extremo se vuelve la GC).
+Clique: GC e {1}.	Click: GC and {1}.	Clic: GC y {1}.
+Use um número (ex.: 3,5).	Use a number (e.g. 3.5).	Usa un número (ej.: 3,5).
+Acrescentar uma chapa deste lado	Add a board on this side	Agregar un tablero de este lado
+Seleciona as peças desta chapa (para copiar, mover ou apagar)	Selects the pieces on this board (to copy, move or delete)	Selecciona las piezas de este tablero (para copiar, mover o borrar)
+Selecionar peças	Select pieces	Seleccionar piezas
+Salva só a estrutura desta chapa como .mola	Saves only this board's structure as .mola	Guarda solo la estructura de este tablero como .mola
+Exportar .mola	Export .mola	Exportar .mola
+Põe um .mola em cima desta chapa	Puts a .mola on top of this board	Pone un .mola sobre este tablero
+Importar .mola	Import .mola	Importar .mola
+Pranchas só desta chapa	Sheets for this board only	Láminas solo de este tablero
+Apagar {1} e a estrutura que está só nela?	Delete {1} and the structure that is only on it?	¿Borrar {1} y la estructura que está solo en él?
+Não foi possível ler o arquivo.	The file could not be read.	No se pudo leer el archivo.
+Há uma versão nova do siMOLAdor pronta.	A new version of siMOLAdor is ready.	Hay una versión nueva de siMOLAdor lista.
+Atualizado para a versão	Updated to version	Actualizado a la versión
+Voltar ao valor da planilha	Back to the spreadsheet value	Volver al valor de la planilla
+padrão	default	por defecto
+Ainda não está guardado para usar sem internet (abra pelo site, com internet, uma vez).	Not yet stored for offline use (open it from the website, online, once).	Aún no está guardado para usar sin internet (ábrelo desde el sitio, con internet, una vez).
+Dá para instalar como aplicativo (ícone próprio, janela própria).	It can be installed as an app (its own icon, its own window).	Se puede instalar como aplicación (ícono propio, ventana propia).
+Há uma versão nova pronta.	A new version is ready.	Hay una versión nueva lista.
+O histórico completo está no CHANGELOG do repositório.	The full history is in the repository's CHANGELOG.	El historial completo está en el CHANGELOG del repositorio.
+Barras só nos eixos (Shift inclina uma barra) (4)	Bars on the axes only (Shift tilts a bar) (4)	Barras solo en los ejes (Shift inclina una barra) (4)
+Inclinadas em passos de {1}° (5)	Tilted in {1}° steps (5)	Inclinadas en pasos de {1}° (5)
+Qualquer direção 3D, com encaixes em esferas, triângulos e alturas (6)	Any 3D direction, snapping to spheres, triangles and heights (6)	Cualquier dirección 3D, con encajes en esferas, triángulos y alturas (6)
+O siMOLAdor encontrou um erro	siMOLAdor ran into an error	siMOLAdor encontró un error
+A estrutura está salva no navegador.	The structure is saved in the browser.	La estructura está guardada en el navegador.
+Como há configurações suas valendo, o mais provável é que alguma delas não tenha funcionado.	Since you have your own settings on, most likely one of them did not work.	Como hay configuraciones tuyas activas, lo más probable es que alguna no haya funcionado.
+Recarregue para continuar.	Reload to continue.	Recarga para continuar.
+Voltar às configurações padrão	Back to the default settings	Volver a la configuración por defecto
+Relatório copiado: mande para a equipe	Report copied: send it to the team	Informe copiado: envíalo al equipo
+Relatório baixado	Report downloaded	Informe descargado
+Copiar relatório	Copy report	Copiar informe
+Relatório copiado.	Report copied.	Informe copiado.
+Relatório baixado (.txt).	Report downloaded (.txt).	Informe descargado (.txt).
+rolo de 3,35 m	3.35 m roll	rollo de 3,35 m
+Acabaram as esferas: as barras só ligam esferas que já existem	Out of spheres: bars only join existing spheres	Se acabaron las esferas: las barras solo unen esferas que ya existen
+Nenhum kit no estoque. Escolha as caixas em	No kit in stock. Choose the boxes in	Ningún kit en el inventario. Elige las cajas en
+, no alto à direita.	, at the top right.	, arriba a la derecha.
+clique numa esfera e depois em outra	click a sphere and then another	haz clic en una esfera y luego en otra
+clique numa mola B6 ou B12	click a B6 or B12 bar	haz clic en una barra B6 o B12
+clique ou arraste para a cena	click or drag into the scene	haz clic o arrastra a la escena
+restam {1} de {2} {3}	{1} of {2} {3} left	quedan {1} de {2} {3}
+Abrir a paleta de peças	Open the piece palette	Abrir la paleta de piezas
+pranchas do Desafio 2022	Desafio 2022 sheets	láminas del Desafío 2022
+medida no kit	measured on the kit	medida en el kit
+ainda a medir (formato provisório)	still to be measured (provisional shape)	aún por medir (forma provisoria)
+de cima	top	de arriba
+de baixo	bottom	de abajo
+inclinada: {1}° com a horizontal, {2}	tilted: {1}° to the horizontal, {2}	inclinada: {1}° con la horizontal, {2}
+Use números em módulos (ex.: 5,196) ou em mm (ex.: 77,3 mm).	Use numbers in modules (e.g. 5.196) or in mm (e.g. 77.3 mm).	Usa números en módulos (ej.: 5,196) o en mm (ej.: 77,3 mm).
+Coordenada {1} em módulos	{1} coordinate in modules	Coordenada {1} en módulos
+Anel de cabo	Cable ring	Anillo de cable
+{1} (cada um com um CABLE CLIP C no anel)	{1} (each with a CABLE CLIP C on the ring)	{1} (cada uno con un CABLE CLIP C en el anillo)
+nenhum ainda: ligue cabos nele com o CABLE	none yet: attach cables to it with the CABLE	ninguno aún: une cables a él con el CABLE
+duplo clique ou arraste: o anel anda no ar (↑/↓ mudam a altura) e os cabos acompanham	double-click or drag: the ring moves in the air (↑/↓ change the height) and the cables follow	doble clic o arrastra: el anillo se mueve en el aire (↑/↓ cambian la altura) y los cables lo siguen
+na 1.x os cabos ficam esticados até o anel; a forma de equilíbrio (com cargas) fica para a 3.x	in 1.x the cables stay taut up to the ring; the equilibrium shape (with loads) comes in 3.x	en la 1.x los cables quedan tensos hasta el anillo; la forma de equilibrio (con cargas) queda para la 3.x
+Ponto de cabo	Cable point	Punto de cable
+No cabo principal	On the main cable	En el cable principal
+bolinha {1} de {2}	bead {1} of {2}	bolita {1} de {2}
+o CABLE CLIP C prende a bolinha do cabo principal (furo do meio) e a ponta do pendural	the CABLE CLIP C holds the main cable's bead (middle hole) and the hanger's end	el CABLE CLIP C sujeta la bolita del cable principal (agujero del medio) y el extremo del péndulo
+duplo clique: o ponto anda na linha do pendural, bolinha a bolinha	double-click: the point moves along the hanger line, bead by bead	doble clic: el punto se mueve por la línea del péndulo, bolita a bolita
+Remover pendural (o cabo principal fica)	Remove hanger (the main cable stays)	Quitar péndulo (el cable principal queda)
+{1} mm acima da chapa	{1} mm above the board	{1} mm sobre el tablero
+{1} num clip de múltiplos cabos ({2} CABLE C)	{1} in a multiple cable clip ({2} CABLE C)	{1} en un clip de varios cables ({2} CABLE C)
+{1}, cada um com a sua CABLE C (o clip múltiplo junta até 5)	{1}, each with its own CABLE C (the multiple clip gathers up to 5)	{1}, cada uno con su CABLE C (el clip múltiple junta hasta 5)
+nós	nodes	nodos
+CABLE CLIP C no outro cabo	CABLE CLIP C on the other cable	CABLE CLIP C en el otro cable
+{1} módulos = {2} mm	{1} modules = {2} mm	{1} módulos = {2} mm
+Pedaço de cabo	Cable piece	Tramo de cable
+{1} (retos entre os pontos de cabo, esticados)	{1} (straight between the cable points, taut)	{1} (rectos entre los puntos de cable, tensos)
+na bolinha {1} · {2}	at bead {1} · {2}	en la bolita {1} · {2}
+No plano de corte	In the cutting plan	En el plan de corte
+pedaço {1}{2}	piece {1}{2}	tramo {1}{2}
+(sem cortar: ocupa um rolo)	(uncut: takes a roll)	(sin cortar: ocupa un rollo)
+{1} · cabo · {2}	{1} · cable · {2}	{1} · cable · {2}
+esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera	sphere · CABLE C · CABLE CLIP C · cable · CABLE CLIP C · CABLE C · sphere	esfera · CABLE C · CABLE CLIP C · cable · CABLE CLIP C · CABLE C · esfera
+esfera · CABLE C · CABLE CLIP C	sphere · CABLE C · CABLE CLIP C	esfera · CABLE C · CABLE CLIP C
+esfera · CABLE C · M CABLE CLIP C	sphere · CABLE C · M CABLE CLIP C	esfera · CABLE C · M CABLE CLIP C
+Na ponta {1}	At end {1}	En el extremo {1}
+só este cabo	this cable only	solo este cable
+Sem cortar (laço): o clip prende a bolinha da medida e o resto do rolo fica preso, sobrando	Uncut (loop): the clip holds the bead at the length and the rest of the roll stays attached, left over	Sin cortar (lazo): el clip sujeta la bolita de la medida y el resto del rollo queda sujeto, sobrando
+Remover cabo	Remove cable	Quitar cable
+{1} (mola rígida)	{1} (stiff bar)	{1} (barra rígida)
+Par contínuo	Continuous pair	Par continuo
+molas no eixo {1}{2} (R troca o lado)	bars on the {1}{2} axis (R switches the side)	barras en el eje {1}{2} (R cambia el lado)
+Nome da chapa	Board name	Nombre del tablero
+Nome da chapa (aparece no menu, nas pranchas e nos arquivos). Vazio = nome padrão.	Board name (shows in the menu, on the sheets and in the files). Empty = default name.	Nombre del tablero (aparece en el menú, en las láminas y en los archivos). Vacío = nombre por defecto.
+{1} × {2} módulos = {3} × {4} mm	{1} × {2} modules = {3} × {4} mm	{1} × {2} módulos = {3} × {4} mm
+Peças em cima	Pieces on it	Piezas encima
+Centro da chapa em X, em módulos (decimais valem)	Board center in X, in modules (decimals allowed)	Centro del tablero en X, en módulos (valen decimales)
+Centro da chapa em Y, em módulos (decimais valem)	Board center in Y, in modules (decimals allowed)	Centro del tablero en Y, en módulos (valen decimales)
+Graus, anti-horário visto de cima	Degrees, counterclockwise seen from above	Grados, antihorario visto desde arriba
+15° no sentido horário (visto de cima)	15° clockwise (seen from above)	15° en sentido horario (visto desde arriba)
+15° no sentido anti-horário (visto de cima)	15° counterclockwise (seen from above)	15° en sentido antihorario (visto desde arriba)
+Giro livre em graus (anti-horário visto de cima), em torno do centro	Free rotation in degrees (counterclockwise seen from above), about the center	Giro libre en grados (antihorario visto desde arriba), alrededor del centro
+Apagar chapa	Delete board	Borrar tablero
+M da anterior	M from the previous one	M del anterior
+Distância entre elas (módulos)	Distance between them (modules)	Distancia entre ellos (módulos)
+{1} módulos ({2} mm)	{1} modules ({2} mm)	{1} módulos ({2} mm)
+Distância livre entre as chapas, em módulos (decimais valem)	Clear distance between the boards, in modules (decimals allowed)	Distancia libre entre los tableros, en módulos (valen decimales)
+: o pedaço que não cabe inteiro numa sobra é dividido, e as partes se unem com um CABLE CLIP C.	: the piece that does not fit whole in a leftover is split, and the parts are joined with a CABLE CLIP C.	: el tramo que no cabe entero en un sobrante se divide, y las partes se unen con un CABLE CLIP C.
+{1} · sem cortar (o resto do rolo fica preso)	{1} · uncut (the rest of the roll stays attached)	{1} · sin cortar (el resto del rollo queda sujeto)
+Use números: deslocamento em módulos (ou mm) e vezes ≥ 1.	Use numbers: offset in modules (or mm) and times ≥ 1.	Usa números: desplazamiento en módulos (o mm) y veces ≥ 1.
+Quantas cópias	How many copies	Cuántas copias
+Criar cópias	Create copies	Crear copias
+Cada cópia anda X, Y, Z módulos da anterior.	Each copy moves X, Y, Z modules from the previous one.	Cada copia se mueve X, Y, Z módulos desde la anterior.
+Seleção ({1} peças)	Selection ({1} pieces)	Selección ({1} piezas)
+peças selecionadas	pieces selected	piezas seleccionadas
+Copiar peças	Copy pieces	Copiar piezas
+M ou Ctrl+X: leva as peças para outro lugar	M or Ctrl+X: takes the pieces somewhere else	M o Ctrl+X: lleva las piezas a otro lugar
+Limpar seleção	Clear selection	Limpiar selección
+· {1} peças	· {1} pieces	· {1} piezas
+{1} peças selecionadas	{1} pieces selected	{1} piezas seleccionadas
+· com enrijecedor	· with stiffener	· con rigidizador
+0: rígida (as ligações travam tudo)	0: rigid (the connectors lock everything)	0: rígida (las conexiones traban todo)
+solta (sem GC): arraste para mover	loose (no GC): drag to move	suelta (sin GC): arrastra para mover
+livre: {1} graus de liberdade	free: {1} degrees of freedom	libre: {1} grados de libertad
+Térreo	Ground floor	Planta baja
+Inserir a vista {1}	Insert view {1}	Insertar la vista {1}
+Vista {1}	View {1}	Vista {1}
+Inserir a isométrica {1}-{2} ({3})	Insert isometric {1}-{2} ({3})	Insertar la isométrica {1}-{2} ({3})
+Isométrica {1}-{2}	Isometric {1}-{2}	Isométrica {1}-{2}
+Escala 1/n, com n entre {1} e {2}	Scale 1/n, with n between {1} and {2}	Escala 1/n, con n entre {1} y {2}
+Escala personalizada: n de 1/n	Custom scale: n of 1/n	Escala personalizada: n de 1/n
+Quais desenhos vão em cada prancha: tira os inseridos, devolve os tirados e cada um à prancha dele (folha	Which drawings go on each sheet: removes the inserted ones, brings back the removed ones and each to its own sheet (sheet	Qué dibujos van en cada lámina: quita los insertados, devuelve los quitados y cada uno a su lámina (hoja
+Posições	Positions	Posiciones
+Onde cada coisa fica na folha: desenhos, títulos e nomes das peças arrastados voltam ao lugar. Os desenhos continuam os mesmos.	Where each thing sits on the sheet: dragged drawings, titles and piece labels go back to their place. The drawings stay the same.	Dónde queda cada cosa en la hoja: dibujos, títulos y nombres de piezas arrastrados vuelven a su lugar. Los dibujos siguen siendo los mismos.
+Indicações de vistas	View markers	Indicaciones de vistas
+Indicações de peças	Piece labels	Indicaciones de piezas
+Escala do desenho	Drawing scale	Escala del dibujo
+Marcado: segue o Mostrar da barra de cima. Desmarcado: vale o que estiver marcado aqui	Checked: follows the Show in the top bar. Unchecked: what is checked here applies	Marcado: sigue el Mostrar de la barra de arriba. Desmarcado: vale lo que esté marcado aquí
+Tira este desenho da prancha (Delete)	Removes this drawing from the sheet (Delete)	Quita este dibujo de la lámina (Delete)
+Apaga a linha de corte das plantas e todos os desenhos deste corte	Deletes the section line from the plans and all drawings of this section	Borra la línea de corte de las plantas y todos los dibujos de este corte
+Eixos e níveis	Grid lines and levels	Ejes y niveles
+Indicações de peças (PILAR, LIGAÇÃO…)	Piece labels (COLUMN, CONNECTOR…)	Indicaciones de piezas (PILAR, CONEXIÓN…)
+Indicações de vistas (A–D) e de cortes	View markers (A–D) and section lines	Indicaciones de vistas (A–D) y de cortes
+Desenhos renderizados (foto da cena 3D na escala do desenho); desligado = simplificado, em linhas	Rendered drawings (photo of the 3D scene at the drawing scale); off = simplified line drawing	Dibujos renderizados (foto de la escena 3D a la escala del dibujo); apagado = simplificado, en líneas
+Largura da folha (mm)	Sheet width (mm)	Ancho de la hoja (mm)
+Altura da folha (mm)	Sheet height (mm)	Alto de la hoja (mm)
+Clique numa planta baixa para marcar a linha de corte.	Click a floor plan to mark the section line.	Haz clic en una planta para marcar la línea de corte.
+Clique numa planta baixa (corte vertical) ou numa vista (planta baixa a uma altura).	Click a floor plan (vertical section) or an elevation (floor plan at a height).	Haz clic en una planta (corte vertical) o en una vista (planta a una altura).
+Os dois pontos do corte precisam ser diferentes.	The two section points must be different.	Los dos puntos del corte tienen que ser distintos.
+a isométrica {1}	isometric {1}	la isométrica {1}
+a vista {1}	view {1}	la vista {1}
+A capa não recebe desenhos: clique numa das outras pranchas.	The cover takes no drawings: click one of the other sheets.	La portada no recibe dibujos: haz clic en una de las otras láminas.
+Só os desenhos saem da prancha. Os títulos da capa e os nomes das peças ficam.	Only drawings leave the sheet. The cover titles and piece labels stay.	Solo los dibujos salen de la lámina. Los títulos de la portada y los nombres de las piezas quedan.
+{1} desenho{2} tirado{3} da prancha. Ctrl+Z desfaz.	{1} drawing{2} removed from the sheet. Ctrl+Z undoes.	{1} dibujo{2} quitado{3} de la lámina. Ctrl+Z deshace.
+Escreva a altura do corte, por exemplo 12,5 cm, 125 mm ou 8 M (módulos).	Type the section height, e.g. 12.5 cm, 125 mm or 8 M (modules).	Escribe la altura del corte, por ejemplo 12,5 cm, 125 mm u 8 M (módulos).
+{1}: liga e desliga em todas as pranchas (menos nos desenhos com ajuste próprio)	{1}: on/off on all sheets (except drawings with their own setting)	{1}: activa y desactiva en todas las láminas (menos en los dibujos con ajuste propio)
+Desenhos das pranchas no automático. Ctrl+Z desfaz.	Sheet drawings back to automatic. Ctrl+Z undoes.	Dibujos de las láminas en automático. Ctrl+Z deshace.
+Posições no automático. Ctrl+Z desfaz.	Positions back to automatic. Ctrl+Z undoes.	Posiciones en automático. Ctrl+Z deshace.
+Tira esta prancha vazia	Removes this empty sheet	Quita esta lámina vacía
+Clique no segundo ponto da linha de corte. O corte olha para a esquerda de quem vai do 1º ao 2º ponto.	Click the second point of the section line. The section looks to the left of someone going from the 1st to the 2nd point.	Haz clic en el segundo punto de la línea de corte. El corte mira a la izquierda de quien va del 1.º al 2.º punto.
+Clique para cortar a {1} da chapa: sai uma planta baixa nessa altura. Esc cancela.	Click to cut at {1} above the board: a floor plan at that height comes out. Esc cancels.	Haz clic para cortar a {1} del tablero: sale una planta a esa altura. Esc cancela.
+Numa planta baixa, clique no primeiro ponto da linha de corte. Numa vista, clique na altura para uma planta baixa cortada. Esc cancela.	On a floor plan, click the first point of the section line. On an elevation, click at a height for a floor plan cut there. Esc cancels.	En una planta, haz clic en el primer punto de la línea de corte. En una vista, haz clic en la altura para una planta cortada. Esc cancela.
+Clique na prancha onde vai {1} (escala {2}). Esc cancela.	Click the sheet where {1} goes (scale {2}). Esc cancels.	Haz clic en la lámina donde va {1} (escala {2}). Esc cancela.
+{1} {2}: arraste um deles para mover todos. Delete tira os desenhos da prancha; Esc limpa.	{1} {2}: drag one to move them all. Delete removes the drawings from the sheet; Esc clears.	{1} {2}: arrastra uno para mover todos. Delete quita los dibujos de la lámina; Esc limpia.
+{1}: arraste para mudar de lugar. Delete tira da prancha; Esc fecha.	{1}: drag to move it. Delete removes it from the sheet; Esc closes.	{1}: arrastra para cambiarlo de lugar. Delete lo quita de la lámina; Esc cierra.
+Editar texto da prancha	Edit sheet text	Editar texto de la lámina
+Clique · Clique	Click · Click	Clic · Clic
+Duplo clique	Double-click	Doble clic
+G (peça andando livre)	G (piece moving freely)	G (pieza moviéndose libre)
+Espaço (peça andando)	Space (piece moving)	Espacio (pieza en movimiento)
+Tab (peça andando)	Tab (piece moving)	Tab (pieza en movimiento)
+Ctrl + clique	Ctrl + click	Ctrl + clic
+Solte para encaixar.	Release to place.	Suelta para encajar.
+Clique para encaixar. R gira;{1} Esc para parar.	Click to place. R rotates;{1} Esc stops.	Clic para encajar. R gira;{1} Esc para terminar.
+Shift inclina a barra;	Shift tilts the bar;	Shift inclina la barra;
+Leve a peça até um ponto verde ou até uma esfera.	Move the piece to a green point or to a sphere.	Lleva la pieza hasta un punto verde o hasta una esfera.
+· versão {1}	· version {1}	· versión {1}
+Abre o arquivo (o navegador pode pedir permissão)	Opens the file (the browser may ask for permission)	Abre el archivo (el navegador puede pedir permiso)
+Abre a cópia guardada do último salvamento	Opens the copy kept from the last save	Abre la copia guardada del último guardado
+Abre esta cópia (a estrutura atual também vira uma cópia antes)	Opens this copy (the current structure also becomes a copy first)	Abre esta copia (la estructura actual también se vuelve una copia antes)
+peças ·	pieces ·	piezas ·
+Antes de abrir outro projeto, e a cada 5 min de trabalho, a estrutura é guardada aqui.	Before opening another project, and every 5 min of work, the structure is kept here.	Antes de abrir otro proyecto, y cada 5 min de trabajo, la estructura se guarda aquí.
+Kit 3 (azul): cabos, anéis, enrijecedores e duas chapas de base · em breve	Kit 3 (blue): cables, rings, stiffeners and two base boards · coming soon	Kit 3 (azul): cables, anillos, rigidizadores y dos tableros base · próximamente
+Menos uma caixa do {1}	One box less of {1}	Una caja menos del {1}
+Mais uma caixa do {1}	One more box of {1}	Una caja más del {1}
+sem limite · mín. {1}	unlimited · min. {1}	sin límite · mín. {1}
+sem limite	unlimited	sin límite
+: baixa de novo	: downloads again	: descarga de nuevo
+Alterações ainda não salvas em {1} (estão guardadas no navegador)	Changes not yet saved to {1} (they are kept in the browser)	Cambios aún no guardados en {1} (están guardados en el navegador)
+Alterações não salvas	Unsaved changes	Cambios sin guardar
+Projeto do siMOLAdor	siMOLAdor project	Proyecto de siMOLAdor
+{1} baixado (este navegador não grava por cima do arquivo: ele vai para a pasta de downloads).	{1} downloaded (this browser does not overwrite the file: it goes to the downloads folder).	{1} descargado (este navegador no sobrescribe el archivo: va a la carpeta de descargas).
+Não foi possível abrir: o arquivo não é um .mola ou está corrompido.	Could not open: the file is not a .mola or it is corrupted.	No se pudo abrir: el archivo no es un .mola o está dañado.
+antes de abrir um exemplo	before opening an example	antes de abrir un ejemplo
+antes de abrir outro arquivo	before opening another file	antes de abrir otro archivo
+{1} Abrir assim mesmo? O que esta versão não conhece fica de fora; se salvar por cima, isso se perde. Atualize o siMOLAdor para abrir tudo.	{1} Open anyway? What this version does not know is left out; if you save over it, that is lost. Update siMOLAdor to open everything.	{1} ¿Abrir igual? Lo que esta versión no conoce queda fuera; si guardas encima, se pierde. Actualiza siMOLAdor para abrir todo.
+Arquivo de uma versão mais nova: aberto só com o que esta versão conhece. Confira antes de salvar por cima.	File from a newer version: opened only with what this version knows. Check before saving over it.	Archivo de una versión más nueva: abierto solo con lo que esta versión conoce. Revisa antes de guardar encima.
+Não foi possível abrir o arquivo.	The file could not be opened.	No se pudo abrir el archivo.
+{1} não foi encontrado; abri a cópia guardada do último salvamento.	{1} was not found; I opened the copy kept from the last save.	No se encontró {1}; abrí la copia guardada del último guardado.
+Cópia automática de {1} aberta. Salve com Ctrl+S para guardar num arquivo.	Automatic copy from {1} opened. Save with Ctrl+S to keep it in a file.	Copia automática de {1} abierta. Guarda con Ctrl+S para conservarla en un archivo.
+antes de começar um projeto novo	before starting a new project	antes de empezar un proyecto nuevo
+a cada 5 min de trabalho	every 5 min of work	cada 5 min de trabajo
+siMOLAdor instalado: ele aparece no menu de programas e abre sem internet.	siMOLAdor installed: it shows up in the programs menu and opens without internet.	siMOLAdor instalado: aparece en el menú de programas y abre sin internet.
+Este modelo tem {1} {2} a outra (barra que não chegou na esfera). Já está selecionada: Delete apaga junto com a barra.	This model has {1} {2} another (a bar that did not reach the sphere). It is already selected: Delete removes it with the bar.	Este modelo tiene {1} {2} otra (barra que no llegó a la esfera). Ya está seleccionada: Delete la borra junto con la barra.
+esfera sobreposta	overlapping sphere	esfera superpuesta
+Inércia ligada: a vista desliza um pouco depois de soltar o mouse (B).	Inertia on: the view glides a little after releasing the mouse (B).	Inercia activada: la vista se desliza un poco al soltar el mouse (B).
+Vista firme: para assim que você solta o mouse (B).	Steady view: stops as soon as you release the mouse (B).	Vista firme: se detiene apenas sueltas el mouse (B).
+Vista paralela: sem perspectiva, as medidas não encolhem com a distância (P).	Parallel view: no perspective, sizes do not shrink with distance (P).	Vista paralela: sin perspectiva, las medidas no se achican con la distancia (P).
+Vista em perspectiva (P).	Perspective view (P).	Vista en perspectiva (P).
+{1} não tem outra peça no mesmo grupo.	{1} has no other piece in the same group.	{1} no tiene otra pieza en el mismo grupo.
+Colado. Clique de novo para outra cópia; Esc termina.	Pasted. Click again for another copy; Esc finishes.	Pegado. Haz clic de nuevo para otra copia; Esc termina.
+O ponto anda na linha do pendural, bolinha a bolinha: o cabo principal acompanha, esticado. Esc cancela.	The point moves along the hanger line, bead by bead: the main cable follows, taut. Esc cancels.	El punto se mueve por la línea del péndulo, bolita a bolita: el cable principal lo sigue, tenso. Esc cancela.
+Essa peça não mexe com a estrutura no lugar.	This piece does not move with the structure in place.	Esta pieza no se mueve con la estructura en su lugar.
+Modo {1} de {2}: a peça segue só essa liberdade (caminho azul/vermelho). G: próximo modo.	Mode {1} of {2}: the piece follows only this freedom (blue/red path). G: next mode.	Modo {1} de {2}: la pieza sigue solo esa libertad (camino azul/rojo). G: siguiente modo.
+Livre de novo ({1} graus de liberdade): arraste para qualquer lado. G: seguir um modo só.	Free again ({1} degrees of freedom): drag anywhere. G: follow a single mode.	Libre de nuevo ({1} grados de libertad): arrastra hacia cualquier lado. G: seguir un solo modo.
+Só há uma etapa aqui: {1}.{2}	There is only one stage here: {1}.{2}	Aquí hay una sola etapa: {1}.{2}
+A posição ficou.	The position was kept.	La posición quedó.
+Nada mais pode mexer junto com essa peça.	Nothing else can move along with this piece.	Nada más puede moverse junto con esta pieza.
+Já está na primeira etapa.	Already at the first stage.	Ya está en la primera etapa.
+Já está na última etapa.	Already at the last stage.	Ya está en la última etapa.
+A posição da etapa anterior ficou (Ctrl+Z volta).	The previous stage's position was kept (Ctrl+Z goes back).	La posición de la etapa anterior quedó (Ctrl+Z vuelve).
+{1} peças copiadas. Ctrl+V cola (R gira, X/Z espelha, ↑/↓ muda a altura).	{1} pieces copied. Ctrl+V pastes (R rotates, X/Z mirrors, ↑/↓ changes the height).	{1} piezas copiadas. Ctrl+V pega (R gira, X/Z refleja, ↑/↓ cambia la altura).
+Apagar {1} e as {2} peças que estão só {3}?	Delete {1} and the {2} pieces that are only on {3}?	¿Borrar {1} y las {2} piezas que están solo {3}?
+Essa chapa ainda está vazia.	This board is still empty.	Este tablero todavía está vacío.
+chapa {1}	board {1}	tablero {1}
+Arquivo inválido.	Invalid file.	Archivo inválido.
+O arquivo não tem peças.	The file has no pieces.	El archivo no tiene piezas.
+{1} peças importadas na chapa.	{1} pieces imported onto the board.	{1} piezas importadas en el tablero.
+Selecione peças para repetir.	Select pieces to repeat.	Selecciona piezas para repetir.
+cópia criada	copy created	copia creada
+cópias criadas	copies created	copias creadas
+Parou na cópia {1}: {2}	Stopped at copy {1}: {2}	Se detuvo en la copia {1}: {2}
+As barras não chegam exatamente lá: foi para o ponto possível mais perto, ({1}).	The bars do not reach exactly there: it went to the nearest possible point, ({1}).	Las barras no llegan exactamente allí: fue al punto posible más cercano, ({1}).
+Barras livres: a ponta segue o cursor em qualquer direção; encaixa em esferas, em triângulos com esferas vizinhas e nas alturas que já existem.	Free bars: the end follows the cursor in any direction; it snaps to spheres, to triangles with neighbor spheres and to existing heights.	Barras libres: el extremo sigue el cursor en cualquier dirección; encaja en esferas, en triángulos con esferas vecinas y en las alturas que ya existen.
+Sem cortar: o pedaço ocupa um rolo só para ele e a sobra fica presa.	Uncut: the piece takes a whole roll and the leftover stays attached.	Sin cortar: el tramo ocupa un rollo solo para él y el sobrante queda sujeto.
+O cabo volta a ser cortado na medida.	The cable is cut to length again.	El cable vuelve a cortarse a medida.
+Peças desconhecidas deixadas de fora: {1}.{2}	Unknown pieces left out: {1}.{2}	Piezas desconocidas dejadas fuera: {1}.{2}
+Arquivo feito com módulo de {1} mm; o programa está com {2} mm (posições em módulos iguais, medidas em mm diferentes).	File made with a {1} mm module; the program is set to {2} mm (same positions in modules, different sizes in mm).	Archivo hecho con módulo de {1} mm; el programa está con {2} mm (posiciones en módulos iguales, medidas en mm distintas).
+Modo {1} de {2} (G troca).	Mode {1} of {2} (G switches).	Modo {1} de {2} (G cambia).
+G: seguir um modo só.	G: follow a single mode.	G: seguir un solo modo.
+Etapa {1} de {2}: {3} (Espaço amplia, Shift+Espaço volta).{4}	Stage {1} of {2}: {3} (Space widens, Shift+Space goes back).{4}	Etapa {1} de {2}: {3} (Espacio amplía, Shift+Espacio vuelve).{4}
+Etapa {1} de {2}: {3}{4}.	Stage {1} of {2}: {3}{4}.	Etapa {1} de {2}: {3}{4}.
+Espaço amplia, Shift+Espaço volta; Esc cancela.	Space widens, Shift+Space goes back; Esc cancels.	Espacio amplía, Shift+Espacio vuelve; Esc cancela.
+{1}Leve a esfera pelo caminho: azul pode, vermelho não. Tab percorre as referências.{2}	{1}Move the sphere along the path: blue is allowed, red is not. Tab cycles the references.{2}	{1}Lleva la esfera por el camino: azul se puede, rojo no. Tab recorre las referencias.{2}
+{1}Anda num caminho (1 grau de liberdade): azul pode, vermelho não. Tab: limites e posições na horizontal/vertical.{2}	{1}Moves along a path (1 degree of freedom): blue is allowed, red is not. Tab: limits and horizontal/vertical positions.{2}	{1}Se mueve por un camino (1 grado de libertad): azul se puede, rojo no. Tab: límites y posiciones horizontales/verticales.{2}
+{1}Livre ({2} graus de liberdade): arraste; o resto do conjunto mexe só o que precisar.{3}	{1}Free ({2} degrees of freedom): drag; the rest of the group moves only as needed.{3}	{1}Libre ({2} grados de libertad): arrastra; el resto del conjunto se mueve solo lo necesario.{3}

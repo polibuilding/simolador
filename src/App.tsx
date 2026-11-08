@@ -4,7 +4,6 @@ import { Palette } from "./ui/Palette";
 import { PropertiesPanel, SelectionTag, SummaryTab } from "./ui/PropertiesPanel";
 import { HintLine, VersionTag } from "./ui/StatusBar";
 import { Dock } from "./ui/Dock";
-import { AdjustSwitch } from "./ui/AdjustSwitch";
 import { Toolbar } from "./ui/Toolbar";
 import { Shortcuts } from "./ui/Shortcuts";
 import { AdvancedConfig } from "./ui/Config";
@@ -253,7 +252,6 @@ export default function App() {
         {mini && <PaletteMini />}
         <HintLine />
         <Dock />
-        <AdjustSwitch />
         <SummaryTab hidden={propsOpen} />
       </main>
       <PropertiesPanel hidden={!propsOpen} />

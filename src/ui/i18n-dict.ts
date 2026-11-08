@@ -3,6 +3,8 @@
 // GC = ligação de base (ground connection / conexión de base), RC90, CC, CC90, B4/B6/B12, D…, P…, C = esfera.
 // Pranchas: "sheets" / "láminas"; chapa (de base): "base board" / "tablero base".
 
+import TEXTOS from "./i18n-textos.tsv?raw";
+
 export type Row = [string, string, string];
 
 export const ROWS: Row[] = [
@@ -390,7 +392,7 @@ export const ROWS: Row[] = [
   ["Cotas: liga e desliga em todas as pranchas (menos nos desenhos com ajuste próprio)", "Dimensions: on/off on all sheets (except drawings with their own setting)", "Cotas: activa y desactiva en todas las láminas (menos en los dibujos con ajuste propio)"],
   ["Cotas", "Dimensions", "Cotas"],
   ["Eixos e níveis: liga e desliga em todas as pranchas (menos nos desenhos com ajuste próprio)", "Grid lines and levels: on/off on all sheets (except drawings with their own setting)", "Ejes y niveles: activa y desactiva en todas las láminas (menos en los dibujos con ajuste propio)"],
-  ["Indicações de peças (PILAR, LIGAÇÃO…): liga e desliga em todas as pranchas (menos nos desenhos com ajuste próprio)", "Piece labels (PILAR, LIGAÇÃO…): on/off on all sheets (except drawings with their own setting)", "Indicaciones de piezas (PILAR, LIGAÇÃO…): activa y desactiva en todas las láminas (menos en los dibujos con ajuste propio)"],
+  ["Indicações de peças (PILAR, LIGAÇÃO…): liga e desliga em todas as pranchas (menos nos desenhos com ajuste próprio)", "Piece labels (COLUMN, CONNECTOR…): on/off on all sheets (except drawings with their own setting)", "Indicaciones de piezas (PILAR, CONEXIÓN…): activa y desactiva en todas las láminas (menos en los dibujos con ajuste propio)"],
   ["Indicações de vistas (A–D) e de cortes: liga e desliga em todas as pranchas (menos nos desenhos com ajuste próprio)", "View markers (A–D) and section lines: on/off on all sheets (except drawings with their own setting)", "Indicaciones de vistas (A–D) y de cortes: activa y desactiva en todas las láminas (menos en los dibujos con ajuste propio)"],
   ["Vistas", "Views", "Vistas"],
   ["Desenhos renderizados (foto da cena 3D na escala do desenho); desligado = simplificado, em linhas: liga e desliga em todas as pranchas (menos nos desenhos com ajuste próprio)", "Rendered drawings (photo of the 3D scene at the drawing scale); off = simplified line drawing: on/off on all sheets (except drawings with their own setting)", "Dibujos renderizados (foto de la escena 3D a la escala del dibujo); apagado = simplificado, en líneas: activa y desactiva en todas las láminas (menos en los dibujos con ajuste propio)"],
@@ -434,6 +436,28 @@ export const ROWS: Row[] = [
   ["FRENTE", "FRONT", "FRENTE"],
   ["TRÁS", "BACK", "ATRÁS"],
 
+  // ---------- pranchas (a folha) ----------
+  ["COBERTURA", "ROOF", "CUBIERTA"],
+  ["PLANTA BAIXA", "FLOOR PLAN", "PLANTA"],
+  ["ESCALA: INDICADA", "SCALE: AS SHOWN", "ESCALA: INDICADA"],
+  ["SEM ESCALA", "NOT TO SCALE", "SIN ESCALA"],
+  ["DESENHOS", "DRAWINGS", "DIBUJOS"],
+  ["Planta (entre centros)", "Plan (center to center)", "Planta (entre centros)"],
+  ["Altura (entre centros)", "Height (center to center)", "Altura (entre centros)"],
+  ["Escala das plantas e vistas", "Scale of plans and views", "Escala de plantas y vistas"],
+  ["USADAS", "USED", "USADAS"],
+  ["CONTRAVENTAMENTO", "BRACING", "ARRIOSTRAMIENTO"],
+  ["LAJE", "SLAB", "LOSA"],
+  ["PAREDE", "WALL", "MURO"],
+  ["PILAR", "COLUMN", "PILAR"],
+  ["VIGA", "BEAM", "VIGA"],
+  ["BARRA", "BAR", "BARRA"],
+  ["ESFERA", "SPHERE", "ESFERA"],
+  ["PLACA", "PLATE", "PLACA"],
+  ["DIAGONAL", "DIAGONAL", "DIAGONAL"],
+  ["PAVIMENTOS", "FLOORS", "PISOS"],
+  ["ALTURA", "HEIGHT", "ALTURA"],
+
   // ---------- confirmações ----------
   ["Começar uma estrutura nova? A atual fica guardada nas cópias automáticas (seta ao lado de Salvar).", "Start a new structure? The current one is kept in the automatic copies (arrow next to Save).", "¿Empezar una estructura nueva? La actual queda guardada en las copias automáticas (flecha junto a Guardar)."],
 ];
@@ -469,5 +493,54 @@ export const PATTERNS: Row[] = [
   ["(.+) \\(Q/E trocam\\)\\.", "$1 (Q/E swap).", "$1 (Q/E cambian)."],
   ["(.+) de novo\\. Esc para parar\\.", "$1 again. Esc to stop.", "$1 de nuevo. Esc para terminar."],
   ["(\\d+) peças da chapa selecionadas: Ctrl\\+C copia, M move, Delete apaga\\.", "$1 pieces on the board selected: Ctrl+C copies, M moves, Delete deletes.", "$1 piezas del tablero seleccionadas: Ctrl+C copia, M mueve, Delete borra."],
+  // pranchas
+  ["(\\d+)º PAVIMENTO", "FLOOR $1", "PISO $1"],
+  ["PB (.+)", "FP $1", "PL $1"],
+  ["VISTA-([A-D])", "VIEW-$1", "VISTA-$1"],
+  ["CORTE (\\d+)", "SECTION $1", "CORTE $1"],
+  ["ESCALA: (.+)", "SCALE: $1", "ESCALA: $1"],
+  ["FOLHA (.+)", "SHEET $1", "HOJA $1"],
+  ["ALTURA = (.+)", "HEIGHT = $1", "ALTURA = $1"],
+  ["Gerado pelo siMOLAdor por (.+) em (.+)", "Made with siMOLAdor by $1 on $2", "Generado con siMOLAdor por $1 el $2"],
+  ["Gerado pelo siMOLAdor em (.+)", "Made with siMOLAdor on $1", "Generado con siMOLAdor el $1"],
+  ["Kits: (.+)", "Kits: $1", "Kits: $1"],
+  // campos das configurações de peças ("B6 Comprimento da mola")
+  ["([A-Z][A-Z0-9x-]*) (Comprimento da mola|Comprimento do cabo|Comprimento|Largura|Espessura|Altura|Tamanho|Diâmetro|Lado maior|Peso|Peso \\(g/m\\))", "$1 $2", "$1 $2"],
   ["(\\d+) itens escolhidos: arraste um deles para mover todos\\. Delete tira os desenhos da prancha; Esc limpa\\.", "$1 items selected: drag one to move them all. Delete removes the drawings from the sheet; Esc clears.", "$1 elementos elegidos: arrastra uno para mover todos. Delete quita los dibujos de la lámina; Esc limpia."],
 ];
+
+// ---------- textos do programa inteiro (i18n-textos.tsv) ----------
+// Tabela com três colunas separadas por tabulação: português, inglês, espanhol (abre em qualquer planilha).
+// {1}, {2}… marcam as partes que mudam (números, códigos, nomes): viram modelos, e a tradução pode mudar a ordem.
+
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** "Acabaram as {1} do estoque." → regex com (.+?) no lugar de cada {n}; tradução com $n */
+function fromTsv(text: string): { rows: Row[]; patterns: Row[] } {
+  const rows: Row[] = [];
+  const patterns: [number, Row][] = [];
+  for (const line of text.split(/\r?\n/).slice(1)) {
+    const c = line.split("\t");
+    if (c.length < 3 || !c[0].trim()) continue;
+    const [pt, en, es] = c.map((x) => x.trim());
+    if (!/\{\d\}/.test(pt)) {
+      rows.push([pt, en, es]);
+      continue;
+    }
+    // a parte variável não atravessa um " · " (listas do carimbo e das dicas são traduzidas parte por parte)
+    const re = pt.split(/\{\d\}/).map(esc).join("((?:(?! · ).)+?)");
+    const to = (t: string) => t.replace(/\{(\d)\}/g, "$$$1");
+    patterns.push([pt.replace(/\{\d\}/g, "").length, [re, to(en), to(es)]]);
+  }
+  // os mais específicos (mais texto fixo) primeiro
+  patterns.sort((a, b) => b[0] - a[0]);
+  return { rows, patterns: patterns.map((p) => p[1]) };
+}
+
+const fromFile = fromTsv(TEXTOS);
+{
+  const known = new Set(ROWS.map((r) => r[0]));
+  for (const r of fromFile.rows) if (!known.has(r[0])) ROWS.push(r);
+  PATTERNS.push(...fromFile.patterns);
+  // por último: listas com " · " (carimbo, dicas) traduzem parte por parte
+  PATTERNS.push(["(.+?) · (.+)", "$1 · $2", "$1 · $2"]);
+}

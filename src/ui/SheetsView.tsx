@@ -7,6 +7,7 @@ import type { SheetLayout, SheetMeta, SheetPaper, SheetShow, SheetView } from ".
 import { CUSTOM_MAX, CUSTOM_MIN, type Pt } from "../drawings/prims";
 import { addPage, addView, deleteCut, moveToPage, nextCut, nextViewId, removePage, removeView, setViewScale, withLayout } from "../drawings/layout";
 import { InsertBar, RestoreMenu, ScalePick, ViewPanel } from "./SheetTools";
+import { useLang } from "./i18n";
 import { useApp } from "./store";
 import { boardsOf } from "../core/model";
 import { boardName } from "../core/boards";
@@ -139,7 +140,9 @@ export function SheetsView() {
   // fotos dos desenhos renderizados, por pedido; a estrutura mudou: tira de novo
   const [renders, setRenders] = useState<Record<string, string | null>>({});
   useEffect(() => setRenders({}), [model]);
-  const built = useMemo(() => buildSheets({ ...input, isoImage, logos, renders }), [input, isoImage, logos, renders]);
+  // a folha também muda de idioma: refaz as pranchas quando o idioma troca
+  const lang = useLang();
+  const built = useMemo(() => buildSheets({ ...input, isoImage, logos, renders }), [input, isoImage, logos, renders, lang]);
   useEffect(() => {
     const todo = built.renderRequests.filter((r) => !(r.key in renders));
     if (!todo.length) return;
@@ -472,12 +475,23 @@ export function SheetsView() {
       tag: label ? label.getAttribute("data-tag")! : block ? `${built.paper}|${block.getAttribute("data-group")}` : "",
       x: e.clientX, y: e.clientY, k: vbW / svg.getBoundingClientRect().width,
     };
-    if (el && picked.length > 1 && picked.includes(keyOf(el))) {
-      press.current.multi = picked.map((key) => {
-        const els = elementsOf(key);
-        return { key, els, axis: els[0]?.getAttribute("data-axis") ?? null };
-      });
-      press.current.multi.forEach((m) => m.els.forEach((x) => x.classList.add("dragging")));
+    if (el) {
+      // o que anda junto: os escolhidos (se este é um deles) e, para cada desenho, o título dele (1.10.5);
+      // o título sozinho continua andando sozinho
+      const base = picked.length > 1 && picked.includes(keyOf(el)) ? picked : [keyOf(el)];
+      const keys = [...base];
+      for (const k of base) {
+        const m = /^b:([^|]*)\|desenho:(.+)$/.exec(k);
+        const t = m && `b:${m[1]}|titulo:${m[2]}`;
+        if (t && !keys.includes(t) && elementsOf(t).length) keys.push(t);
+      }
+      if (keys.length > 1) {
+        press.current.multi = keys.map((key) => {
+          const els = elementsOf(key);
+          return { key, els, axis: els[0]?.getAttribute("data-axis") ?? null };
+        });
+        press.current.multi.forEach((m) => m.els.forEach((x) => x.classList.add("dragging")));
+      }
     }
     el?.classList.add("dragging");
   };
