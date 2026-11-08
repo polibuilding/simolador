@@ -35,3 +35,4 @@ v1.10.0 d003e58 Arquivos de verdade, uso sem internet e aviso de versão nova
 v1.10.1 a12d9ac Pavimentos na capa, planta baixa a qualquer altura e mais liberdade nas pranchas
 v1.10.2 cd4efca Base para o Kit X (por dentro, sem mudar o uso)
 v1.10.3 7962b8b Chave Ajustável (em breve) e Kit X no estoque
+v1.10.4 3c4cfc6 Modo escuro, inglês e espanhol, e RC90 na base
