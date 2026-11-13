@@ -37,3 +37,4 @@ v1.10.2 cd4efca Base para o Kit X (por dentro, sem mudar o uso)
 v1.10.3 7962b8b Chave Ajustável (em breve) e Kit X no estoque
 v1.10.4 3c4cfc6 Modo escuro, inglês e espanhol, e RC90 na base
 v1.10.5 c2b3e25 Pranchas traduzidas, diagonais claras no escuro e título que acompanha o desenho
+v1.10.6 c307d7e CC e CC90 com o formato real, massa das peças e passo do cabo medido
