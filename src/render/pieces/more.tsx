@@ -1,8 +1,8 @@
-// Diagonais, placas e ligações em 3D. Medidas do catálogo; CC e CC90 ainda sem medidas (formato provisório).
+// Diagonais, placas e ligações em 3D. Medidas do catálogo (CC e CC90: estimadas pelas fotos da equipe, 13/11/2026).
 import { useMemo } from "react";
 import * as THREE from "three";
 import { catalog } from "../../core/catalog";
-import { continuousOutline } from "../../core/shapes";
+import { continuousOutline, continuousSize } from "../../core/shapes";
 import { insetPolygon2, isRectangle, polyTo2D } from "../../core/geom";
 import type { Vec3 } from "../../core/model";
 import { COLORS } from "../units";
@@ -318,7 +318,7 @@ export function RigidConnector({
   return <mesh geometry={geom} material={mat} matrix={matrix} matrixAutoUpdate={false} castShadow {...pickProps(p)} />;
 }
 
-/** CC / CC90 (formato provisório até as medidas): CC sobre a esfera; CC90 por cima dela, com as hastes nas molas transversais. */
+/** CC / CC90: CC sobre a esfera, nas duas molas alinhadas; CC90 em cruz por cima dela, nas molas do outro par (a fenda passa pela CC). */
 export function ContinuousConnector({
   at, axis, side: sideIn, code, look = "normal", ...p
 }: { at: THREE.Vector3; axis: Vec3; side?: Vec3; code: string; look?: Look } & Pickable) {
@@ -327,7 +327,7 @@ export function ContinuousConnector({
     const u = v3(axis);
     // lado da esfera onde a peça fica (escolhido ao colocar; arquivos antigos: para cima, ou +x em pilares)
     const side = sideIn ? v3(sideIn) : Math.abs(axis[1]) > 0.5 ? new THREE.Vector3(1, 0, 0) : Y.clone();
-    return { matrix: basis(at, u, side), geom: extruded(continuousOutline(catalog, code), 6) };
+    return { matrix: basis(at, u, side), geom: extruded(continuousOutline(catalog, code), continuousSize(catalog, code).thickness) };
   }, [at, axis, tall, sideIn]);
   const mat = useMaterial(look, tall ? "#c4c9cd" : "#d6dadd", 0.05, 0.5);
   return <mesh geometry={geom} material={mat} matrix={matrix} matrixAutoUpdate={false} castShadow {...pickProps(p)} />;

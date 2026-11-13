@@ -1,7 +1,7 @@
 // Estoque: quantos kits de cada tipo o usuário tem (A-CONFIRMAR Q03) e quantas peças já foram usadas.
 import { catalog as defaultCatalog, type Catalog } from "./catalog";
 import type { Model } from "./model";
-import { isRopeCode, kit3Usage } from "./rope";
+import { isRopeCode, kit3Usage, ropePlan } from "./rope";
 
 export interface InventoryConfig {
   kits: Record<string, number>; // id do kit → quantidade de caixas
@@ -48,6 +48,24 @@ export function usage(model: Model, cat: Catalog = defaultCatalog): Record<strin
   for (const c of Object.values(model.connectors)) inc(c.code);
   for (const [k, n] of Object.entries(kit3Usage(cat, model))) inc(k, n);
   return u;
+}
+
+/**
+ * Massa da estrutura (g), pela coluna "Massa (g)" da planilha (pesagens da equipe, 13/11/2026) ou pelas configurações.
+ * O cabo do Kit 3 conta em g por metro. A chapa de base não entra. `missing`: peças usadas ainda sem massa.
+ */
+export function structureMass(model: Model, cat: Catalog = defaultCatalog): { g: number; missing: string[] } {
+  let g = 0;
+  const missing: string[] = [];
+  const add = (code: string, n: number) => {
+    const w = cat.pieces[code]?.weightG;
+    if (typeof w === "number" && w > 0) g += w * n;
+    else if (!missing.includes(code)) missing.push(code);
+  };
+  for (const [code, n] of Object.entries(usage(model, cat))) if (n > 0 && !isRopeCode(cat, code)) add(code, n);
+  const rope = Object.values(model.members).some((m) => isRopeCode(cat, m.code)) ? ropePlan(cat, model).mm : 0;
+  if (rope > 0) add("CABLE", rope / 1000);
+  return { g, missing };
 }
 
 export function remaining(cat: Catalog, inv: InventoryConfig, model: Model, code: string): number {

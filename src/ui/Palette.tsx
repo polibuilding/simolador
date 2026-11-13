@@ -137,7 +137,7 @@ export function Icon({ code }: { code: string }) {
   const tall = code === "CC90";
   return (
     <svg viewBox="0 0 48 24" aria-hidden>
-      <path d={tall ? "M8 20 L14 8 L20 8 L20 13 L28 13 L28 8 L34 8 L40 20 Z" : "M8 18 L13 11 L21 11 L21 14 L27 14 L27 11 L35 11 L40 18 Z"} className="i-plastic" />
+      <path d={tall ? "M6 18 L18 18 L21.5 14.5 L21.5 10.4 L26.5 10.4 L26.5 14.5 L30 18 L42 18 L31.7 7.7 L16.3 7.7 Z" : "M6 17 L17.8 17 L21.5 13.3 L26.5 13.3 L30.2 17 L42 17 L34 9 L14 9 Z"} className="i-plastic" />
     </svg>
   );
 }

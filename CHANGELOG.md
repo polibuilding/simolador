@@ -24,6 +24,11 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 ## 1.10 — Pronto para usar fora do site
 
+### 1.10.6 — CC e CC90 com o formato real, massa das peças e passo do cabo medido · 13/11/2026
+- **CC e CC90 como as peças de verdade**, pelas fotos da equipe: trapézios com as pontas a 45° e um recorte em V que abraça a esfera. A CC90 tem uma fenda e vai **em cruz** por cima da CC. Mudou na cena, na paleta e nas pranchas. As medidas (≈ 44 × 9,6 mm e 45,5 × 13 mm, 6 mm de espessura) estão na planilha e nas configurações, para conferir com paquímetro.
+- **Massa da estrutura** no resumo ("Massa ≈ 280 g"), com as pesagens da equipe. As massas também aparecem nas configurações (aba Peças) e ficam na planilha, prontas para a simulação. O cabo e as peças do Kit 3 ainda não têm massa: o resumo diz quais ficaram de fora.
+- **Cabo**: o passo passou para o medido (80 bolinhas em 26,5 cm = 3,31 mm). Para a diagonal de 12M × 12M continuar com 60 bolinhas, a ligação de cabo (CABLE C) ficou com 11 mm. Os cabos são recontados: alguns ganham uma bolinha, e um cabo agora cabe entre esferas a partir de ≈ 58 mm (antes ≈ 68 mm).
+
 ### 1.10.5 — Pranchas em inglês e espanhol, diagonais visíveis no escuro e título que acompanha o desenho · 08/11/2026
 - **Pranchas no idioma escolhido**: capa, plantas, vistas, carimbo e PDF/DXF/SVG saem em inglês ou espanhol quando a interface está nesse idioma (o nome do projeto e os textos que você digitou ficam como estão).
 - **Muito mais texto traduzido**: as mensagens das regras de encaixe, as dicas do rodapé com números, o painel das peças, os cabos, as chapas, os arquivos e o "sem limite" do estoque. As traduções ficam numa tabela (`i18n-textos.tsv`) que abre em qualquer planilha.

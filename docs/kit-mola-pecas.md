@@ -57,8 +57,8 @@ Sistemas do manual: ligações, tirante, pilar, viga, pórticos, treliças, viga
 |---|---|---|---|---|
 | Esfera | C | 18 | Ø ≈ 0,95M | Ø ≈ 14 mm |
 | Ligação rígida 90° | RC90 | 12 | idem Kit 1 | — |
-| Ligação contínua | CC | 12 | dá continuidade a duas barras alinhadas (pilar/viga contínuos) | — |
-| Ligação contínua 90° | CC90 | 12 | continuidade em canto 90° | — |
+| Ligação contínua | CC | 12 | dá continuidade a duas barras alinhadas (pilar/viga contínuos) | 44 × 9,6 × 6 mm (fotos, ver abaixo) |
+| Ligação contínua 90° | CC90 | 12 | segundo par alinhado, em cruz por cima da CC | 45,5 × 13 × 6 mm (fotos, ver abaixo) |
 | Ligação de base | GC | 6 | idem Kit 1 | — |
 | Barra (mola) | B4 | 18 | 4M c/c | c/c 60 mm, peça ≈ 46 mm |
 | Barra (mola) | B6 | 30 | 6M c/c | c/c 90 mm, peça ≈ 76 mm |
@@ -68,6 +68,22 @@ Sistemas do manual: ligações, tirante, pilar, viga, pórticos, treliças, viga
 | Chapa de base | G | 1 | 18M × 12M | ≈ 270 × 180 mm |
 
 Sistemas do manual: balanço, viga contínua, grelha, comprimento de flambagem, pilar estaiado e viga armada, pórtico de múltiplos vãos, geodésicas.
+
+## CC e CC90 (fotos da equipe, 13/11/2026)
+
+Duas fotos de cima (2 CC e 2 CC90 sobre a mesa). A escala saiu da própria peça: o recorte em V tem a profundidade de raio da esfera − raio da mola (7,5 − 3 = 4,5 mm) e os lados a 45° tangenciam a esfera de 15 mm. Com essa escala (≈ 10,2 px/mm e ≈ 11,0 px/mm), o contorno desenhado pelo programa cai em cima das peças nas duas fotos. As massas (≈ 3 g cada) e a da RC90 dão o mesmo material com 6 mm de espessura.
+
+| | CC | CC90 |
+|---|---|---|
+| Forma | trapézio com as pontas a 45°; lado maior nas duas molas alinhadas; no meio dele, recorte em V com fundo reto, que encosta na esfera (ímã) | trapézio mais largo, pontas a 45°; o V termina numa **fenda** da espessura da CC |
+| Comprimento (lado das molas) | ≈ 44 mm | ≈ 45,5 mm |
+| Largura (das molas para fora) | ≈ 9,6 mm | ≈ 13 mm |
+| Espessura | 6 mm (como a RC90; coerente com a massa) | 6 mm |
+| Recorte | V de 4,5 mm de fundo, boca ≈ 15 mm, fundo reto ≈ 6 mm | mesmo V, e a fenda de ≈ 6,4 mm vai até ≈ 9,6 mm da face das molas (a largura da CC) |
+| Como monta | sobre a esfera, nas duas molas alinhadas | **em cruz** por cima da CC, no plano do outro par de molas: a fenda passa pela CC e apoia na borda de fora dela |
+| Massa | 3,0–3,075 g | 2,975–3,0 g |
+
+Os ímãs da CC aparecem na borda: um em cada ponta do lado das molas e um no fundo do V (3 ímãs, como a "ligação contínua" de 2008). **Conferir com paquímetro** comprimento, largura, espessura e a fenda; os valores ficam em `parametros.xlsx` (aba Peças, colunas medidas).
 
 ## Regras de montagem relevantes para o simulador
 
@@ -134,10 +150,10 @@ Escala tirada da esfera (15 mm) e da mola (6 mm) na foto do nó com cabos (≈ 1
 
 | Parâmetro (`parametros.xlsx`) | Valor | Como foi estimado / como medir |
 |---|---|---|
-| `cabo_passo_mm` | 3,15 mm | **calibrado pela equipe (26/10)**: a diagonal de um quadrado de 12M × 12M pede 60 bolinhas para ficar esticada (antes 3,2 mm, que dava 59). O valor põe a diagonal no meio do intervalo de 60 bolinhas. **Conferir**: contar as bolinhas em 10 cm (≈ 32); se der 31, o passo volta a 3,2 mm e quem encurta são as pontas (`cabo_ligacao_mm` + `cabo_clip_mm`) |
+| `cabo_passo_mm` | **3,31 mm** | **medido pela equipe (13/11)**: 80 bolinhas em 26,5 cm. Antes, 3,15 mm, calibrado (26/10) pela diagonal de um quadrado de 12M × 12M, que pede 60 bolinhas para ficar esticada. Com o passo medido, quem encurta são as pontas (abaixo) |
 | `cabo_bolinha_mm` | 2,4 mm | foto: bolinha ≈ 2,1–2,4 mm |
-| `cabo_rolo_mm` | 3350 mm | site oficial (≈ 1046 bolinhas) |
-| `cabo_ligacao_mm` | 16 mm | CABLE C: mola ≈ 4 mm de diâmetro e ≈ 13 mm de comprimento + anel ≈ 3 mm |
+| `cabo_rolo_mm` | 3350 mm | site oficial (≈ 1012 bolinhas) |
+| `cabo_ligacao_mm` | **11 mm** | **ajustado (13/11)** para a diagonal de 12M × 12M continuar com as 60 bolinhas da equipe com o passo medido. Pela foto, a CABLE C dava ≈ 16 mm (mola ≈ 13 mm + anel ≈ 3 mm); como ela é um esticador de enroscar, 11 mm deve ser ela fechada. **Conferir**: medir a CABLE C fechada, da superfície da esfera à ponta do anel |
 | `cabo_clip_mm` | 9 mm | CABLE CLIP C ≈ 10,5 × 3,5 mm (do anel ao centro da bolinha da ponta) |
 | `cabo_ajuste_mm` | 4 mm | quanto o esticador da CABLE C estica girando |
 | `cabo_angulo_minimo_graus` | 20° | lugar da CABLE C na esfera ao lado de outras peças |
@@ -145,7 +161,7 @@ Escala tirada da esfera (15 mm) e da mola (6 mm) na foto do nó com cabos (≈ 1
 | anel pequeno / médio | ≈ 10 / 15 mm | foto da caixa, comparando com as esferas |
 | M CABLE CLIP C | ≈ 11 mm | foto do nó com cabos |
 
-Com essas medidas, a diagonal de um quadrado de 12M × 12M (252 mm entre centros) tem 60 bolinhas, um cabo entre esferas a 12 módulos (178 mm) tem 37 (≈ 11,7 cm), e o mínimo entre centros para caber um cabo é ≈ 68 mm.
+Com essas medidas, a diagonal de um quadrado de 12M × 12M (252 mm entre centros) tem 60 bolinhas, um cabo entre esferas a 12 módulos (178 mm) tem 38 (≈ 12,6 cm), e o mínimo entre centros para caber um cabo é ≈ 58 mm (antes ≈ 68 mm: um cabo entre esferas a 4 módulos agora cabe).
 
 Dúvida: os 3 quadrados transparentes da foto "Conteúdo da caixa" não estão na lista oficial. São placas P6x6 ou embalagem?
 

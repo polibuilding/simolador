@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { pieceMobility, structureMobility, type MoveRef } from "../core/globalMove";
 import { catalog } from "../core/catalog";
-import { available, usage } from "../core/inventory";
+import { available, usage, structureMass } from "../core/inventory";
 import { boardsOf, componentOf, DISP_AXIS, len, sub, toDisp, type Vec3 } from "../core/model";
 import { boardCenter, boardName, boardSelection, boardSize, boardsGap } from "../core/boards";
 import { NumField } from "../render/Boards";
@@ -513,6 +513,7 @@ function Summary() {
   const zs = nodes.map((n) => n.pos[2]);
   const span = (a: number[]) => (Math.max(...a) - Math.min(...a)) * M;
   const levels = new Set(ys.map((y) => Math.round(y * 100))).size;
+  const mass = structureMass(model, catalog);
   return (
     <>
       <h2>Resumo da estrutura</h2>
@@ -520,6 +521,7 @@ function Summary() {
         <Row k="Planta" v={`${fmt(span(xs), 0)} × ${fmt(span(zs), 0)} mm`} />
         <Row k="Altura" v={`${fmt(span(ys), 0)} mm`} />
         <Row k="Níveis" v={levels} />
+        {mass.g > 0 && <Row k="Massa" v={mass.missing.length ? `≈ ${fmt(mass.g, 0)} g (sem ${mass.missing.join(", ")})` : `≈ ${fmt(mass.g, 0)} g`} />}
 
       </dl>
       <table className="bom">

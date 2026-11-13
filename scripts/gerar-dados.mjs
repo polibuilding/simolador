@@ -12,6 +12,7 @@
 //   cabo (Kit 3): corrente de bolinhas; o comprimento de cada pedaço sai da distância entre as esferas (programa)
 //   enrijecedor: comprimento = vão × M − barra_desconto_mm (o da mola)
 // Uma coluna "medido" preenchida na aba Peças substitui a regra só para aquela peça.
+// "Massa (g)" (aba Peças): peso de uma peça, pesado pela equipe (no cabo, g por metro); vira `weightG`.
 
 import ExcelJS from "exceljs";
 import { writeFile, mkdir } from "node:fs/promises";
@@ -211,12 +212,16 @@ async function main() {
         if (typeof v === "number" && !(v > 0)) err(`${where}: medida calculada "${k}" = ${v}; confira os descontos em Geral.`);
       }
       if (r["Status"] === "a medir") warn(`${where}: status "a medir".`);
+      // massa (g; no cabo, g por metro): pesada pela equipe; vazia = não informada (usada no resumo e na 3.x)
+      const mass = r["Massa (g)"];
+      if (mass != null && !positive(mass)) err(`${where}: "Massa (g)" precisa ser número > 0 (está "${mass}").`);
       pieces.push({
         code, name: r["Nome"] ?? code, type, spanM, geometry,
         ...(Object.keys(sources).length ? { sources } : {}),
         behavior: r["Comportamento"] ?? null,
         status: r["Status"] ?? null,
         notes: r["Observações"] ?? null,
+        weightG: positive(mass) ? mass : null,
       });
     }
   }

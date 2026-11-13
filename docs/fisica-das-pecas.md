@@ -1,6 +1,6 @@
 # Física das peças e ligações do Kit Mola
 
-Versão 1.1 · 04/11/2026 (1.1: dissertação de Oliveira, 2008). Base de dados física para a linha **3.x** (simulação). Reúne o que se sabe sobre massa, rigidez, resistência e comportamento dinâmico de cada peça e de cada ligação, com a fonte e o grau de confiança de cada número. Dimensões geométricas: `kit-mola-pecas.md`. Plano da simulação: `plano-simolador.md` §10. Regras de montagem: `regras-de-encaixe.md`.
+Versão 1.2 · 13/11/2026 (1.2: massas pesadas pela equipe, formato da CC e da CC90 pelas fotos, passo do cabo medido; 1.1: dissertação de Oliveira, 2008). Base de dados física para a linha **3.x** (simulação). Reúne o que se sabe sobre massa, rigidez, resistência e comportamento dinâmico de cada peça e de cada ligação, com a fonte e o grau de confiança de cada número. Dimensões geométricas: `kit-mola-pecas.md`. Plano da simulação: `plano-simolador.md` §10. Regras de montagem: `regras-de-encaixe.md`.
 
 **Status dos valores** (o mesmo da planilha `parametros.xlsx`):
 
@@ -221,7 +221,7 @@ Notação: c/c = centro a centro das esferas; L_f = comprimento flexível (só a
 |---|---|---|---|
 | Diâmetro | 15,0 mm (14 mm em 2008) | [2022]; [Oliveira] Tab. 3.1 | desenho |
 | Material | aço (é atraída pelos ímãs) | site | confirmado |
-| Massa | **≈ 13,9 g** se for aço maciço | [nós] | estimado: pesar 10 (T0) |
+| Massa | **13,9 g**: bate com uma esfera de aço maciço de 15 mm (13,87 g), o que confirma o diâmetro e o material | equipe 13/11/2026 | **pesado** |
 | Papel mecânico | **rótula**: as peças giram em volta dela; transmite força, não momento (a não ser com RC90, CC ou CC90) | [TFG] Fig. 11; [Oliveira] ensaios 1, 5, 9; 1.7.1; equipe 08/11/2026 | confirmado (duas fontes e a equipe) |
 | Peso relativo | "elevado quando comparado ao peso de outros elementos"; pode limitar a montagem | [Oliveira] 8.1 | confirmado |
 
@@ -233,7 +233,8 @@ Notação: c/c = centro a centro das esferas; L_f = comprimento flexível (só a
 | Peça em 2008 | 45 mm | 74 mm | 162 mm | [Oliveira] Tab. 3.1 | confirma a regra (±2 mm) |
 | Peça (com terminais) | 44,9 mm | 74,6 mm | 163,8 mm | [2022] | desenho (B6 medida ≈ 75) |
 | Espiras (se encostadas) | ≈ 61 | ≈ 111 (TFG: 112) | ≈ 260 | [nós] | estimado |
-| Massa do fio | ≈ 1,5 g | ≈ 2,6 g | ≈ 6,2 g | [nós], aço | estimado; **somar os terminais** (pesar: T0) |
+| Massa (peça inteira) | **3,3–3,4 g** | **4,7–4,8 g** | **9,0–9,1 g** | equipe 13/11/2026 | **pesado** |
+| Massa por partes | 1,2 g dos dois terminais (≈ 0,6 g cada) + **0,048 g/mm** de mola (reta pelos três pesos e pelos comprimentos das peças; erro < 0,05 g) | | | [nós], das pesagens | calculado |
 
 | Grandeza (vale para as três) | Valor | Fonte | Status |
 |---|---|---|---|
@@ -258,7 +259,7 @@ Notação: c/c = centro a centro das esferas; L_f = comprimento flexível (só a
 | Trabalha | **só à tração**: "pouca resistência à compressão" | manual; [TFG] Fig. 12; [Oliveira] 3.4 | confirmado |
 | Rigidez axial | o fio é rígido; **quem estica são as molinhas das pontas** (e o contato do ímã) | [Oliveira] | a medir (T6): importante para pórticos contraventados |
 | Folga montada | quanto sobra no vão nominal (esticada ou frouxa) | — | a medir (já no `medicoes-template.csv`) |
-| Massa | ? | — | a medir (T0) |
+| Massa | **D4x6 1,4 g · D6x6 1,5 g · D6x12 1,56–1,6 g** ("tirantes" pequeno, médio e grande): ≈ 1,23 g dos dois terminais (≈ 0,6 g cada, como os da mola) + ≈ 0,002 g/mm de cabo | equipe 13/11/2026 | **pesado** |
 
 ### 3.4 Placas P6x6 e P6x12
 
@@ -266,7 +267,7 @@ Notação: c/c = centro a centro das esferas; L_f = comprimento flexível (só a
 |---|---|---|---|
 | Lados | 81,9 × 81,9 / 171,1 × 81,9 mm | [2022] | desenho |
 | Espessura | ≈ 4 mm (6 mm em 2008) | [Oliveira] Tab. 3.1 | estimado: medir |
-| Material, massa | MDF em 2008: ≈ 29 g (P6x6) e ≈ 60 g (P6x12), se ainda for assim | [Oliveira]; [nós] | a medir (T0) |
+| Massa | **P6x6 19,6 g · P6x12 40,6–41,8 g**: as duas dão ≈ 2,9 kg/m² (a razão das massas, 2,10, é a das áreas, 2,09). Não é MDF de 6 mm (daria ≈ 29 e 60 g); se for acrílico, a espessura seria ≈ 2,5 mm, e não os 4 mm estimados | equipe 13/11/2026; [nós] | **pesado**; espessura e material a medir |
 | Papel | **corpo rígido** preso **direto nas 4 esferas** pelos ímãs; no próprio plano funciona como **diafragma** (laje) ou **núcleo rígido** (parede) | [Oliveira] espaciais 4, 8 e Estudo 3; 1.7.1 | confirmado (forma) |
 | Limite | a carga da laje vai direto para as esferas: não dá para ver a laje "carregar a viga" | [Oliveira] 8.1 | — |
 
@@ -278,14 +279,15 @@ Notação: c/c = centro a centro das esferas; L_f = comprimento flexível (só a
 | Papel | **rótula fixa**: a posição fica presa e a rotação é livre | [TFG] Fig. 11; [Oliveira] ensaios 11, 12, 15, 24, 25 | **confirmado por duas fontes** |
 | Com RC90 | engaste no plano da RC90; nos pórticos espaciais de 2008, as bases "engastadas" parecem ter RC90 nas duas direções | [Oliveira] Figs. 5.30–5.37 | provável: duas perpendiculares = engaste completo |
 | Como prende na chapa | **ímãs embaixo, sobre a chapa metálica** (2008) | [Oliveira] 3.4 | provável: medir a força (T2) |
-| Massa | ? | — | a medir |
+| Massa | **GC 31,7–31,8 g**; **chapa de base G 346,3 g** (≈ 7,2 kg/m² em 267,6 × 178,4 mm: chapa de aço de ≈ 0,9 mm) | equipe 13/11/2026 | **pesado** |
 
 ### 3.6 Ligações RC90, CC e CC90
 
 | Grandeza | RC90 | CC | CC90 | Fonte | Status |
 |---|---|---|---|---|---|
-| Forma | triângulo de catetos 18,3 mm, 6 mm de espessura | trapézio baixo | "chapéu" alto sobre a CC | [2022]; caixa | desenho / provisório |
-| Material | plástico com ímãs (2008: MDF com 3 ímãs) | idem | idem | site; [Oliveira] | — |
+| Forma | triângulo de catetos 18,3 mm, 6 mm de espessura | trapézio de 44 × 9,6 mm, pontas a 45°, com recorte em V que abraça a esfera | trapézio de 45,5 × 13 mm, com recorte em V que termina numa fenda: vai **em cruz** por cima da CC | [2022]; fotos da equipe 13/11/2026 (escala da esfera) | desenho / estimado: conferir com paquímetro |
+| Massa | **2,2 g** | **3,0–3,075 g** | **2,975–3,0 g** | equipe 13/11/2026 ("ligação contínua (1) e (2)"; supomos (1) = CC e (2) = CC90) | **pesado** |
+| Material | plástico cinza com ímãs (2008: MDF com 3 ímãs). Com 6 mm de espessura, a RC90 e a CC dão ≈ 1,45 g/cm³ contando os ímãs: o mesmo material, e a espessura de 6 mm é coerente | site; [Oliveira]; fotos e pesagens 13/11/2026 | provável |
 | Trecho rígido | a RC90 deixa reta a parte da mola que ela cobre (≈ 18 mm) | — | — | [Oliveira] ensaios 2–8 | a medir (T12) |
 | O que trava | o ângulo entre as duas molas **no plano dela** (L10); a torção fica livre | duas molas alinhadas: a viga fica contínua e **a coluna do mesmo nó continua rotulada** | o segundo par alinhado (X) | regras; [Oliveira] ensaios 19, 21 | equipe + 2008 |
 | Rigidez à rotação | finita ("nem engaste perfeito nem rótula", [TFG] 3.3.4) | ? | ? | — | a medir (T4) |
@@ -296,7 +298,7 @@ Notação: c/c = centro a centro das esferas; L_f = comprimento flexível (só a
 
 | Grandeza | Valor | Fonte | Status |
 |---|---|---|---|
-| Cabo (corrente de bolinhas): passo, bolinha, rolo | 3,15 mm; 2,4 mm; 3.350 mm | equipe; site | calibrado / estimado |
+| Cabo (corrente de bolinhas): passo, bolinha, rolo | **3,31 mm** (80 bolinhas em 26,5 cm); 2,4 mm; 3.350 mm | equipe 13/11/2026; site | medido / estimado |
 | Massa do cabo | ? (pesar o rolo e dividir por 3,35 m) | — | a medir (T0) |
 | Trabalha | só à tração; frouxo não segura | manual | confirmado |
 | Rigidez axial | alta (aço); o que cede são os clips e a CABLE C | — | a medir (T9) |
@@ -414,7 +416,7 @@ Registro: `docs/ensaios-template.csv` (uma linha por leitura). Fotos: o método 
 
 | # | Ensaio | O que fazer | Alimenta | Prioridade |
 |---|---|---|---|---|
-| **T0** | Massas | Pesar 10 esferas juntas, 10 B6, 5 B12, 10 B4, 10 diagonais de cada, as placas, as GC, as RC90 e o rolo de cabo (dividir por 3,35 m) | peso próprio, dinâmica | **alta** (5 min) |
+| **T0** | Massas | ~~Kits 1 e 2 e chapa~~ **feito em 13/11/2026** (§3). Falta o Kit 3: o rolo de cabo (dividir por 3,35 m), CABLE C, clips, anéis e enrijecedores | peso próprio, dinâmica | baixa (falta só o Kit 3) |
 | **T1** | A mola é fechada? | Olhar a B6 contra a luz (as espiras se tocam?); medir o diâmetro externo e o fio; contar as espiras em 10 mm; medir o comprimento só da espiral. Pendurar a B6 pela esfera de cima e ir pondo peso no copinho: anotar o alongamento a cada 20 g até soltar. Há um peso abaixo do qual ela não estica (pré-tensão)? | §2.4, EA, F₀, L_f, diâmetro (conflito 4 × 6 mm) | **alta** |
 | **T2** | Força dos ímãs | Arrancamento: esfera presa (na GC); pendurar o copinho na ponta da mola, na vertical, e pôr peso até soltar. Repetir com diagonal, RC90 e placa. Escorregamento: mesma ideia, puxando de lado. GC: puxar para cima e de lado sobre a chapa | modo de falha "ímã solta" | **alta** |
 | **T3** | Balanço com peso próprio | GC + RC90, B6 na horizontal, uma esfera na ponta; medir quanto a ponta abaixa. Depois com 1, 2 e 3 moedas no copinho. Repetir com a B4 e a B12 | EI (confere o TFG), L_f, linearidade | **alta** (é o primeiro caso de validação) |
@@ -442,7 +444,7 @@ Quando houver medida, os valores entram em **`data/parametros.xlsx`**, numa aba 
 | `mola_k_tracao_N_mm` | 4,5 | medido com ressalva [TFG] |
 | `mola_pretensao_N` | — | a medir (T1) |
 | `mola_comprimento_flexivel_desconto_mm` | — | a medir (T1): peça − espiral |
-| `esfera_massa_g`, `barra_massa_g_por_mm`, `terminal_massa_g`, `diagonal_massa_g`, `placa_massa_g`, `gc_massa_g`, `rc90_massa_g`, `cabo_massa_g_por_m` | esfera 13,9 (estimado) | a medir (T0) |
+| Massa de cada peça: coluna **"Massa (g)"** da aba Peças (desde a 1.10.6); vira `weightG` no catálogo e aparece no resumo ("Massa ≈ … g") | Kits 1 e 2 e chapa: pesados (13/11/2026) | **feito**; falta o Kit 3 (cabo em g/m, CABLE C, clips, anéis, enrijecedores) |
 | `ima_mola_esfera_N`, `ima_diagonal_esfera_N`, `ima_placa_N`, `ima_rc90_N`, `gc_chapa_N` (arrancar e escorregar) | — | a medir (T2) |
 | `rc90_rigidez_Nmm_rad`, `rc90_momento_solta_Nmm`, `cc_rigidez_Nmm_rad`, `cc_momento_solta_Nmm` | rígido (a H2 sugere ≈ 90 N·mm/rad) | a medir (T4, T14) |
 | `rc90_trecho_rigido_mm` | 0 (H1) ou 18 (H2) | a medir (T12) |

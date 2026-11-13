@@ -1,6 +1,6 @@
 // Projeção ortográfica do modelo nas plantas e vistas A–D, com os símbolos das pranchas do Desafio 2022.
 import type { Catalog } from "../core/catalog";
-import { continuousOutline } from "../core/shapes";
+import { continuousOutline, continuousSize } from "../core/shapes";
 import { insetPolygon2, isRectangle, polyCenter, polyTo2D } from "../core/geom";
 import { type Model, type Vec3, cross, norm, sub } from "../core/model";
 import { GRAY, PEN, type Prim, type Pt } from "./prims";
@@ -321,7 +321,7 @@ export function itemsFor(cat: Catalog, model: Model, pr: Projector): Item[] {
       n = norm(cross(ax, side));
       pts3 = continuousOutline(cat, cn.code).map(([u, v]) => shift(at, ax, u, side, v));
     }
-    const pts = planar(pr, pts3, n, s.rc90_espessura_mm);
+    const pts = planar(pr, pts3, n, kind === "cc" ? continuousSize(cat, cn.code).thickness : s.rc90_espessura_mm);
     const mid = pts.reduce((acc, q) => add2(acc, mul2(q, 1 / pts.length)), [0, 0] as Pt);
     items.push({ depth: d + 0.2, order: 4, kind, anchor: mid, level: at[1], draw: poly(pts, GRAY.node, "MOLA-LIGACAO") });
   }

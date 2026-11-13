@@ -505,7 +505,7 @@ export const PATTERNS: Row[] = [
   ["Gerado pelo siMOLAdor em (.+)", "Made with siMOLAdor on $1", "Generado con siMOLAdor el $1"],
   ["Kits: (.+)", "Kits: $1", "Kits: $1"],
   // campos das configurações de peças ("B6 Comprimento da mola")
-  ["([A-Z][A-Z0-9x-]*) (Comprimento da mola|Comprimento do cabo|Comprimento|Largura|Espessura|Altura|Tamanho|Diâmetro|Lado maior|Peso|Peso \\(g/m\\))", "$1 $2", "$1 $2"],
+  ["([A-Z][A-Z0-9x-]*) (Comprimento da mola|Comprimento do cabo|Comprimento \\(lado das molas\\)|Largura \\(das molas para fora\\)|Comprimento|Largura|Espessura|Altura|Tamanho|Diâmetro|Lado maior|Peso|Peso \\(g/m\\))", "$1 $2", "$1 $2"],
   ["(\\d+) itens escolhidos: arraste um deles para mover todos\\. Delete tira os desenhos da prancha; Esc limpa\\.", "$1 items selected: drag one to move them all. Delete removes the drawings from the sheet; Esc clears.", "$1 elementos elegidos: arrastra uno para mover todos. Delete quita los dibujos de la lámina; Esc limpia."],
 ];
 

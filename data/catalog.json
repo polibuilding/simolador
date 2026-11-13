@@ -2,7 +2,7 @@
   "_meta": {
     "generatedBy": "scripts/gerar-dados.mjs",
     "source": "data/parametros.xlsx",
-    "generatedAt": "2026-11-08T14:00:33.587Z",
+    "generatedAt": "2026-11-13T22:53:35.878Z",
     "doNotEdit": "Arquivo gerado. Edite data/parametros.xlsx e rode npm run dados."
   },
   "schemaVersion": 2,
@@ -36,10 +36,10 @@
     "tolerancia_encaixe_mm": 0.5,
     "passo_inclinacao_graus": 15,
     "gc_angulo_minimo_base_graus": 40,
-    "cabo_passo_mm": 3.15,
+    "cabo_passo_mm": 3.31,
     "cabo_bolinha_mm": 2.4,
     "cabo_rolo_mm": 3350,
-    "cabo_ligacao_mm": 16,
+    "cabo_ligacao_mm": 11,
     "cabo_clip_mm": 9,
     "cabo_pendural_mm": 5,
     "cabo_ajuste_mm": 4,
@@ -61,7 +61,8 @@
       },
       "behavior": null,
       "status": "desenho",
-      "notes": "Diâmetro em Geral"
+      "notes": "Diâmetro em Geral",
+      "weightG": 13.9
     },
     {
       "code": "GC",
@@ -76,7 +77,8 @@
       },
       "behavior": null,
       "status": "desenho",
-      "notes": "Tem esfera embutida (E17). Centro da GC deve ficar dentro da chapa, borda inclusive (E18)"
+      "notes": "Tem esfera embutida (E17). Centro da GC deve ficar dentro da chapa, borda inclusive (E18)",
+      "weightG": 31.75
     },
     {
       "code": "RC90",
@@ -89,7 +91,8 @@
       },
       "behavior": null,
       "status": "desenho",
-      "notes": "Trapezoidal; prende na esfera e nas duas molas a 90°. Uma por canto; na GC, opcional uma de cada lado (E03, E04)"
+      "notes": "Trapezoidal; prende na esfera e nas duas molas a 90°. Uma por canto; na GC, opcional uma de cada lado (E03, E04)",
+      "weightG": 2.2
     },
     {
       "code": "CC",
@@ -97,13 +100,14 @@
       "type": "connector",
       "spanM": null,
       "geometry": {
-        "lengthMm": null,
-        "widthMm": null,
-        "heightMm": null
+        "lengthMm": 44,
+        "widthMm": 9.6,
+        "heightMm": 6
       },
       "behavior": null,
-      "status": "a medir",
-      "notes": "Forma 1 da caixa do Kit 2 (trapézio baixo). Vai direto na esfera, ligando duas molas alinhadas: enrijece o nó a 180° (E05). Medidas: preencher as colunas medidas"
+      "status": "estimado",
+      "notes": "Trapézio com as pontas a 45°: o lado maior (comprimento) apoia nas duas molas alinhadas, com um recorte em V no meio que abraça a esfera (ímã no fundo). Largura = das molas para fora; altura = espessura. Medidas estimadas pelas fotos da equipe (13/11/2026), na escala da esfera: conferir com paquímetro. Enrijece o nó a 180° (E05)",
+      "weightG": 3.04
     },
     {
       "code": "CC90",
@@ -111,13 +115,14 @@
       "type": "connector",
       "spanM": null,
       "geometry": {
-        "lengthMm": null,
-        "widthMm": null,
-        "heightMm": null
+        "lengthMm": 45.5,
+        "widthMm": 13,
+        "heightMm": 6
       },
       "behavior": null,
-      "status": "a medir",
-      "notes": "Forma 2 da caixa do Kit 2 (chapéu alto). Vai por cima de uma CC no mesmo nó, enrijecendo um segundo par de molas alinhadas, perpendicular ao primeiro: forma um X. Exige CC no nó. Medidas: preencher as colunas medidas"
+      "status": "estimado",
+      "notes": "Trapézio mais largo que a CC, pontas a 45°; o recorte em V termina numa fenda da espessura da CC. Vai em cruz por cima de uma CC no mesmo nó (a fenda passa pela CC), apoiada no outro par de molas alinhadas, perpendicular ao primeiro. Exige CC no nó. Medidas estimadas pelas fotos da equipe (13/11/2026): conferir com paquímetro",
+      "weightG": 2.99
     },
     {
       "code": "B4",
@@ -136,7 +141,8 @@
       },
       "behavior": "tração, compressão e flexão",
       "status": "calculado",
-      "notes": null
+      "notes": null,
+      "weightG": 3.35
     },
     {
       "code": "B6",
@@ -155,7 +161,8 @@
       },
       "behavior": "tração, compressão e flexão",
       "status": "confirmado",
-      "notes": "Equipe mediu ≈ 75 mm (08/10/2026); a regra dá 74,6. Medida aproximada: mantida a regra"
+      "notes": "Equipe mediu ≈ 75 mm (08/10/2026); a regra dá 74,6. Medida aproximada: mantida a regra",
+      "weightG": 4.75
     },
     {
       "code": "B12",
@@ -174,7 +181,8 @@
       },
       "behavior": "tração, compressão e flexão",
       "status": "desenho",
-      "notes": null
+      "notes": null,
+      "weightG": 9.05
     },
     {
       "code": "D4x6",
@@ -195,7 +203,8 @@
       },
       "behavior": "só tração",
       "status": "calculado",
-      "notes": null
+      "notes": null,
+      "weightG": 1.4
     },
     {
       "code": "D6x6",
@@ -216,7 +225,8 @@
       },
       "behavior": "só tração",
       "status": "desenho",
-      "notes": null
+      "notes": null,
+      "weightG": 1.5
     },
     {
       "code": "D6x12",
@@ -237,7 +247,8 @@
       },
       "behavior": "só tração",
       "status": "calculado",
-      "notes": null
+      "notes": null,
+      "weightG": 1.58
     },
     {
       "code": "P6x6",
@@ -259,7 +270,8 @@
       },
       "behavior": null,
       "status": "desenho",
-      "notes": "Liga nas 4 esferas pelos chanfros com ímã; barras no contorno recomendadas (E07, E08)"
+      "notes": "Liga nas 4 esferas pelos chanfros com ímã; barras no contorno recomendadas (E07, E08)",
+      "weightG": 19.6
     },
     {
       "code": "P6x12",
@@ -281,7 +293,8 @@
       },
       "behavior": null,
       "status": "desenho",
-      "notes": "Vão A = comprimento, Vão B = largura. Liga nas 4 esferas (E07)"
+      "notes": "Vão A = comprimento, Vão B = largura. Liga nas 4 esferas (E07)",
+      "weightG": 41.2
     },
     {
       "code": "G",
@@ -298,7 +311,8 @@
       },
       "behavior": null,
       "status": "desenho",
-      "notes": "Tamanho pela grade em Geral"
+      "notes": "Tamanho pela grade em Geral",
+      "weightG": 346.3
     },
     {
       "code": "CABLE",
@@ -306,16 +320,17 @@
       "type": "rope",
       "spanM": null,
       "geometry": {
-        "pitchMm": 3.15,
+        "pitchMm": 3.31,
         "ballMm": 2.4,
         "rollMm": 3350,
-        "connectionMm": 16,
+        "connectionMm": 11,
         "clipMm": 9,
         "adjustMm": 4
       },
       "behavior": "só tração",
       "status": "estimado",
-      "notes": "Corrente de bolinhas; vem um rolo de 3,35 m por Kit 3 e é cortado na montagem. Comprimento contado em bolinhas (régua do manual)"
+      "notes": "Corrente de bolinhas; vem um rolo de 3,35 m por Kit 3 e é cortado na montagem. Comprimento contado em bolinhas (régua do manual)",
+      "weightG": null
     },
     {
       "code": "CABLE-C",
@@ -323,11 +338,12 @@
       "type": "accessory",
       "spanM": null,
       "geometry": {
-        "lengthMm": 16
+        "lengthMm": 11
       },
       "behavior": "esticador",
       "status": "estimado",
-      "notes": "Duas partes enroscadas: ímã na esfera, anel na outra ponta; girar ajusta o comprimento. Entra sozinha: 2 por cabo"
+      "notes": "Duas partes enroscadas: ímã na esfera, anel na outra ponta; girar ajusta o comprimento. Entra sozinha: 2 por cabo",
+      "weightG": null
     },
     {
       "code": "CLIP-C",
@@ -339,7 +355,8 @@
       },
       "behavior": null,
       "status": "estimado",
-      "notes": "Bolinha da ponta do cabo numa ponta, anel na outra; também une dois cabos. Entra sozinho: 2 por cabo"
+      "notes": "Bolinha da ponta do cabo numa ponta, anel na outra; também une dois cabos. Entra sozinho: 2 por cabo",
+      "weightG": null
     },
     {
       "code": "MCLIP-C",
@@ -351,7 +368,8 @@
       },
       "behavior": null,
       "status": "estimado",
-      "notes": "Até 5 cabos numa só CABLE C. Ainda não usado pelo programa"
+      "notes": "Até 5 cabos numa só CABLE C. Ainda não usado pelo programa",
+      "weightG": null
     },
     {
       "code": "RING-P",
@@ -363,7 +381,8 @@
       },
       "behavior": null,
       "status": "estimado",
-      "notes": "Liga vários cabos num ponto (radial). Ainda não usado pelo programa"
+      "notes": "Liga vários cabos num ponto (radial). Ainda não usado pelo programa",
+      "weightG": null
     },
     {
       "code": "RING-M",
@@ -375,7 +394,8 @@
       },
       "behavior": null,
       "status": "estimado",
-      "notes": "Liga vários cabos num ponto (radial). Ainda não usado pelo programa"
+      "notes": "Liga vários cabos num ponto (radial). Ainda não usado pelo programa",
+      "weightG": null
     },
     {
       "code": "BS6",
@@ -390,7 +410,8 @@
       },
       "behavior": "deixa a mola rígida",
       "status": "estimado",
-      "notes": "Tubo transparente em volta da mola B6"
+      "notes": "Tubo transparente em volta da mola B6",
+      "weightG": null
     },
     {
       "code": "BS12",
@@ -405,7 +426,8 @@
       },
       "behavior": "deixa a mola rígida",
       "status": "estimado",
-      "notes": "Tubo transparente em volta da mola B12"
+      "notes": "Tubo transparente em volta da mola B12",
+      "weightG": null
     }
   ]
 }

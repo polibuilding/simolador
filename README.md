@@ -4,7 +4,7 @@ Simulador de montagem 3D de estruturas com o [Kit Mola](https://molamodel.com) (
 
 **Abrir o programa:** https://polibuilding.github.io/simolador/ · funciona no navegador, sem instalar nada. Depois da primeira visita, abre **sem internet**. No Chrome e no Edge, dá para **instalar como aplicativo** (Configurações › Sobre).
 
-**Versão atual:** **1.10.5** (linha 1.x, "geométrica"). O que mudou em cada versão está no [CHANGELOG.md](CHANGELOG.md).
+**Versão atual:** **1.10.6** (linha 1.x, "geométrica"). O que mudou em cada versão está no [CHANGELOG.md](CHANGELOG.md).
 
 ## O que dá para fazer
 

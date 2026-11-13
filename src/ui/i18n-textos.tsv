@@ -565,3 +565,7 @@ Espaço amplia, Shift+Espaço volta; Esc cancela.	Space widens, Shift+Space goes
 {1}Leve a esfera pelo caminho: azul pode, vermelho não. Tab percorre as referências.{2}	{1}Move the sphere along the path: blue is allowed, red is not. Tab cycles the references.{2}	{1}Lleva la esfera por el camino: azul se puede, rojo no. Tab recorre las referencias.{2}
 {1}Anda num caminho (1 grau de liberdade): azul pode, vermelho não. Tab: limites e posições na horizontal/vertical.{2}	{1}Moves along a path (1 degree of freedom): blue is allowed, red is not. Tab: limits and horizontal/vertical positions.{2}	{1}Se mueve por un camino (1 grado de libertad): azul se puede, rojo no. Tab: límites y posiciones horizontales/verticales.{2}
 {1}Livre ({2} graus de liberdade): arraste; o resto do conjunto mexe só o que precisar.{3}	{1}Free ({2} degrees of freedom): drag; the rest of the group moves only as needed.{3}	{1}Libre ({2} grados de libertad): arrastra; el resto del conjunto se mueve solo lo necesario.{3}
+Massa	Mass	Masa
+≈ {1} g (sem {2})	≈ {1} g (without {2})	≈ {1} g (sin {2})
+Comprimento (lado das molas)	Length (spring side)	Longitud (lado de los resortes)
+Largura (das molas para fora)	Width (from the springs outward)	Ancho (desde los resortes hacia afuera)

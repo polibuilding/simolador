@@ -87,7 +87,7 @@ export function pieceFields(p: PieceDef): PieceField[] {
     case "connector":
       return p.code === "RC90"
         ? [{ key: "legMm", label: "Lado maior", min: 2, max: 60 }, H(), WEIGHT]
-        : [LEN(), W(), { key: "heightMm", label: "Altura", min: 0.5, max: 60 }, WEIGHT];
+        : [LEN("Comprimento (lado das molas)"), W("Largura (das molas para fora)"), { key: "heightMm", label: "Espessura", min: 0.5, max: 60 }, WEIGHT];
     default: return [WEIGHT];
   }
 }

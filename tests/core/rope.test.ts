@@ -47,8 +47,8 @@ describe("cabo (Kit 3)", () => {
     const b = id(m, [15, 6, 3]);
     expect(validateRope(catalog, kit3, m, a, b).ok).toBe(true);
     expect(validateRope(catalog, kit3, m, a, a).ok).toBe(false);
-    const perto = pilares(4);
-    const r = validateRope(catalog, kit3, perto, id(perto, [3, 6, 3]), id(perto, [7, 6, 3]));
+    const perto = pilares(3); // 3 M ≈ 45 mm entre centros: menos que o mínimo (≈ 58 mm)
+    const r = validateRope(catalog, kit3, perto, id(perto, [3, 6, 3]), id(perto, [6, 6, 3]));
     expect(r.ok).toBe(false);
     expect(r.errors[0]).toMatch(/Curto demais/);
     const com = addRope(m, [3, 6, 3], [15, 6, 3]);
@@ -123,8 +123,11 @@ describe("cabo preso em cabo: pendurais (K7–K9)", () => {
     const green = ropeRefs(catalog, m).filter((r) => r.kind === "green");
     expect(green).toHaveLength(1);
     expect(Math.abs(green[0].pos[0] - 9)).toBeLessThan(0.3);
-    // o meio do cabo cai na mesma bolinha (vale a verde); com a primeira ponta embaixo de x = 7, a perpendicular é amarela
-    expect(ropeRefs(catalog, m)).toHaveLength(1);
+    // além da verde, no máximo a bolinha do meio (amarela; some quando cai na mesma bolinha da verde);
+    // com a primeira ponta embaixo de x = 7, a perpendicular é amarela
+    const refs = ropeRefs(catalog, m);
+    expect(refs.length).toBeLessThanOrEqual(2);
+    expect(refs.filter((r) => r.kind !== "green").every((r) => r.kind === "yellow")).toBe(true);
     const perp = ropeRefs(catalog, m, [7, 0, 3]).find((r) => /perpendicular/.test(r.text))!;
     expect(perp.kind).toBe("yellow");
     expect(Math.abs(perp.pos[0] - 7)).toBeLessThan(0.3);
@@ -180,7 +183,11 @@ describe("cabo preso em cabo: pendurais (K7–K9)", () => {
     expect(set.locus?.kind).toBe("path");
     const P = r.model.nodes[r.a].pos;
     const q = set.nearest!([P[0], P[1] - 3, P[2]])!;
-    expect(q[0]).toBeCloseTo(P[0], 6);
+    // na reta do pendural (do ponto de cabo até a GC embaixo)
+    const G = r.model.nodes[gc].pos;
+    const t = (P[1] - q[1]) / (P[1] - G[1]);
+    expect(q[0]).toBeCloseTo(P[0] + (G[0] - P[0]) * t, 6);
+    expect(q[2]).toBeCloseTo(P[2] + (G[2] - P[2]) * t, 6);
     expect(q[1]).toBeLessThan(P[1]);
     const mv = set.evalAt!(q)!;
     expect(mv.check.ok).toBe(true);

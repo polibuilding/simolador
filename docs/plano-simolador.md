@@ -211,7 +211,7 @@ A **escala gráfica** saiu do carimbo: fica na direita da folha, vertical e sem 
 
 | Fase | Entrega | Critério de pronto |
 |---|---|---|
-| 0. Dados | `parametros.xlsx` → `catalog.json` e `kits.json` (feito); medições do kit | CC e CC90 medidas |
+| 0. Dados | `parametros.xlsx` → `catalog.json` e `kits.json` (feito); medições do kit | CC e CC90 pelas fotos (1.10.6); falta o paquímetro |
 | 1. Protótipo ✅ | chapa, esferas, GC (grade e livre), B6/B12 na grade; arrastar, encaixar, salvar/abrir; publicado no GitHub Pages | montar o pórtico simples do manual |
 | 2. Kits 1 e 2 completos ✅ | diagonais, placas, RC90, CC, CC90, B4; estoque configurável; regras; mover e girar; pontos de encaixe | Estrutura 01 do Desafio 2022 montada com a contagem certa (`examples/`) |
 | 3. Pranchas ✅ (1ª versão) | capa, plantas por pavimento, 4 elevações, escala automática, carimbo editável, PDF, SVG e DXF | plantas e vistas da "Estrutura 01" equivalentes às do Desafio 2022 |
@@ -246,8 +246,9 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 | Chave **Ajustável** desativada ("em breve") no canto de baixo, Kit X no lugar do Kit A no Estoque, tirante entre as peças criadas (§11.0, X8–X11) | 1.10.3 ✅ |
 | Modo escuro, inglês e espanhol (pedido da equipe, 08/11), RC90 na base só no plano dela (equipe confirmou GC = rótula) | 1.10.4 ✅ |
 | Pranchas traduzidas, dicionário completo (regras e dicas), diagonais claras no escuro, chave Ajustável ao lado da barra, título acompanha o desenho | 1.10.5 ✅ |
-| Impressão direta das pranchas e revisão das exportações | 1.10.6 |
-| Modo leve para computador fraco (sem sombras nem renderizado, menos resolução) e teste num notebook com vídeo integrado | 1.10.7 |
+| CC e CC90 com o formato real (fotos da equipe), massa das peças no resumo e nas configurações, passo do cabo medido | 1.10.6 ✅ |
+| Impressão direta das pranchas e revisão das exportações | 1.10.7 |
+| Modo leve para computador fraco (sem sombras nem renderizado, menos resolução) e teste num notebook com vídeo integrado | 1.10.8 |
 
 **1.11 — Aplicativo de computador:**
 
@@ -283,7 +284,7 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0.0`, `v1.8.2`…).
 
-- **1.x — geométrica** (atual: 1.10.5): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.10.6): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: flexibilidade, ajustabilidade e criação de peças próprias para representar e simular estruturas que fogem das limitações das peças atuais do kit. O instrumento é o **Kit X** (barra, placa e RC de qualquer ângulo, catálogo próprio e arquivo `.kit`, §11).
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
@@ -295,7 +296,7 @@ Decisões registradas (A-CONFIRMAR, aba Decisões): navegador agora, app local d
 
 Em aberto:
 - ~~CC90~~: resolvido. Kit 2 tem 12 RC90 (forma 3), 12 CC (forma 1) e 12 CC90 (forma 2, sobreposta à CC). Total de 145 confirmado.
-- **Medidas da CC e da CC90**: necessárias para desenhá-las (o programa usa um formato provisório até lá). **Lembrete pedido pela equipe (13/10): ajeitar as peças CC e CC90.**
+- **Medidas da CC e da CC90**: **13/11 (1.10.6)**: formato tirado das fotos da equipe (trapézios com pontas a 45° e recorte em V; a CC90 em cruz por cima da CC, pela fenda), na escala da esfera; detalhes em `kit-mola-pecas.md`. Falta conferir com paquímetro e confirmar o comportamento da CC90 (travar o ângulo com o par da CC).
 - **Configurações** (engrenagem; 1.6.0): o menu muda módulo, ângulo mínimo entre molas, ângulo mínimo da mola na GC, passo das inclinadas (o rótulo da barra de baixo acompanha) e o tamanho da chapa; **1.9.0**: a engrenagem abre direto a janela, com as abas Geral, Peças, Medidas gerais, Cabo e as pessoais (no navegador, não no projeto): **Tutorial** (seis passos que se marcam sozinhos), **Aparência** (chapa, fundo, eixos, animações; aplicar recarrega), **Perfil** (nome e equipe na capa das pranchas) e **Idioma** (só português). **Próximo**: inglês e espanhol (separar os textos da interface para tradução); tutorial guiado na própria cena. Os pesos ainda não entram em nenhuma conta (3.x).
   - **Proteção**: limites em cada valor; checagens cruzadas (molas com comprimento positivo, esfera menor que o menor vão, bolinha menor que o passo, GC menor que a chapa) bloqueiam o Aplicar; antes de aplicar, a tela mostra o que muda na estrutura aberta (GC fora da chapa, chapas sobrepostas, ângulos abaixo do novo mínimo); aplicar recarrega o programa com a estrutura salva; se a abertura travar, a seguinte volta ao padrão sozinha (as configurações recusadas ficam guardadas à parte); valores ilegíveis são ignorados com aviso; tela de erro com "Voltar às configurações padrão"; `?padrao` no endereço abre sem as configurações.
 - **Rigidez e movimentos livres** (1.7.1, `src/core/mechanism.ts`): esferas = rótulas; RC90 trava ângulo; RC90 na base engasta; CC/CC90 travam 180°; placas = corpos rígidos; diagonais e cabos só tração; GC fixas. Graus de liberdade pelo posto da matriz de rigidez, com teste finito (descarta as "dobras" que só existem no infinitesimal, como a torção de um pórtico plano com RC90). Duplo clique: 0 = travado, 1 = caminho azul/vermelho (traçado numericamente), 2+ = arraste livre mexendo o mínimo. Resumo: bloco Estabilidade com os graus de liberdade; painel da peça: "Movimento".
@@ -307,7 +308,7 @@ Em aberto:
 - **Pranchas editáveis** (1.8.0, F1–F12; 1.8.1, F13–F16): carimbo novo, folhas A2/A3/A4/personalizada, Mostrar global e por desenho, inserir desenhos e cortes; na 1.8.1, escala personalizada, Ctrl+Z/Ctrl+Y das pranchas, "Voltar ao automático" explicado, barra lateral Inserir, 4 isométricas, corte nas vistas transversais, lixeira do corte e desenhos renderizados. **A conferir com a equipe**: tamanho do quadro das logos (hoje 36 mm na A3, como antes); o arranjo mexido não acompanha pavimentos novos (hoje: "Voltar ao automático › Desenhos das pranchas"); a chapa preta nas plantas renderizadas pesa na impressão (talvez clarear só na foto). **Próximos**: textos livres inseríveis; corte com profundidade limitada (hoje vai até o fim da estrutura); seção de placas e diagonais cortadas; o desenho que passa da folha avisa; isométrica inserida com tamanho menor de partida.
 - **Biblioteca** (ao lado da engrenagem; 1.6.0): por enquanto "em breve" e os exemplos que vêm com o programa (abrem com um clique). Depois: biblioteca online de modelos enviados pelos usuários (precisa de um servidor e de contas: definir onde hospedar).
 - **Simolar** (botão ao lado de Pranchas): por enquanto "em breve"; é a porta da linha 3.x (deformação, estaticidade, estabilidade). Plano reforçado na §10 (04/11), com a física das peças em `docs/fisica-das-pecas.md`.
-- **Kit 3 (1.5.0: cabo simples e enrijecedor)**: Kit 3 no estoque; cabo em dois cliques (esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera, com as ligações e clipes automáticos), pedaço em bolinhas, plano de corte dos rolos no resumo e na capa; enrijecedor clicando na mola B6/B12. **Medidas estimadas pelas fotos** (`kit-mola-pecas.md`): confirmar com o kit em mãos. Próximas montagens de cabo, mapeadas abaixo.
+- **Kit 3 (1.5.0: cabo simples e enrijecedor)**: Kit 3 no estoque; cabo em dois cliques (esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera, com as ligações e clipes automáticos), pedaço em bolinhas, plano de corte dos rolos no resumo e na capa; enrijecedor clicando na mola B6/B12. **Medidas estimadas pelas fotos** (`kit-mola-pecas.md`): confirmar com o kit em mãos. **13/11 (1.10.6)**: passo medido (80 bolinhas em 26,5 cm = 3,31 mm); a CABLE C ficou com 11 mm para manter as 60 bolinhas da diagonal de 12M × 12M. Próximas montagens de cabo, mapeadas abaixo.
 - **Kit 3: outras montagens de cabo (mapa)** — o que o manual permite e como poderia entrar no programa:
   1. **Clip de múltiplos cabos (M CABLE CLIP C)**: **feito na 1.9.0 (K11)**: clicar com o clip numa esfera com 2+ cabos junta todos numa CABLE C (até 5 por clip).
   2. **Anéis (CABLE R pequeno e médio)**: **feito na 1.9.0 (K10)**: nó "anel" no ar, posição definida pelo usuário (altura com ↑/↓), só recebe cabos. Na 3.x: posição de equilíbrio calculada.
