@@ -83,7 +83,7 @@ Duas fotos de cima (2 CC e 2 CC90 sobre a mesa). A escala saiu da própria peça
 | Como monta | sobre a esfera, nas duas molas alinhadas | **em cruz** por cima da CC, no plano do outro par de molas: a fenda passa pela CC e apoia na borda de fora dela |
 | Massa | 3,0–3,075 g | 2,975–3,0 g |
 
-Os ímãs da CC aparecem na borda: um em cada ponta do lado das molas e um no fundo do V (3 ímãs, como a "ligação contínua" de 2008). **Conferir com paquímetro** comprimento, largura, espessura e a fenda; os valores ficam em `parametros.xlsx` (aba Peças, colunas medidas).
+Os ímãs da CC aparecem na borda: um em cada ponta do lado das molas e um no fundo do V (3 ímãs, como a "ligação contínua" de 2008). **Conferido pela equipe (14/11/2026): tamanho e comportamento compatíveis com as peças.** Os valores ficam em `parametros.xlsx` (aba Peças, colunas medidas).
 
 ## Regras de montagem relevantes para o simulador
 
@@ -122,7 +122,7 @@ Módulo implícito em 2008: (peça + esfera)/n = **14,67 mm** nas quatro molas (
 ## Outros kits (resumo)
 
 - Kit 3 (azul, 205 peças + cortador): detalhado na seção abaixo.
-- Kit 4 (amarelo, 144 peças + chave Allen): B3, B6, B12, arco A6x6, D3x3, D3x6, D6x6, ligação de superfície, folhas de papel.
+- Kit 4 (amarelo, 144 peças + chave Allen; site oficial, 14/11/2026): 12 esferas, 24 RC90, 6 CC (sem CC90), 10 ligações de superfície, 8 GC, 18 B3, 18 B6, 3 B12, 6 arcos A6x6, 6 D3x3, 9 D3x6, 9 D6x6, 14 folhas de papel (pré-marcadas para dobrar as cascas), 1 chapa e 1 chave Allen (ajusta as ligações de superfície). Plano em `plano-simolador.md` §13.
 - Acessórios: barras de comprimento ajustável (B3–B4, B4–B6, B6–B9, B9–B12), ligações leves, placas avulsas, Ground Clip (une chapas de base).
 
 ## Kit 3 (cor azul) — 205 peças + cortador, manual bilíngue

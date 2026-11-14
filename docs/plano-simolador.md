@@ -296,7 +296,7 @@ Decisões registradas (A-CONFIRMAR, aba Decisões): navegador agora, app local d
 
 Em aberto:
 - ~~CC90~~: resolvido. Kit 2 tem 12 RC90 (forma 3), 12 CC (forma 1) e 12 CC90 (forma 2, sobreposta à CC). Total de 145 confirmado.
-- **Medidas da CC e da CC90**: **13/11 (1.10.6)**: formato tirado das fotos da equipe (trapézios com pontas a 45° e recorte em V; a CC90 em cruz por cima da CC, pela fenda), na escala da esfera; detalhes em `kit-mola-pecas.md`. Falta conferir com paquímetro e confirmar o comportamento da CC90 (travar o ângulo com o par da CC).
+- **Medidas da CC e da CC90**: **13/11 (1.10.6)**: formato tirado das fotos da equipe (trapézios com pontas a 45° e recorte em V; a CC90 em cruz por cima da CC, pela fenda), na escala da esfera; detalhes em `kit-mola-pecas.md`. **14/11: a equipe conferiu: tamanho e comportamento da CC e da CC90 compatíveis** (a CC90 trava o par perpendicular e o ângulo com o par da CC). Resolvido.
 - **Configurações** (engrenagem; 1.6.0): o menu muda módulo, ângulo mínimo entre molas, ângulo mínimo da mola na GC, passo das inclinadas (o rótulo da barra de baixo acompanha) e o tamanho da chapa; **1.9.0**: a engrenagem abre direto a janela, com as abas Geral, Peças, Medidas gerais, Cabo e as pessoais (no navegador, não no projeto): **Tutorial** (seis passos que se marcam sozinhos), **Aparência** (chapa, fundo, eixos, animações; aplicar recarrega), **Perfil** (nome e equipe na capa das pranchas) e **Idioma** (só português). **Próximo**: inglês e espanhol (separar os textos da interface para tradução); tutorial guiado na própria cena. Os pesos ainda não entram em nenhuma conta (3.x).
   - **Proteção**: limites em cada valor; checagens cruzadas (molas com comprimento positivo, esfera menor que o menor vão, bolinha menor que o passo, GC menor que a chapa) bloqueiam o Aplicar; antes de aplicar, a tela mostra o que muda na estrutura aberta (GC fora da chapa, chapas sobrepostas, ângulos abaixo do novo mínimo); aplicar recarrega o programa com a estrutura salva; se a abertura travar, a seguinte volta ao padrão sozinha (as configurações recusadas ficam guardadas à parte); valores ilegíveis são ignorados com aviso; tela de erro com "Voltar às configurações padrão"; `?padrao` no endereço abre sem as configurações.
 - **Rigidez e movimentos livres** (1.7.1, `src/core/mechanism.ts`): esferas = rótulas; RC90 trava ângulo; RC90 na base engasta; CC/CC90 travam 180°; placas = corpos rígidos; diagonais e cabos só tração; GC fixas. Graus de liberdade pelo posto da matriz de rigidez, com teste finito (descarta as "dobras" que só existem no infinitesimal, como a torção de um pórtico plano com RC90). Duplo clique: 0 = travado, 1 = caminho azul/vermelho (traçado numericamente), 2+ = arraste livre mexendo o mínimo. Resumo: bloco Estabilidade com os graus de liberdade; painel da peça: "Movimento".
@@ -306,7 +306,7 @@ Em aberto:
   - **GC perto da estrutura** (1.7.2, `reach.ts`): círculos na chapa onde uma mola nova (até uma esfera baixa) ou pendurada (desce girando) chega até a GC respeitando G12.
   - Feito na 1.8.3: rótulas que giram em laranja durante o movimento; **G** no arraste livre segue um modo (uma liberdade) por vez, como caminho; diagonal frouxa desenhada com barriga (parábola com o comprimento da diagonal). Próximos: o cabo do Kit 3 frouxo (hoje ele é recontado e fica sempre esticado); levar o estudo para a 3.x (rigidez das molas, enrijecedor, cargas).
 - **Pranchas editáveis** (1.8.0, F1–F12; 1.8.1, F13–F16): carimbo novo, folhas A2/A3/A4/personalizada, Mostrar global e por desenho, inserir desenhos e cortes; na 1.8.1, escala personalizada, Ctrl+Z/Ctrl+Y das pranchas, "Voltar ao automático" explicado, barra lateral Inserir, 4 isométricas, corte nas vistas transversais, lixeira do corte e desenhos renderizados. **A conferir com a equipe**: tamanho do quadro das logos (hoje 36 mm na A3, como antes); o arranjo mexido não acompanha pavimentos novos (hoje: "Voltar ao automático › Desenhos das pranchas"); a chapa preta nas plantas renderizadas pesa na impressão (talvez clarear só na foto). **Próximos**: textos livres inseríveis; corte com profundidade limitada (hoje vai até o fim da estrutura); seção de placas e diagonais cortadas; o desenho que passa da folha avisa; isométrica inserida com tamanho menor de partida.
-- **Biblioteca** (ao lado da engrenagem; 1.6.0): por enquanto "em breve" e os exemplos que vêm com o programa (abrem com um clique). Depois: biblioteca online de modelos enviados pelos usuários (precisa de um servidor e de contas: definir onde hospedar).
+- **Biblioteca** (ao lado da engrenagem; 1.6.0): por enquanto "em breve" e os exemplos que vêm com o programa (abrem com um clique). Depois: biblioteca online, plano na **§12** (14/11: primeiro curada pela equipe, em arquivos no próprio site e sem contas; depois aberta, com contas).
 - **Simolar** (botão ao lado de Pranchas): por enquanto "em breve"; é a porta da linha 3.x (deformação, estaticidade, estabilidade). Plano reforçado na §10 (04/11), com a física das peças em `docs/fisica-das-pecas.md`.
 - **Kit 3 (1.5.0: cabo simples e enrijecedor)**: Kit 3 no estoque; cabo em dois cliques (esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera, com as ligações e clipes automáticos), pedaço em bolinhas, plano de corte dos rolos no resumo e na capa; enrijecedor clicando na mola B6/B12. **Medidas estimadas pelas fotos** (`kit-mola-pecas.md`): confirmar com o kit em mãos. **13/11 (1.10.6)**: passo medido (80 bolinhas em 26,5 cm = 3,31 mm); a CABLE C ficou com 11 mm para manter as 60 bolinhas da diagonal de 12M × 12M. Próximas montagens de cabo, mapeadas abaixo.
 - **Kit 3: outras montagens de cabo (mapa)** — o que o manual permite e como poderia entrar no programa:
@@ -524,3 +524,68 @@ O Kit X mexe em três coisas que hoje são fixas no programa: a **geometria** (t
 **Ainda em aberto:**
 - **Placa côncava ou com furo:** a resposta foi "sempre plana, sem limite de lados". Proposta para a implementação: aceitar côncava desde que os lados não se cruzem; furo fica para depois. Confirmar com a equipe.
 - **A RC ajustável do projeto paralelo:** quando existir, entra como peça física (com faixa de ângulos, como a barra comercial).
+
+## 12. Biblioteca online (plano de 14/11/2026)
+
+Hoje a **Biblioteca** (ao lado da engrenagem) só abre os exemplos que vêm com o programa. A ideia é que as equipes publiquem as estruturas delas e que qualquer um abra, estude e parta delas.
+
+**Princípio: a Biblioteca é só mais uma fonte de arquivos `.mola`.** O núcleo não muda. Um modelo da Biblioteca entra pelo mesmo caminho dos exemplos e dos arquivos do computador (`openText`/`openExample` em `files.ts`), com a cópia automática, o aviso de arquivo de versão mais nova (A-regras) e as peças criadas que o arquivo carrega (A9). Por isso ela funciona igual no site, no app instalado pelo navegador (PWA) e no app de computador (Tauri, 1.11).
+
+### 12.1 Em duas etapas
+
+| Etapa | O que faz | Onde fica | Contas | Quando |
+|---|---|---|---|---|
+| **A. Biblioteca da equipe** (curada) | Modelos escolhidos pela Poli Mola (manual, Desafios anteriores, estruturas boas das equipes), com miniatura, ficha (autor, equipe, ano, kits, peças, massa) e busca. **Enviar** monta um pacote (`.mola` + miniatura + ficha) que a pessoa manda à equipe por um formulário; a equipe revisa e publica | arquivos estáticos no próprio site (pasta `biblioteca/` com `indice.json`), no mesmo GitHub Pages | nenhuma | 1.12, depois do app (1.11) |
+| **B. Biblioteca aberta** | Cada um publica direto, edita e apaga o que é seu; curtir, comentar, "partir deste modelo" (cópia com crédito), denúncia | serviço com banco, arquivos e login. Recomendação: **Supabase** (gratuito no começo; Postgres, armazenamento e login por e-mail ou Google) | e-mail com código (sem senha) ou Google | depois da A, se houver uso |
+
+A etapa A já entrega quase todo o valor (modelos bons, abertos com um clique) sem servidor, sem custo e sem dados pessoais. A B só vale a pena quando houver gente publicando.
+
+### 12.2 Como fica compatível com o app
+
+- **Sem internet**: o índice e as miniaturas ficam guardados pelo service worker (como o resto do site); o que a pessoa abriu fica em "Baixados" (IndexedDB, como as cópias automáticas) e abre sem internet. Sem conexão, a Biblioteca mostra só o que já foi baixado. Um envio feito sem internet espera numa fila e sai quando a conexão voltar.
+- **No app de computador (Tauri)**: a Biblioteca é uma página da mesma interface, então não muda nada. Só três cuidados:
+  - **Endereço da Biblioteca fixo e completo**: o app não roda em `polibuilding.github.io`;
+  - **Permissão de acesso (CORS)** no serviço da etapa B, para a origem do app;
+  - **Login sem janela de redirecionamento**: código por e-mail funciona igual no site e no app. O login pelo Google precisaria de um endereço `simolador://` registrado no sistema.
+- **Versões**: o `.mola` já grava a versão do programa (`app`). O índice guarda a versão mínima de cada modelo, e a Biblioteca avisa "precisa da versão X; atualize" em vez de abrir errado. Modelos com peças do Kit X (2.x) ficam marcados.
+- **Arquivo grande**: o `.mola` é texto pequeno (dezenas de kB). Com a miniatura em WebP, o índice inteiro de centenas de modelos cabe em poucos MB.
+- **Abrir pelo link**: `…/simolador/?modelo=<id>` abre o modelo no site; no app, o mesmo link pode abrir o app (associação de endereço do Tauri) ou o site.
+
+### 12.3 Decisões da equipe (pendentes)
+
+1. **Quem cuida**: quem revisa os envios (etapa A) e modera (etapa B).
+2. **Licença dos modelos publicados**: sugestão CC BY 4.0 (qualquer um usa, citando o autor).
+3. **Público**: aberto a todos ou só a equipes do Desafio e alunos da Poli.
+4. **Dados pessoais** (etapa B): só nome, equipe e e-mail; termos de uso e LGPD (apagar a conta apaga os dados).
+5. **Marca Mola**: entra na mesma autorização pedida para o app (§7c).
+
+## 13. Kit 4 — arcos e cascas (registro de 14/11/2026)
+
+Kit 4 (amarelo, 2024, Kickstarter): **144 peças + chave Allen**, para **arcos e cascas**. Segundo o site oficial (molamodel.com), os modelos são: arco e reações de apoio, vários arcos, condições de contorno, cascas cilíndricas (com e sem viga de borda), casca em balanço e cúpula. A caixa tem 320 × 230 × 45 mm e pesa 2,3 kg.
+
+| Peça (site) | Qtd. | No programa | Observação |
+|---|---|---|---|
+| Connection (esfera, C) | 12 | já existe | |
+| Rigid Connection (RC90) | 24 | já existe | |
+| Continuous Connection (CC) | 6 | já existe | sem CC90 no Kit 4 |
+| Ground Connection (GC) | 8 | já existe | |
+| Ground (chapa G) | 1 | já existe | |
+| Bar B6 / B12 | 18 / 3 | já existem | |
+| **Bar B3** | 18 | **nova** | mola de 3M (peça ≈ 30 mm, pela tabela de 2008); permite malha de 3M |
+| **Diagonal D3x3 / D3x6** | 6 / 9 | **novas** | diagonais da malha de 3M |
+| **Arch A6x6** | 6 | **nova** | mola curva: arco que vence 6M na horizontal e 6M na vertical (¼ de circunferência?). Dois formam um arco de meia circunferência |
+| **Surface Connection** (ligação de superfície) | 10 | nova | prende os papéis às esferas pelo ímã; regulável com a chave |
+| **Paper Sheets** (papéis) | 14 | nova | folhas pré-marcadas para dobrar (plissar) as cascas como origami |
+| **Allen Key** (chave Allen) | 1 | — | ferramenta para ajustar a ligação de superfície |
+
+**O que entra e quando:**
+
+1. **Kit 4 no Estoque, com as peças retas** (B3, D3x3, D3x6): seguem as regras atuais das molas e diagonais, só com medidas novas. Pode entrar ainda na 1.x, assim que houver as medidas.
+2. **Arco A6x6**: um membro curvo. No grafo, continua uma ligação entre duas esferas com distância fixa, mas ganha a forma do arco (desenho na cena e nas pranchas) e um lado (para que lado ele se curva). Os casos de validação O-P22 a O-P25 (arcos bi-engastado, com rótula e tri-articulado) já estão previstos para a 2.x.
+3. **Papéis, ligação de superfície e chave**: **fora do programa por enquanto** (decisão da equipe, 14/11). Fica a ideia: a casca dobrada é uma superfície de vários painéis planos ligados por dobras (dá para partir da placa de N cantos da 1.10.2, com uma dobra como rótula entre painéis), e a ligação de superfície é uma ligação ajustável, como as RC do Kit X. Padrões a estudar: plissado cilíndrico, Miura-ori, Yoshimura.
+
+**Para avançar, a equipe precisa mandar** (se tiver o Kit 4):
+- **manual do Kit 4** (PDF ou fotos das páginas);
+- **medidas**: B3, D3x3, D3x6 e o arco A6x6 (raio, ângulo, comprimento e as pontas);
+- **massas**, como as dos Kits 1 e 2;
+- **fotos**: a ligação de superfície, como ela prende o papel e a esfera, e o que a chave ajusta.

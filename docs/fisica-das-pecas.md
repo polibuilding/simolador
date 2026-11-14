@@ -285,7 +285,7 @@ Notação: c/c = centro a centro das esferas; L_f = comprimento flexível (só a
 
 | Grandeza | RC90 | CC | CC90 | Fonte | Status |
 |---|---|---|---|---|---|
-| Forma | triângulo de catetos 18,3 mm, 6 mm de espessura | trapézio de 44 × 9,6 mm, pontas a 45°, com recorte em V que abraça a esfera | trapézio de 45,5 × 13 mm, com recorte em V que termina numa fenda: vai **em cruz** por cima da CC | [2022]; fotos da equipe 13/11/2026 (escala da esfera) | desenho / estimado: conferir com paquímetro |
+| Forma | triângulo de catetos 18,3 mm, 6 mm de espessura | trapézio de 44 × 9,6 mm, pontas a 45°, com recorte em V que abraça a esfera | trapézio de 45,5 × 13 mm, com recorte em V que termina numa fenda: vai **em cruz** por cima da CC | [2022]; fotos da equipe 13/11/2026 (escala da esfera) | desenho / **conferido pela equipe (14/11)** |
 | Massa | **2,2 g** | **3,0–3,075 g** | **2,975–3,0 g** | equipe 13/11/2026 ("ligação contínua (1) e (2)"; supomos (1) = CC e (2) = CC90) | **pesado** |
 | Material | plástico cinza com ímãs (2008: MDF com 3 ímãs). Com 6 mm de espessura, a RC90 e a CC dão ≈ 1,45 g/cm³ contando os ímãs: o mesmo material, e a espessura de 6 mm é coerente | site; [Oliveira]; fotos e pesagens 13/11/2026 | provável |
 | Trecho rígido | a RC90 deixa reta a parte da mola que ela cobre (≈ 18 mm) | — | — | [Oliveira] ensaios 2–8 | a medir (T12) |
