@@ -17,6 +17,8 @@ const SheetsView = lazy(() => import("./ui/SheetsView").then((m) => ({ default: 
 import { openProject, saveProject } from "./ui/files";
 import { logError } from "./ui/errorlog";
 import { available } from "./core/inventory";
+import { viewArrows } from "./core/boards";
+import { view } from "./interaction/ctx";
 
 /** Retângulo de seleção: azul = só o que está inteiro dentro; verde tracejado = o que tocar. */
 function SelectBox() {
@@ -101,11 +103,18 @@ function useShortcuts() {
         e.preventDefault();
         st.startPaste();
       } else if (st.tool.kind === "select" && st.selectedBoard && e.key.startsWith("Arrow")) {
-        // chapa selecionada: as setas movem nos eixos dela (1 M; Shift: 6 M; Alt ou Ctrl: 1/4 M)
+        // chapa selecionada (1.10.7): as setas seguem o que se vê na tela, no eixo da grade mais próximo
+        // (1 M; Ctrl: 6 M; Alt: 1/4 M); Shift + ← / → gira 15° (→ horário, ← anti-horário, vistos de cima)
         e.preventDefault();
-        const step = e.shiftKey ? 6 : e.altKey || mod ? 0.25 : 1;
-        const d: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
-        st.nudgeBoards(d[e.key]);
+        const key = e.key as "ArrowLeft" | "ArrowRight" | "ArrowUp" | "ArrowDown";
+        if (e.shiftKey) {
+          if (key === "ArrowLeft" || key === "ArrowRight") st.turnSelectedBoard(key === "ArrowRight" ? -15 : 15);
+          else useApp.setState({ hint: "Shift + ← / → gira a chapa 15°. Setas movem; Ctrl + setas: 6 módulos; Alt + setas: 1/4." });
+        } else {
+          const step = mod ? 6 : e.altKey ? 0.25 : 1;
+          const d = viewArrows(view.right())[key];
+          if (d) st.nudgeBoards([d[0] * step, d[1] * step]);
+        }
       } else if (st.tool.kind === "place" && (st.tool.code === "RING-P" || st.tool.code === "RING-M") && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
         // anel de cabo: ↑/↓ mudam a altura (1 módulo; Shift: 6), de 1 a 60
         e.preventDefault();

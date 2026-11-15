@@ -6,7 +6,7 @@ import { codeOf, moveGroup, nodeMoveNearest, nodeMoveOptions, removeMany, remove
 import { globalMoveAt, globalMoveOptions, moveScopes, type GlobalMove, type MoveRef, type MoveScope } from "../core/globalMove";
 import { createHistory, push, redo, undo, type History } from "../core/history";
 import { defaultInventory, type InventoryConfig } from "../core/inventory";
-import { boardsOf, emptyModel, membersAt, rotateNodes, rotYRad, samePos, toDisp, type Model, type Vec3 } from "../core/model";
+import { boardsOf, emptyModel, membersAt, rotateNodes, samePos, toDisp, type Model, type Vec3 } from "../core/model";
 import { overlappingNodes, type Check } from "../core/rules";
 import type { RopeBall } from "../core/rope";
 import { dropUnknownPieces, fromFile, toFile, type SheetMeta } from "../core/serialization";
@@ -172,7 +172,10 @@ interface State {
   addBoardAt: (fromId: string, side: Side) => void;
   removeBoardId: (id: string) => string | null;
   /** setas: desloca as chapas selecionadas nos eixos da primeira (módulos) */
-  nudgeBoards: (local: [number, number]) => void;
+  /** desloca as chapas selecionadas (módulos, no plano: x e z do modelo) */
+  nudgeBoards: (delta: [number, number]) => void;
+  /** gira a chapa selecionada até o próximo múltiplo de 15° (graus: + anti-horário, − horário, vistos de cima) */
+  turnSelectedBoard: (deg: number) => void;
   setBoardCenterOf: (id: string, cx: number, cz: number) => string | null;
   rotateBoardOf: (id: string, deg: number) => string | null;
   /** distância (módulos) entre as chapas selecionadas, na ordem em que foram escolhidas */
@@ -561,14 +564,11 @@ export const useApp = create<State>((set, get) => ({
     set({ history: push(s.history, r.model), hoverBoard: null, selectedBoard: null, boardExtra: [], selection: null, multi: [], hint: "Chapa apagada. Ctrl+Z desfaz." });
     return null;
   },
-  nudgeBoards: (local) => {
+  nudgeBoards: (delta) => {
     const s = get();
     const ids = boardSel(s);
     if (!ids.length) return;
-    const first = boardsOf(s.history.present).find((b) => b.id === ids[0]);
-    if (!first) return;
-    const v = rotYRad([local[0], 0, local[1]], boardRad(first));
-    const r = moveBoards(catalog, s.history.present, ids, [v[0], v[2]]);
+    const r = moveBoards(catalog, s.history.present, ids, delta);
     if (!r.model) return set({ hint: r.error ?? null });
     const b = boardsOf(r.model).find((x) => x.id === ids[0])!;
     const [cx, cz] = boardCenter(catalog, b);
@@ -587,6 +587,21 @@ export const useApp = create<State>((set, get) => ({
     if (!r.model) return r.error ?? null;
     set({ history: push(s.history, r.model), hint: null });
     return null;
+  },
+  turnSelectedBoard: (deg) => {
+    const s = get();
+    const ids = boardSel(s);
+    if (ids.length !== 1) return set({ hint: ids.length ? "Para girar, selecione uma chapa só." : null });
+    const b = boardsOf(s.history.present).find((x) => x.id === ids[0]);
+    if (!b) return;
+    // até o próximo múltiplo de 15° (um giro livre, como 7°, vai para 15° ou 0°)
+    const rot = b.rot ?? 0;
+    const to = deg > 0 ? Math.floor(rot / 15 + 1e-6) * 15 + 15 : Math.ceil(rot / 15 - 1e-6) * 15 - 15;
+    const r = rotateBoard(catalog, s.history.present, b.id, to);
+    if (!r.model) return set({ hint: r.error ?? null });
+    const nb = boardsOf(r.model).find((x) => x.id === b.id)!;
+    const shown = String(nb.rot ?? 0).replace(".", ",");
+    set({ history: push(s.history, r.model), hint: r.note ?? `${boardName(nb)}: giro ${shown}° (Shift + ← / →).` });
   },
   rotateBoardOf: (id, deg) => {
     const s = get();

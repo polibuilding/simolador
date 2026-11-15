@@ -10,7 +10,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 
 - **No ar:** https://polibuilding.github.io/simolador/
 - **Repositório:** `polibuilding/simolador`, branch `main`. A publicação é por GitHub Actions no GitHub Pages (`.github/workflows/pages.yml`).
-- **Versão atual:** 1.10.6. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
+- **Versão atual:** 1.10.7. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
 - **Usuários:** estudantes de engenharia e arquitetura, que montam e documentam estruturas para a competição.
 
 ## Como trabalhar com a equipe
@@ -26,7 +26,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 npm install
 npm run dados     # data/parametros.xlsx → data/catalog.json e data/kits.json (nunca edite os .json à mão)
 npm run dev       # http://localhost:5173/simolador/
-npm test          # Vitest (núcleo); hoje 199 testes, todos passando
+npm test          # Vitest (núcleo); hoje 207 testes, todos passando
 npm run typecheck
 npm run build     # tsc + vite build
 npx vite preview --port 4173 --strictPort   # testar o build em http://localhost:4173/simolador/
@@ -174,7 +174,7 @@ O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o as
 
 ### Outros
 - **Geometria livre:** geodésicas e barras fora dos planos ortogonais (E19). É a fase 4 do plano.
-- **App local:** fase 5, plano em `plano-simolador.md` §7c. Feito na 1.10.0: arquivos, sem internet, PWA, Sobre e relatório. Feito na 1.10.1: pavimentos na capa, planta baixa cortada a uma altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20). Feito na 1.10.2: base para a 2.x (plano §11.5). Feito na 1.10.3: chave Ajustável desativada, Kit X no Estoque, tirante criado. Feito na 1.10.4: modo escuro, inglês e espanhol, RC90 na base só no plano dela. Feito na 1.10.5: pranchas traduzidas, dicionário completo, chave ao lado da barra, título acompanha o desenho. Feito na 1.10.6: CC e CC90 pelas fotos, massas, passo do cabo medido. Próximos: 1.10.7 impressão das pranchas, 1.10.8 modo leve, 1.11 Tauri (instaladores, atualizador, página de download), 1.12 Biblioteca da equipe (§12).
+- **App local:** fase 5, plano em `plano-simolador.md` §7c. Feito na 1.10.0: arquivos, sem internet, PWA, Sobre e relatório. Feito na 1.10.1: pavimentos na capa, planta baixa cortada a uma altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20). Feito na 1.10.2: base para a 2.x (plano §11.5). Feito na 1.10.3: chave Ajustável desativada, Kit X no Estoque, tirante criado. Feito na 1.10.4: modo escuro, inglês e espanhol, RC90 na base só no plano dela. Feito na 1.10.5: pranchas traduzidas, dicionário completo, chave ao lado da barra, título acompanha o desenho. Feito na 1.10.6: CC e CC90 pelas fotos, massas, passo do cabo medido. Feito na 1.10.7: chapas moduladas (centro na grade, `onQuarter`/`boardFromCenter` em `boards.ts`), setas pelo que se vê (`viewArrows` + `view.right` em `interaction/ctx.ts`), Shift + ← / → gira. Próximos: 1.10.8 impressão das pranchas, 1.10.9 modo leve, 1.11 Tauri (instaladores, atualizador, página de download), 1.12 Biblioteca da equipe (§12).
 - **Medições pendentes:** o protocolo está em `plano-simolador.md` §9.
 - **Responsáveis por frente** (Q08): falta definir.
 

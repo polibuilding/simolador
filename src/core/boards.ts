@@ -29,6 +29,41 @@ export function boardCenter(cat: Catalog, b: Board): [number, number] {
   return fromBoardLocal(b, w / 2, d / 2);
 }
 
+// ---------- modulação (1.10.7) ----------
+// As chapas ficam na grade de 1/4 de módulo: girar não pode tirar o centro da grade (o canto é recalculado a partir
+// do centro, e não o contrário), e as peças em cima voltam aos pontos da grade da chapa. Assim, girar e voltar a 0°
+// deixa a chapa exatamente onde estava e ela volta a encostar nas vizinhas.
+
+/** Posição guardada com 6 casas (o giro dá números sem fim; 4 casas acumulavam erro a cada giro). */
+const r6 = (n: number) => Math.round(n * 1e6) / 1e6 + 0;
+
+/** Número perto de um múltiplo de 1/4 de módulo (erro de arredondamento) vira o múltiplo. */
+export function onQuarter(n: number): number {
+  const q = Math.round(n * 4) / 4;
+  return Math.abs(n - q) < 2e-3 ? q + 0 : r6(n);
+}
+
+/** Chapa com centro (cx, cz) e giro `rot` (graus): o canto sai do centro, que fica na grade. */
+export function boardFromCenter(cat: Catalog, b: Board, cx: number, cz: number, rot: number): Board {
+  const { w, d } = boardSize(cat);
+  const v = rotYRad([w / 2, 0, d / 2], (rot * Math.PI) / 180);
+  const out: Board = { ...b, x: r6(onQuarter(cx) - v[0]), z: r6(onQuarter(cz) - v[2]), rot };
+  if (!rot) delete out.rot;
+  return out;
+}
+
+/**
+ * Setas referidas a quem olha (1.10.7): ← → andam para a esquerda e a direita da tela, ↑ ↓ para longe e para perto,
+ * sempre num eixo da grade (o eixo X ou Z mais perto do que se vê), para a chapa continuar modulada.
+ * `right` = direção da direita da tela no plano (x, z).
+ */
+export function viewArrows(right: [number, number]): Record<"ArrowLeft" | "ArrowRight" | "ArrowUp" | "ArrowDown", [number, number]> {
+  const [rx, rz] = right;
+  const r: [number, number] = Math.abs(rx) >= Math.abs(rz) ? [Math.sign(rx) || 1, 0] : [0, Math.sign(rz) || 1];
+  const away: [number, number] = [r[1] + 0, -r[0] + 0]; // para dentro da tela
+  return { ArrowRight: r, ArrowLeft: [-r[0] + 0, -r[1] + 0], ArrowUp: away, ArrowDown: [-away[0] + 0, -away[1] + 0] };
+}
+
 /** Os quatro cantos da chapa no plano, em ordem. */
 export function boardCorners(cat: Catalog, b: Board): [number, number][] {
   const { w, d } = boardSize(cat);
@@ -138,8 +173,7 @@ export function placeBeside(cat: Catalog, to: Board, side: Side, gap: number, sh
   const lc: [number, number] = [w / 2 + sx * reach + (sx ? 0 : shift), d / 2 + sz * reach + (sz ? 0 : shift)];
   const [cx, cz] = fromBoardLocal(to, lc[0], lc[1]);
   const v = rotYRad([w / 2, 0, d / 2], (rot * Math.PI) / 180);
-  const r = (n: number) => Math.round(n * 1e4) / 1e4 + 0;
-  return { x: r(cx - v[0]), z: r(cz - v[2]) };
+  return { x: r6(cx - v[0]), z: r6(cz - v[2]) };
 }
 
 export function addBoard(cat: Catalog, model: Model, fromId: string, side: Side): { model?: Model; id?: string; error?: string } {
@@ -201,8 +235,7 @@ export function renameBoard(model: Model, id: string, name: string): Model {
 export function moveBoards(cat: Catalog, model: Model, ids: string[], delta: [number, number]): { model?: Model; error?: string } {
   const boards = boardsOf(model);
   const sel = new Set(ids);
-  const r4 = (n: number) => Math.round(n * 1e4) / 1e4 + 0;
-  const moved = boards.map((b) => (sel.has(b.id) ? { ...b, x: r4(b.x + delta[0]), z: r4(b.z + delta[1]) } : b));
+  const moved = boards.map((b) => (sel.has(b.id) ? { ...b, x: r6(b.x + delta[0]), z: r6(b.z + delta[1]) } : b));
   for (const m of moved.filter((b) => sel.has(b.id))) {
     const hit = moved.find((o) => !sel.has(o.id) && overlaps(cat, o, m));
     if (hit) return { error: `${boardName(m)} encostaria em ${boardName(hit)}.` };
@@ -289,16 +322,26 @@ export function rotateBoard(cat: Catalog, model: Model, id: string, deg: number)
   if (!b) return { error: "Chapa não encontrada." };
   if (!Number.isFinite(deg)) return { error: "Giro em graus (ex.: 30)." };
   const rotN = Math.round((((deg % 360) + 540) % 360 - 180) * 1e4) / 1e4 + 0; // −180…180
-  const [cx, cz] = boardCenter(cat, b);
-  const { w, d } = boardSize(cat);
-  const v = rotYRad([w / 2, 0, d / 2], (rotN * Math.PI) / 180);
-  const turned: Board = { ...b, x: Math.round((cx - v[0]) * 1e4) / 1e4 + 0, z: Math.round((cz - v[2]) * 1e4) / 1e4 + 0, rot: rotN };
-  if (!rotN) delete turned.rot;
+  // o centro fica na grade (girar e voltar não tira a chapa do lugar)
+  const c0 = boardCenter(cat, b);
+  const cx = onQuarter(c0[0]);
+  const cz = onQuarter(c0[1]);
+  const from = boardFromCenter(cat, b, cx, cz, b.rot ?? 0);
+  const turned = boardFromCenter(cat, b, cx, cz, rotN);
   const own = ownStructures(cat, model, id);
   if (own.error) return { error: own.error };
   let next: Model = { ...model, boards: boards.map((x) => (x.id === id ? turned : x)) };
   if (own.ids.size) {
-    next = rotateNodes(next, own.ids, [cx, 0, cz], boardRad(turned) - boardRad(b));
+    // ligações giram juntas; as posições saem das coordenadas da chapa (pontos da grade dela continuam exatos)
+    next = rotateNodes(next, own.ids, [cx, 0, cz], boardRad(turned) - boardRad(from));
+    const nodes = { ...next.nodes };
+    for (const nid of own.ids) {
+      const n = model.nodes[nid];
+      const [lx, lz] = toBoardLocal(from, n.pos[0], n.pos[2]);
+      const [x, z] = fromBoardLocal(turned, onQuarter(lx), onQuarter(lz));
+      nodes[nid] = { ...nodes[nid], pos: [Math.round(x * 1e4) / 1e4 + 0, n.pos[1], Math.round(z * 1e4) / 1e4 + 0] };
+    }
+    next = { ...next, nodes };
     const ck = validateMovedModel(cat, next, own.ids);
     if (!ck.ok) return { error: ck.errors[0] };
   }

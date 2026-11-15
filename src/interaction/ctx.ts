@@ -34,6 +34,12 @@ export const freshCmd = (): Cmd => ({
   linkPick: null, linkGhost: null, ballPick: null, boxStart: null, lastSpot: null,
 });
 
+/**
+ * Direção da direita da tela no plano do chão (x, z do modelo), para as setas referidas a quem olha (chapas, 1.10.7).
+ * A cena registra a câmera aqui; sem cena, vale o eixo x.
+ */
+export const view = { right: (): [number, number] => [1, 0] };
+
 export interface Ctx {
   camera: THREE.Camera;
   el: HTMLCanvasElement;

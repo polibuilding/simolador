@@ -24,6 +24,12 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 ## 1.10 — Pronto para usar fora do site
 
+### 1.10.7 — Chapas moduladas, setas pelo que se vê e giro com Shift · 15/11/2026
+- **Chapas sempre na grade**: girar uma chapa e voltar a 0° a deixa exatamente onde estava, e ela volta a encostar na vizinha. Antes, cada giro arredondava a posição, e andar com as setas numa chapa girada a tirava da grade: ao voltar a 0° sobrava uma fração de módulo e ela não encostava mais. As peças em cima também voltam aos pontos exatos da grade.
+- **Setas pelo que se vê**: com a chapa selecionada, ← → andam para a esquerda e a direita da tela, ↑ ↓ para longe e para perto, de qualquer lado que se olhe. O passo é sempre num eixo da grade (o mais próximo do que se vê).
+- **Shift + ← / →** gira a chapa 15° (→ horário, ← anti-horário, vistos de cima), sempre para o próximo múltiplo de 15°.
+- **Passos**: Ctrl + setas andam 6 módulos (antes era Shift) e Alt + setas, 1/4 de módulo.
+
 ### 1.10.6 — CC e CC90 com o formato real, massa das peças e passo do cabo medido · 13/11/2026
 - **CC e CC90 como as peças de verdade**, pelas fotos da equipe: trapézios com as pontas a 45° e um recorte em V que abraça a esfera. A CC90 tem uma fenda e vai **em cruz** por cima da CC. Mudou na cena, na paleta e nas pranchas. As medidas (≈ 44 × 9,6 mm e 45,5 × 13 mm, 6 mm de espessura) estão na planilha e nas configurações, para conferir com paquímetro.
 - **Massa da estrutura** no resumo ("Massa ≈ 280 g"), com as pesagens da equipe. As massas também aparecem nas configurações (aba Peças) e ficam na planilha, prontas para a simulação. O cabo e as peças do Kit 3 ainda não têm massa: o resumo diz quais ficaram de fora.

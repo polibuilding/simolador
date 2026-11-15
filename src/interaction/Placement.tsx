@@ -15,7 +15,7 @@ import { len, sub } from "../core/model";
 import { freeOn, inclineOn, panelOpen, useApp, workingModel } from "../ui/store";
 import { M, toWorld } from "../render/units";
 import { PROPS_W } from "../render/Scene";
-import { freshCmd, makeCtx } from "./ctx";
+import { freshCmd, makeCtx, view } from "./ctx";
 import { AXES_PX, CLICK_PX, DRAG_PX, GIZMO_PX, guidesFor } from "./queries";
 import { pickSupport, reachStep } from "./steps/support";
 import { freeBar, linkStep, sphereUnder, triangleStep } from "./steps/bars";
@@ -45,6 +45,10 @@ export function Placement() {
   useEffect(() => {
     const el = gl.domElement;
     const ctx = makeCtx(camera, el);
+    view.right = () => {
+      const e = camera.matrixWorld.elements; // 1ª coluna = direita da câmera
+      return [e[0], e[2]];
+    };
     const cmd = ctx.cmd;
     const { toScreen, insideOf, planeHit, markHover } = ctx;
 
