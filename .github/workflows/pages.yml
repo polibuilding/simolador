@@ -1,4 +1,7 @@
-# Publica o siMOLAdor no GitHub Pages a cada push na main.
+# Publica o siMOLAdor no GitHub Pages a cada push na main, em dois canais (equipe, 17/11/2026):
+# - oficial (https://polibuilding.github.io/simolador/): o commit escrito em .github/oficial.txt (a versão que a
+#   equipe diz que é a atual). Para a BETA virar a oficial, troque o commit nesse arquivo e faça o push.
+# - BETA (…/simolador/beta/): a main, com as entregas do dia a dia.
 # Os dados (catalog.json e kits.json) são sempre regerados a partir de data/parametros.xlsx.
 name: Publicar no GitHub Pages
 
@@ -25,16 +28,37 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # ---- BETA: a main ----
       - run: npm ci
-      - name: Gerar dados a partir da planilha
+      - name: Gerar dados a partir da planilha (BETA)
         run: npm run dados
-      - name: Testes
+      - name: Testes (BETA)
         run: npm test
-      - name: Build
+      - name: Build da BETA
         run: npm run build
+        env:
+          SIMOLADOR_CANAL: beta
+          SIMOLADOR_BASE: /simolador/beta/
+      # ---- oficial: o commit de .github/oficial.txt ----
+      - name: Qual é a oficial
+        id: oficial
+        run: echo "ref=$(tr -d '[:space:]' < .github/oficial.txt)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.oficial.outputs.ref }}
+          path: _oficial
+      - name: Build da oficial
+        working-directory: _oficial
+        run: npm ci && npm run dados && npm run build
+      # ---- site: a oficial na raiz, a BETA na pasta beta/ ----
+      - name: Montar o site
+        run: |
+          mkdir -p _site/beta
+          cp -r _oficial/dist/. _site/
+          cp -r dist/. _site/beta/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: _site
 
   deploy:
     needs: build

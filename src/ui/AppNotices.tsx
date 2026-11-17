@@ -1,10 +1,12 @@
 // Avisos do programa (1.10.0): "nova versão pronta" (service worker) e "atualizado para vX" depois da troca.
 import { useEffect, useState } from "react";
 import { VERSION } from "../version";
+import { IS_BETA } from "../channel";
 import { applyUpdate } from "./pwa";
 import { useApp } from "./store";
 
-const SEEN_KEY = "simolador:versao-vista";
+// a BETA guarda a sua (as duas versões dividem o navegador): ir e voltar não avisa "atualizado"
+const SEEN_KEY = IS_BETA ? "simolador:versao-vista-beta" : "simolador:versao-vista";
 
 export function AppNotices() {
   const updateReady = useApp((s) => s.updateReady);

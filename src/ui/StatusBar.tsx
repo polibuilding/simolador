@@ -1,6 +1,7 @@
 import { catalog } from "../core/catalog";
 import { useApp } from "./store";
 import { EDITION, VERSION, VERSION_SHORT } from "../version";
+import { IS_BETA } from "../channel";
 
 /** Dica da ferramenta: texto pequeno direto no fundo da cena, acima da barra de baixo. */
 export function HintLine() {
@@ -30,7 +31,7 @@ export function HintLine() {
 export function VersionTag() {
   return (
     <span className="version-tag" title={`siMOLAdor ${VERSION}${EDITION ? ` · versão ${EDITION}` : ""}`}>
-      v{VERSION_SHORT}
+      v{VERSION_SHORT}{IS_BETA ? " beta" : ""}
     </span>
   );
 }

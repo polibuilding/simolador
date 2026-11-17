@@ -14,6 +14,9 @@ const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), 
  * (código, pranchas, PDF, fontes, logos, ícones) e um carimbo da versão. O service worker guarda tudo na primeira
  * visita; a cada versão nova, o carimbo muda, o navegador baixa a lista nova e o programa avisa "nova versão".
  */
+// canal da publicação: "oficial" (padrão) ou "beta" (pasta beta/ do site; ver src/channel.ts e pages.yml)
+const CANAL = process.env.SIMOLADOR_CANAL === "beta" ? "beta" : "oficial";
+
 function offlinePlugin(): Plugin {
   let outDir = "dist";
   return {
@@ -36,17 +39,27 @@ function offlinePlugin(): Plugin {
       const hash = createHash("sha256");
       for (const f of files) hash.update(f).update(readFileSync(join(outDir, f)));
       const stamp = `${pkg.version}-${hash.digest("hex").slice(0, 10)}`;
+      // BETA: o app instalável tem outro nome (as duas versões podem ficar instaladas lado a lado)
+      if (CANAL === "beta") {
+        const mf = join(outDir, "manifest.webmanifest");
+        try {
+          const m = JSON.parse(readFileSync(mf, "utf8"));
+          writeFileSync(mf, JSON.stringify({ ...m, name: `${m.name} BETA`, short_name: `${m.short_name} BETA` }, null, 2));
+        } catch {
+          /* sem manifesto */
+        }
+      }
       const tpl = readFileSync(new URL("./scripts/sw-modelo.js", import.meta.url), "utf8");
-      writeFileSync(join(outDir, "sw.js"), tpl.replace("__CARIMBO__", stamp).replace("__VERSAO__", pkg.version).replace("[/*__ARQUIVOS__*/]", JSON.stringify(["./", ...files.filter((f) => f !== "index.html")], null, 0)));
+      writeFileSync(join(outDir, "sw.js"), tpl.replace("__CARIMBO__", stamp).replace("__VERSAO__", pkg.version).replace("__CANAL__", CANAL).replace("[/*__ARQUIVOS__*/]", JSON.stringify(["./", ...files.filter((f) => f !== "index.html")], null, 0)));
     },
   };
 }
 
 // base = nome do repositório, para o GitHub Pages (https://polibuilding.github.io/simolador/)
 export default defineConfig({
-  base: "/simolador/",
+  base: process.env.SIMOLADOR_BASE || "/simolador/",
   plugins: [react(), offlinePlugin()],
-  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+  define: { __APP_VERSION__: JSON.stringify(pkg.version), __CANAL__: JSON.stringify(CANAL) },
   // bibliotecas em arquivos à parte: mudam pouco, então o navegador guarda e, a cada versão nova, só o código do
   // programa é baixado de novo. As pranchas (e o PDF) vêm sob demanda, quando são abertas.
   build: {
