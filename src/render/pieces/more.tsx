@@ -318,7 +318,7 @@ export function RigidConnector({
   return <mesh geometry={geom} material={mat} matrix={matrix} matrixAutoUpdate={false} castShadow {...pickProps(p)} />;
 }
 
-/** CC / CC90: CC sobre a esfera, nas duas molas alinhadas; CC90 em cruz por cima dela, nas molas do outro par (a fenda passa pela CC). */
+/** CC / CC90: sobre a esfera, nas duas molas alinhadas; a CC90 também pode ir em cruz por cima de uma CC, nas molas do outro par (a fenda passa pela CC). */
 export function ContinuousConnector({
   at, axis, side: sideIn, code, look = "normal", ...p
 }: { at: THREE.Vector3; axis: Vec3; side?: Vec3; code: string; look?: Look } & Pickable) {

@@ -189,7 +189,8 @@ export function connectorCandidates(cat: Catalog, inv: InventoryConfig, model: M
         specs.push({ code, node: nodeId, dirs: [UP, rotDir(side, fr)], base: true });
       }
     }
-  } else if (code === "CC") {
+  } else if (code === "CC" || code === "CC90") {
+    // CC90 (1.10.8): sozinha, faz o papel da CC; com uma CC do outro par no mesmo lado, vai em cruz por cima dela (L5)
     const has = (d: Vec3) => dirs.some((x) => Math.abs(dot(x, d) - 1) < DIR_TOL);
     const axes: Vec3[] = [];
     for (const d of dirs) {
@@ -199,13 +200,6 @@ export function connectorCandidates(cat: Catalog, inv: InventoryConfig, model: M
     for (const ax of axes) {
       // os 4 lados em volta do par; lado com barra transversal fica de fora (L6)
       for (const side of sidesAround(ax, frameRadAt(cat, boardsOf(model), n.pos[0], n.pos[2]))) if (!has(side)) specs.push({ code, node: nodeId, dirs: [ax], side });
-    }
-  } else if (code === "CC90") {
-    const has = (d: Vec3) => dirs.some((x) => Math.abs(dot(x, d) - 1) < DIR_TOL);
-    for (const c of Object.values(model.connectors)) {
-      if (c.node !== nodeId || c.code !== "CC" || !c.side) continue;
-      const ax = canonicalDir(norm(cross(c.dirs[0], c.side)).map((v) => Math.round(v * 1e6) / 1e6 + 0) as Vec3);
-      if (has(ax) && has(scale(ax, -1))) specs.push({ code, node: nodeId, dirs: [ax], side: c.side });
     }
   }
   return specs.map((spec) => ({ kind: "connector" as const, spec, check: validateConnector(cat, inv, model, spec) }));

@@ -64,6 +64,18 @@ describe("CC e CC90: lados da esfera", () => {
     // nó do meio (9,6,3): só o par em x
     const cc = connectorCandidates(catalog, inv, m, "CC", id(m, [9, 6, 3])).filter((x) => x.check.ok);
     expect(cc).toHaveLength(4);
+    // CC90 sozinha (1.10.8): os mesmos 4 lados; com uma CC por cima do mesmo par, não cabe no lado dela
+    const cc90 = connectorCandidates(catalog, inv, m, "CC90", id(m, [9, 6, 3])).filter((x) => x.check.ok);
+    expect(cc90).toHaveLength(4);
+    const m2 = applyCandidate(m, cc[0]);
+    const k = cc[0].kind === "connector" ? cc[0].spec.side : undefined;
+    const over = connectorCandidates(catalog, inv, m2, "CC90", id(m2, [9, 6, 3])).filter((x) => x.kind === "connector" && String(x.spec.side) === String(k));
+    expect(over[0].check.errors.join()).toMatch(/já tem uma CC nesse par/);
+    // e a CC não entra embaixo de uma CC90 do mesmo par
+    const m3 = applyCandidate(m, cc90[0]);
+    const s3 = cc90[0].kind === "connector" ? cc90[0].spec.side : undefined;
+    const under = connectorCandidates(catalog, inv, m3, "CC", id(m3, [9, 6, 3])).filter((x) => x.kind === "connector" && String(x.spec.side) === String(s3));
+    expect(under[0].check.errors.join()).toMatch(/CC90 nesse par/);
   });
   it("barra transversal ocupa um lado; CC90 vai no mesmo lado da CC", () => {
     let m = emptyModel();

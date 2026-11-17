@@ -3,7 +3,7 @@
 // - Esfera = rótula (articulação esférica): as molas giram livres em volta dela.
 // - Mola (B4, B6, B12) = barra: o comprimento não muda.
 // - RC90 entre duas molas a 90°: trava o ângulo entre elas (vira um esquadro).
-// - CC entre duas molas alinhadas: trava em 180° (viga contínua); CC90 por cima de uma CC: trava o par
+// - CC entre duas molas alinhadas: trava em 180° (viga contínua); CC90 sozinha: igual à CC (1.10.8); CC90 em cruz por cima de uma CC: trava o par
 //   perpendicular em 180° e o ângulo entre os dois pares.
 // - RC90 na base de uma GC: trava só o tombamento do pilar no plano dela (equipe 08/11: a RC90 trava uma direção;
 //   a outra fica um pouco mais rígida, o que entra na simulação da 3.x). Duas, em lados perpendiculares, engastam.

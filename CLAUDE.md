@@ -10,7 +10,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 
 - **No ar:** https://polibuilding.github.io/simolador/
 - **Repositório:** `polibuilding/simolador`, branch `main`. A publicação é por GitHub Actions no GitHub Pages (`.github/workflows/pages.yml`).
-- **Versão atual:** 1.10.7. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
+- **Versão atual:** 1.10.8. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
 - **Usuários:** estudantes de engenharia e arquitetura, que montam e documentam estruturas para a competição.
 
 ## Como trabalhar com a equipe
@@ -61,7 +61,7 @@ TypeScript, React 18, Three.js via React Three Fiber + drei, Zustand, Vite, Vite
 
 | Arquivo | Papel |
 |---|---|
-| `model.ts` | Grafo: nós (`sphere` ou `support` = GC), membros (barra, diagonal = `cable`, cabo do Kit 3 = `rope`; `stiff` = enrijecedor), placas (4 cantos no kit; N cantos aceitos para a 2.x), ligações (RC90, CC, CC90; `base` = RC90 na GC), chapas |
+| `model.ts` | Grafo: nós (`sphere` ou `support` = GC), membros (barra, diagonal = `cable`, cabo do Kit 3 = `rope`; `stiff` = enrijecedor), placas (4 cantos no kit; N cantos aceitos para a 2.x), ligações (RC90, CC, CC90 sozinha ou em cruz sobre a CC; `base` = RC90 na GC), chapas |
 | `rules.ts` | Todas as validações (`validateMember`, `validateSupport`, `validateMovedModel`…), cada uma com a regra de `regras-de-encaixe.md` |
 | `snapping.ts` | Candidatas de encaixe e guias da GC |
 | `edit.ts` | Edições: mover só o nó (`nodeMoveOptions`, loci esfera/círculo/pontos/caminho), ligar duas esferas (`connectReach`), girar, remover, trechos azul/vermelho do caminho (`locusStatus`), paradas na horizontal/vertical (`alignStops`) |
@@ -106,7 +106,7 @@ Em `mechanism.ts` e `globalMove.ts`, cada ligação vira um vínculo:
 | RC90 | Trava só a **inclinação no plano em que foi posicionada** (L10, 16/10): distância entre as pontas das duas molas. No plano perpendicular a mola gira, e a torção também fica livre (14/10). No "mover só o nó" (`edit.ts`), vira mais um vínculo de distância, em vez de travar o nó |
 | RC90 na base | Trava só o tombamento do pilar **no plano dela** (equipe 08/11; vínculo `planes` em `mechanism.ts`, `RC90_BASE_ENGASTA = false` em `model.ts`). Duas, em lados perpendiculares, engastam |
 | CC | Colinear (`lerps`) |
-| CC90 | Também trava o ângulo com o par da CC (conferido pela equipe em 14/11) |
+| CC90 | Sozinha: igual à CC (1.10.8). Em cruz por cima de uma CC: também trava o ângulo com o par da CC (conferido pela equipe em 14/11) |
 | Placa | Corpo rígido (shape matching) |
 | Diagonal e cabo | Só tração (`ties`) |
 | GC | Fixa na chapa e **rótula** para as molas (confirmado pela equipe em 08/11) |
@@ -174,7 +174,7 @@ O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o as
 
 ### Outros
 - **Geometria livre:** geodésicas e barras fora dos planos ortogonais (E19). É a fase 4 do plano.
-- **App local:** fase 5, plano em `plano-simolador.md` §7c. Feito na 1.10.0: arquivos, sem internet, PWA, Sobre e relatório. Feito na 1.10.1: pavimentos na capa, planta baixa cortada a uma altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20). Feito na 1.10.2: base para a 2.x (plano §11.5). Feito na 1.10.3: chave Ajustável desativada, Kit X no Estoque, tirante criado. Feito na 1.10.4: modo escuro, inglês e espanhol, RC90 na base só no plano dela. Feito na 1.10.5: pranchas traduzidas, dicionário completo, chave ao lado da barra, título acompanha o desenho. Feito na 1.10.6: CC e CC90 pelas fotos, massas, passo do cabo medido. Feito na 1.10.7: chapas moduladas (centro na grade, `onQuarter`/`boardFromCenter` em `boards.ts`), setas pelo que se vê (`viewArrows` + `view.right` em `interaction/ctx.ts`), Shift + ← / → gira. Próximos: 1.10.8 impressão das pranchas, 1.10.9 modo leve, 1.11 Tauri (instaladores, atualizador, página de download), 1.12 Biblioteca da equipe (§12).
+- **App local:** fase 5, plano em `plano-simolador.md` §7c. Feito na 1.10.0: arquivos, sem internet, PWA, Sobre e relatório. Feito na 1.10.1: pavimentos na capa, planta baixa cortada a uma altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20). Feito na 1.10.2: base para a 2.x (plano §11.5). Feito na 1.10.3: chave Ajustável desativada, Kit X no Estoque, tirante criado. Feito na 1.10.4: modo escuro, inglês e espanhol, RC90 na base só no plano dela. Feito na 1.10.5: pranchas traduzidas, dicionário completo, chave ao lado da barra, título acompanha o desenho. Feito na 1.10.6: CC e CC90 pelas fotos, massas, passo do cabo medido. Feito na 1.10.7: chapas moduladas (centro na grade, `onQuarter`/`boardFromCenter` em `boards.ts`), setas pelo que se vê (`viewArrows` + `view.right` em `interaction/ctx.ts`), Shift + ← / → gira. Feito na 1.10.8: CC90 sozinha no papel da CC (L5). Próximos: 1.10.9 impressão das pranchas, 1.10.10 modo leve, 1.11 Tauri (instaladores, atualizador, página de download), 1.12 Biblioteca da equipe (§12).
 - **Medições pendentes:** o protocolo está em `plano-simolador.md` §9.
 - **Responsáveis por frente** (Q08): falta definir.
 

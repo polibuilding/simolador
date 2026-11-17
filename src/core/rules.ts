@@ -564,16 +564,22 @@ export function validateConnector(cat: Catalog, inv: InventoryConfig, model: Mod
     // L4: uma peça por lado da esfera; o mesmo par pode ter CC em vários lados
     const onSide = (c: { side?: Vec3 }) => !!side && !!c.side && samePos(c.side, side, DIR_TOL);
     const cc = existing.filter((c) => c.code === "CC");
+    const sameAxis = (c: { dirs: Vec3[] }) => Math.abs(dot(c.dirs[0], ax)) > 1 - DIR_TOL;
+    const cc90 = existing.filter((c) => c.code === "CC90");
     if (spec.code === "CC" && side) {
       const same = cc.find(onSide);
       if (same) {
-        errors.push(Math.abs(dot(same.dirs[0], ax)) > 1 - DIR_TOL ? "Esse lado já tem uma CC." : "Nesse lado já há uma CC no outro par: use a CC90 por cima dela.");
+        errors.push(sameAxis(same) ? "Esse lado já tem uma CC." : "Nesse lado já há uma CC no outro par: use a CC90 por cima dela.");
       }
+      // a CC entra por baixo de uma CC90 do outro par (em cruz); no mesmo par, não cabe
+      const top = cc90.find(onSide);
+      if (top && sameAxis(top)) errors.push("Esse lado já tem uma CC90 nesse par.");
     }
-    if (spec.code === "CC90") {
-      const base = cc.find((c) => Math.abs(dot(c.dirs[0], ax)) < DIR_TOL && onSide(c));
-      if (!base) errors.push("A CC90 vai por cima de uma CC, no mesmo lado, travando o par perpendicular."); // L5
-      if (existing.some((c) => c.code === "CC90" && onSide(c))) errors.push("Esse lado já tem uma CC90.");
+    if (spec.code === "CC90" && side) {
+      // L5 (1.10.8): sozinha, a CC90 faz o papel da CC; com uma CC do outro par no mesmo lado, vai em cruz por cima dela
+      const under = cc.find(onSide);
+      if (under && sameAxis(under)) errors.push("Esse lado já tem uma CC nesse par: a CC90 vai em cruz, por cima de uma CC do outro par.");
+      if (cc90.some(onSide)) errors.push("Esse lado já tem uma CC90.");
     }
   } else {
     errors.push(`${spec.code} não é uma ligação.`);

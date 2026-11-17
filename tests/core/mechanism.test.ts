@@ -80,6 +80,9 @@ describe("graus de liberdade (esferas = rótulas; RC90, CC e placas travam)", ()
     const sem = mob(m, [[15, 6, 3]]).r.dof;
     const com = addConnector(m, { code: "CC", node: id(m, [9, 6, 3]), dirs: [[1, 0, 0]], side: [0, 1, 0] }).model;
     expect(mob(com, [[15, 6, 3]]).r.dof).toBe(sem - 2);
+    // a CC90 sozinha faz o mesmo papel (1.10.8)
+    const cc90 = addConnector(m, { code: "CC90", node: id(m, [9, 6, 3]), dirs: [[1, 0, 0]], side: [0, 1, 0] }).model;
+    expect(mob(cc90, [[15, 6, 3]]).r.dof).toBe(sem - 2);
   });
 });
 

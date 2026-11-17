@@ -248,8 +248,9 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 | Pranchas traduzidas, dicionário completo (regras e dicas), diagonais claras no escuro, chave Ajustável ao lado da barra, título acompanha o desenho | 1.10.5 ✅ |
 | CC e CC90 com o formato real (fotos da equipe), massa das peças no resumo e nas configurações, passo do cabo medido | 1.10.6 ✅ |
 | Chapas moduladas (girar e voltar não tira da grade), setas pelo que se vê, Shift + ← / → gira 15° (pedido da equipe, 15/11) | 1.10.7 ✅ |
-| Impressão direta das pranchas e revisão das exportações | 1.10.8 |
-| Modo leve para computador fraco (sem sombras nem renderizado, menos resolução) e teste num notebook com vídeo integrado | 1.10.9 |
+| CC90 sozinha, no papel da CC (pedido da equipe, 17/11) | 1.10.8 ✅ |
+| Impressão direta das pranchas e revisão das exportações | 1.10.9 |
+| Modo leve para computador fraco (sem sombras nem renderizado, menos resolução) e teste num notebook com vídeo integrado | 1.10.10 |
 
 **1.11 — Aplicativo de computador:**
 
@@ -285,7 +286,7 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0.0`, `v1.8.2`…).
 
-- **1.x — geométrica** (atual: 1.10.7): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: 1.10.8): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: flexibilidade, ajustabilidade e criação de peças próprias para representar e simular estruturas que fogem das limitações das peças atuais do kit. O instrumento é o **Kit X** (barra, placa e RC de qualquer ângulo, catálogo próprio e arquivo `.kit`, §11).
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 

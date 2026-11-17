@@ -24,6 +24,11 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 ## 1.10 — Pronto para usar fora do site
 
+### 1.10.8 — CC90 sozinha, no papel da CC · 17/11/2026
+- **A CC90 pode ir sozinha** num par de barras alinhadas, nos mesmos lados da esfera que a CC, e faz o mesmo papel: deixa a viga contínua (a fenda fica vazia). Continua podendo ir em cruz por cima de uma CC do outro par.
+- Tirar a CC de baixo não apaga mais a CC90: ela fica, fazendo o papel da CC no par dela.
+- Não cabem duas peças no mesmo par e no mesmo lado: a CC90 não vai por cima de uma CC do mesmo par, e a CC não entra embaixo de uma CC90 do mesmo par (o rodapé diz por quê).
+
 ### 1.10.7 — Chapas moduladas, setas pelo que se vê e giro com Shift · 15/11/2026
 - **Chapas sempre na grade**: girar uma chapa e voltar a 0° a deixa exatamente onde estava, e ela volta a encostar na vizinha. Antes, cada giro arredondava a posição, e andar com as setas numa chapa girada a tirava da grade: ao voltar a 0° sobrava uma fração de módulo e ela não encostava mais. As peças em cima também voltam aos pontos exatos da grade.
 - **Setas pelo que se vê**: com a chapa selecionada, ← → andam para a esquerda e a direita da tela, ↑ ↓ para longe e para perto, de qualquer lado que se olhe. O passo é sempre num eixo da grade (o mais próximo do que se vê).

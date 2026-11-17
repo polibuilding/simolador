@@ -18,7 +18,8 @@ export function continuousSize(cat: Catalog, code: string): { length: number; wi
  * As duas são trapézios com as pontas a 45°: o lado maior apoia nas duas molas (v = raio da mola) e o menor fica para
  * fora. No meio do lado maior, um recorte em V abraça a esfera (os lados a 45° tangenciam a esfera).
  * CC: o fundo do V é reto e encosta na esfera (ímã).
- * CC90: o fundo do V vira uma fenda da espessura da CC; ela vai por cima da CC, em cruz (no plano do outro par de molas),
+ * CC90: o fundo do V vira uma fenda da espessura da CC. Sozinha, faz o papel da CC (a fenda fica vazia); ou vai por cima
+ * da CC, em cruz (no plano do outro par de molas),
  * e a fenda chega até a borda de fora da CC.
  */
 export function continuousOutline(cat: Catalog, code: string): [number, number][] {

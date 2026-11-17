@@ -2,7 +2,7 @@
   "_meta": {
     "generatedBy": "scripts/gerar-dados.mjs",
     "source": "data/parametros.xlsx",
-    "generatedAt": "2026-11-13T22:53:35.878Z",
+    "generatedAt": "2026-11-17T20:30:15.026Z",
     "doNotEdit": "Arquivo gerado. Edite data/parametros.xlsx e rode npm run dados."
   },
   "schemaVersion": 2,
@@ -121,7 +121,7 @@
       },
       "behavior": null,
       "status": "estimado",
-      "notes": "Trapézio mais largo que a CC, pontas a 45°; o recorte em V termina numa fenda da espessura da CC. Vai em cruz por cima de uma CC no mesmo nó (a fenda passa pela CC), apoiada no outro par de molas alinhadas, perpendicular ao primeiro. Exige CC no nó. Medidas estimadas pelas fotos da equipe (13/11/2026): conferir com paquímetro",
+      "notes": "Trapézio mais largo que a CC, pontas a 45°; o recorte em V termina numa fenda da espessura da CC. Sozinha, faz o papel da CC (equipe 17/11/2026). Ou vai em cruz por cima de uma CC no mesmo nó (a fenda passa pela CC), apoiada no outro par de molas alinhadas, perpendicular ao primeiro. Medidas estimadas pelas fotos da equipe (13/11/2026), conferidas pela equipe em 14/11",
       "weightG": 2.99
     },
     {

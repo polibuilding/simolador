@@ -80,7 +80,7 @@ Duas fotos de cima (2 CC e 2 CC90 sobre a mesa). A escala saiu da própria peça
 | Largura (das molas para fora) | ≈ 9,6 mm | ≈ 13 mm |
 | Espessura | 6 mm (como a RC90; coerente com a massa) | 6 mm |
 | Recorte | V de 4,5 mm de fundo, boca ≈ 15 mm, fundo reto ≈ 6 mm | mesmo V, e a fenda de ≈ 6,4 mm vai até ≈ 9,6 mm da face das molas (a largura da CC) |
-| Como monta | sobre a esfera, nas duas molas alinhadas | **em cruz** por cima da CC, no plano do outro par de molas: a fenda passa pela CC e apoia na borda de fora dela |
+| Como monta | sobre a esfera, nas duas molas alinhadas | **sozinha**, como a CC (a fenda fica vazia; equipe 17/11), ou **em cruz** por cima da CC, no plano do outro par de molas: a fenda passa pela CC e apoia na borda de fora dela |
 | Massa | 3,0–3,075 g | 2,975–3,0 g |
 
 Os ímãs da CC aparecem na borda: um em cada ponta do lado das molas e um no fundo do V (3 ímãs, como a "ligação contínua" de 2008). **Conferido pela equipe (14/11/2026): tamanho e comportamento compatíveis com as peças.** Os valores ficam em `parametros.xlsx` (aba Peças, colunas medidas).

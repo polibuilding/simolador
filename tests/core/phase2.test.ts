@@ -73,13 +73,14 @@ describe("ligações", () => {
     const gc = connectorCandidates(catalog, inv, m, "RC90", id(m, [3, 0, 3])).filter((c) => c.check.ok);
     expect(gc).toHaveLength(4); // um de cada lado do pilar
   });
-  it("CC exige barras alinhadas; CC90 vai por cima da CC no par perpendicular", () => {
+  it("CC exige barras alinhadas; CC90 sozinha (papel da CC) ou em cruz por cima da CC", () => {
     let m = emptyModel();
     m = addSupport(m, [9, 0, 6]).model;
     m = addMember(m, "B6", id(m, [9, 0, 6]), [9, 6, 6]).model;
     const c = id(m, [9, 6, 6]);
     for (const p of [[3, 6, 6], [15, 6, 6], [9, 6, 0], [9, 6, 12]] as Vec3[]) m = addMember(m, "B6", c, p).model;
-    expect(connectorCandidates(catalog, inv, m, "CC90", c).filter((x) => x.check.ok)).toHaveLength(0);
+    // sem CC, a CC90 vai sozinha nos mesmos lugares da CC (1.10.8)
+    expect(connectorCandidates(catalog, inv, m, "CC90", c).filter((x) => x.check.ok)).toHaveLength(2);
     const cc = connectorCandidates(catalog, inv, m, "CC", c).filter((x) => x.check.ok);
     expect(cc).toHaveLength(2); // eixo x ou eixo z
     m = applyCandidate(m, cc[0]);
@@ -87,9 +88,10 @@ describe("ligações", () => {
     const cc90 = connectorCandidates(catalog, inv, m, "CC90", c).filter((x) => x.check.ok);
     expect(cc90).toHaveLength(1);
     m = applyCandidate(m, cc90[0]);
-    // tirar a CC derruba a CC90 junto
+    // tirar a CC deixa a CC90 sozinha, fazendo o papel da CC no par dela
     const ccId = Object.values(m.connectors).find((x) => x.code === "CC")!.id;
-    expect(Object.keys(removeSelection(m, { kind: "connector", id: ccId }).connectors)).toHaveLength(0);
+    const sem = removeSelection(m, { kind: "connector", id: ccId }).connectors;
+    expect(Object.values(sem).map((x) => x.code)).toEqual(["CC90"]);
   });
 });
 

@@ -221,11 +221,7 @@ export function connectorSupported(model: Model, c: Connector): boolean {
   const ax = c.dirs[0];
   if (!barAlong(ax) || !barAlong(scale(ax, -1))) return false;
   if (c.side && barAlong(c.side)) return false; // uma barra transversal ocupou o lado
-  if (c.code === "CC90") {
-    return Object.values(model.connectors).some(
-      (o) => o.code === "CC" && o.node === c.node && Math.abs(dot(o.dirs[0], ax)) < DIR_TOL && (!c.side || !o.side || samePos(o.side, c.side, DIR_TOL)),
-    );
-  }
+  // a CC90 não depende da CC (1.10.8): sem ela, faz o papel da CC no par em que está
   return true;
 }
 
@@ -333,7 +329,6 @@ export function removePlate(model: Model, id: string): Model {
 export function removeConnector(model: Model, id: string): Model {
   const connectors = { ...model.connectors };
   delete connectors[id];
-  // CC90 depende da CC
   return prune({ ...model, connectors });
 }
 
