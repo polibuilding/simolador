@@ -33,6 +33,8 @@ export interface KitDef {
   pieces: Record<string, number>;
   /** kit sem limite (Kit X, 2.x): cada caixa dá quantas peças quiser das que ele traz (quantidade > 0 = traz) */
   unlimited?: boolean;
+  /** sem limite no estoque, mas vendido em pacotes: o mínimo de kits conta os pacotes (ligações super leves, 2.x) */
+  packs?: boolean;
   /** kit criado pelo usuário (catálogo de um .kit); `file` = nome do arquivo de onde veio */
   user?: boolean;
   file?: string;
@@ -74,12 +76,22 @@ export interface Catalog {
   kits: Record<string, KitDef>;
 }
 
+/** Ligação super leve (LC): esfera do mesmo tamanho, mais leve; preta, como as peças da 2.x. */
+export const LIGHT_BALL = "LC";
+export const LIGHT_BALL_COLOR = "#1d2022";
+
 export function buildCatalog(cat: unknown, kits: unknown): Catalog {
   const c = cat as { settings: Settings; pieces: PieceDef[] };
   const k = kits as { kits: Record<string, KitDef> };
   const pieces: Record<string, PieceDef> = {};
   for (const p of c.pieces) pieces[p.code] = p;
-  return { settings: c.settings, pieces, kits: k.kits };
+  const kitDefs: Record<string, KitDef> = { ...k.kits };
+  // Ligações Super Leves (2.x, plano §11.7): vendidas à parte, em pacotes; sem limite no estoque
+  if (pieces[LIGHT_BALL]) {
+    const pack = Number(c.settings.lc_pacote_unidades) || 12;
+    kitDefs[LIGHT_BALL] = { name: "Ligações Super Leves", color: LIGHT_BALL_COLOR, pieces: { [LIGHT_BALL]: pack }, unlimited: true, packs: true };
+  }
+  return { settings: c.settings, pieces, kits: kitDefs };
 }
 
 /** Catálogo da planilha (sem as configurações do usuário). */

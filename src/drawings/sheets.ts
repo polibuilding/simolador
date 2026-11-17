@@ -7,6 +7,7 @@ import { currentLang, tr } from "../ui/i18n";
 import type { InventoryConfig } from "../core/inventory";
 import { ballsPerRoll, ropePlan, ropeSpec } from "../core/rope";
 import { minKits, usage } from "../core/inventory";
+import { LIGHT_BALL, lightBallPacks } from "../core/lightBalls";
 import { boardsOf, type Model, type Vec3 } from "../core/model";
 import { boardCorners, fromBoardLocal } from "../core/boards";
 import type { IsoCorner, SheetCut, SheetLayout, SheetMeta, SheetShow, SheetView } from "../core/serialization";
@@ -329,7 +330,12 @@ interface PageInfo {
 /** Kits usados: os do estoque; no modo sem limite, o menor conjunto que cobre as peças. */
 function kitLines(input: SheetInput): string[] {
   const { cat, inventory, model } = input;
-  const kits = inventory.unlimited ? minKits(cat, usage(model, cat)).kits : inventory.kits;
+  const kits = inventory.unlimited ? minKits(cat, usage(model, cat)).kits : { ...inventory.kits };
+  // ligações super leves (2.x): sem limite no estoque, mas a capa diz quantos pacotes a montagem pede
+  if (!inventory.unlimited) {
+    const packs = lightBallPacks(cat, model);
+    if (packs) kits[LIGHT_BALL] = packs;
+  }
   const short = (k: string) => (cat.kits[k]?.name ?? `Kit ${k}`).replace(/^mola structural\s*/i, "").toUpperCase();
   return Object.entries(kits).filter(([, c]) => c > 0).map(([k, c]) => `${c > 1 ? `${c}× ` : ""}${short(k)}`);
 }

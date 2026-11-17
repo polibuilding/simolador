@@ -230,6 +230,8 @@ export function fromFile(
       id: n.id, kind, pos,
       ...(kind === "ring" ? { ring: n.ring === "RING-M" ? "RING-M" : "RING-P" } : {}),
       ...(n.mclip && kind !== "ring" && kind !== "clip" ? { mclip: true } : {}),
+      // esfera de outra peça (2.x: ligação super leve LC); o código é conferido no catálogo ao abrir (store)
+      ...(kind === "sphere" && typeof n.ball === "string" && n.ball !== "C" && /^[A-Z][A-Za-z0-9.\-]{0,15}$/.test(n.ball) ? { ball: n.ball } : {}),
     };
   }
   const members: Model["members"] = {};
@@ -295,8 +297,18 @@ export function dropUnknownPieces(cat: { pieces: Record<string, unknown> }, mode
   const dropped = new Set<string>();
   const keep = <T extends { code: string }>(rec: Record<string, T>) =>
     Object.fromEntries(Object.entries(rec).filter(([, x]) => (known(x.code) ? true : (dropped.add(x.code), false))));
-  if (Object.values(model.members).every((m) => known(m.code)) && Object.values(model.plates).every((p) => known(p.code)) && Object.values(model.connectors).every((c) => known(c.code))) {
+  // esfera de uma peça desconhecida (2.x): volta a ser C
+  const badBall = Object.values(model.nodes).some((n) => n.ball && !known(n.ball));
+  if (!badBall && Object.values(model.members).every((m) => known(m.code)) && Object.values(model.plates).every((p) => known(p.code)) && Object.values(model.connectors).every((c) => known(c.code))) {
     return { model, dropped: [] };
   }
-  return { model: { ...model, members: keep(model.members), plates: keep(model.plates), connectors: keep(model.connectors) }, dropped: [...dropped] };
+  const nodes = badBall
+    ? Object.fromEntries(Object.entries(model.nodes).map(([k, n]) => {
+        if (!n.ball || known(n.ball)) return [k, n];
+        dropped.add(n.ball);
+        const { ball: _b, ...rest } = n;
+        return [k, rest];
+      }))
+    : model.nodes;
+  return { model: { ...model, nodes, members: keep(model.members), plates: keep(model.plates), connectors: keep(model.connectors) }, dropped: [...dropped] };
 }

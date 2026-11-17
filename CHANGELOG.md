@@ -22,6 +22,17 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 ---
 
+## 2.0 — Arquitetônica (BETA)
+
+A linha 2.x é desenvolvida na **BETA** (https://polibuilding.github.io/simolador/beta/), aberta pelo botão **BETA** no canto de baixo à direita. A versão oficial continua a 1.10.9 até a equipe decidir que a BETA vira a oficial.
+
+### 2.0.0-beta.1 — Chave Ajustável e ligações super leves · 17/11/2026
+- **Duas versões no ar**: a oficial (1.10.9) e a BETA (a 2.x do dia a dia). O botão **BETA** leva de uma para a outra, e a estrutura aberta vai junto. Cada uma funciona sem internet por conta própria, e a BETA se instala como "siMOLAdor BETA".
+- **A chave Ajustável funciona** (ao lado da barra de baixo) e fica lembrada no navegador. Abrir um arquivo com peças da 2.x a liga sozinha.
+- **Ligações super leves (LC)**: com a chave ligada, aparecem na paleta (logo abaixo da C) e no Estoque ("Trocar esferas"). Clique no LC e depois nas esferas do modelo: cada uma vira uma ligação super leve, preta; clicar de novo volta para C. Também dá pelo painel da esfera. Mesmo tamanho e mesmo ímã da C: os encaixes e as regras não mudam, só a massa (≈ 4,7 g) e a cor.
+- **Sem limite no estoque**, mas o mínimo de kits diz quantos **pacotes de 12** comprar (ex.: 15 LC = 2 pacotes); a barra do Estoque e o carimbo das pranchas mostram os pacotes. A massa no resumo usa os 4,7 g. A esfera trocada deixa de gastar C.
+- O Kit X (barra, tirante, placa e RC ajustáveis) vem nas próximas entregas da BETA.
+
 ## 1.10 — Pronto para usar fora do site
 
 ### 1.10.9 — Barras de Comprimento Regulável pela embalagem · 17/11/2026

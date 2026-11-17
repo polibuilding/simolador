@@ -122,7 +122,7 @@ Módulo implícito em 2008: (peça + esfera)/n = **14,67 mm** nas quatro molas (
 ## Outros kits (resumo)
 
 - Kit 3 (azul, 205 peças + cortador): detalhado na seção abaixo.
-- **Ligações Super Leves — LC** (vendidas à parte; embalagem, foto da equipe 17/11/2026): esfera do **mesmo tamanho** da C, **≈ 4,7 g** (65% mais leve que a padrão, 13,9 g), **12 por pacote**. Para estruturas mais altas e vãos e balanços maiores. Entra na 2.x (plano §11.7).
+- **Ligações Super Leves — LC** (vendidas à parte; embalagem, foto da equipe 17/11/2026): esfera do **mesmo tamanho** da C, **≈ 4,7 g** (65% mais leve que a padrão, 13,9 g), **12 por pacote**, com o **mesmo ímã** (equipe 17/11); vai em qualquer esfera e com todas as ligações. Para estruturas mais altas e vãos e balanços maiores. No programa desde a 2.0.0-beta.1 (plano §11.7, regra N6), preta.
 - **Barras de Comprimento Regulável** (vendidas à parte; embalagem, foto da equipe 17/11/2026): quatro modelos, **A.B3-B4, A.B4-B6, A.B6-B9 e A.B9-B15**; cada um vai do comprimento de uma barra ao de outra girando um lado. Faixa total de B3 a B15 (o site dizia B12). Base da barra ajustável do Kit X (2.x, plano §11); divisas em `parametros.xlsx` (Geral, `barra_ajustavel_*`).
 - Kit 4 (amarelo, 144 peças + chave Allen; site oficial, 14/11/2026): 12 esferas, 24 RC90, 6 CC (sem CC90), 10 ligações de superfície, 8 GC, 18 B3, 18 B6, 3 B12, 6 arcos A6x6, 6 D3x3, 9 D3x6, 9 D6x6, 14 folhas de papel (pré-marcadas para dobrar as cascas), 1 chapa e 1 chave Allen (ajusta as ligações de superfície). Plano em `plano-simolador.md` §13.
 - Acessórios: barras de comprimento ajustável (B3–B4, B4–B6, B6–B9, B9–B12), ligações leves, placas avulsas, Ground Clip (une chapas de base).

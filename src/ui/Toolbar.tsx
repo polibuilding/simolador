@@ -2,13 +2,14 @@ import { tr } from "./i18n";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
 import { minKits, usage } from "../core/inventory";
+import { LIGHT_BALL, lightBallCount, lightBallPacks } from "../core/lightBalls";
 import { LibraryPanel } from "./Config";
 import { useApp, useModel } from "./store";
 import { canSaveInPlace, listCopies, listRecents, newProjectSafe, openProject, openRecent, restoreCopy, saveProject, type AutoCopy, type RecentFile } from "./files";
 
 /** "2× K1 + 1× K2" */
 export const kitsText = (kits: Record<string, number>) =>
-  Object.entries(kits).filter(([, c]) => c > 0).map(([k, c]) => `${c}× K${k}`).join(" + ");
+  Object.entries(kits).filter(([, c]) => c > 0).map(([k, c]) => `${c}× ${/^\d+$/.test(k) ? `K${k}` : k === "X" ? "KX" : k}`).join(" + ");
 
 /** Menu de arquivo (seta ao lado de Salvar): Salvar como, Recentes e Cópias automáticas. */
 function FileMenu({ onClose }: { onClose: () => void }) {
@@ -99,7 +100,7 @@ export function useDismiss(onClose: () => void) {
 const SOON = [
   { id: "3", name: "Kit 3", color: "#2F6FD6", tag: "em breve", note: "Kit 3 (azul): cabos, anéis, enrijecedores e duas chapas de base · em breve" },
   // Kit X = o antigo "Kit A" (equipe 08/11): liga junto com a chave Ajustável, na 2.x
-  { id: "X", name: "Kit X", color: "#000000", tag: "2.x", note: "Kit X (preto): barra, tirante, placa e RC ajustáveis, sem limite, e as peças que você criar · versões 2.x (chave Ajustável)" },
+  { id: "X", name: "Kit X", color: "#000000", tag: "em breve", note: "Kit X (preto): barra, tirante, placa e RC ajustáveis, sem limite, e as peças que você criar · próximas entregas da 2.x (chave Ajustável)" },
 ];
 
 function StockPanel({ onClose }: { onClose: () => void }) {
@@ -108,9 +109,12 @@ function StockPanel({ onClose }: { onClose: () => void }) {
   const setInventory = useApp((s) => s.setInventory);
   const setKit = (id: string, n: number) =>
     setInventory({ ...inventory, kits: { ...inventory.kits, [id]: Math.max(0, Math.min(20, n)) } });
+  const adjustable = useApp((s) => s.adjustable);
+  const model = useModel();
+  const lcUsed = lightBallCount(model);
   return (
     <div ref={ref} className="popover stock-pop" role="dialog" aria-label="Estoque">
-      {Object.entries(catalog.kits).map(([id, k]) => (
+      {Object.entries(catalog.kits).filter(([, k]) => !k.unlimited).map(([id, k]) => (
         <label key={id} className="stock-row">
           <i className="kit-swatch" style={{ background: k.color ?? "#999" }} />
           <span>{k.name.replace("Mola Structural ", "")}</span>
@@ -120,6 +124,19 @@ function StockPanel({ onClose }: { onClose: () => void }) {
             <button onClick={() => setKit(id, (inventory.kits[id] ?? 0) + 1)} aria-label={`Mais uma caixa do ${k.name}`}>+</button>
           </span>
         </label>
+      ))}
+      {/* kits sem limite da 2.x (chave Ajustável): ligações super leves e Kit X */}
+      {Object.entries(catalog.kits).filter(([id, k]) => k.unlimited && (adjustable || (id === LIGHT_BALL ? lcUsed > 0 : true))).map(([id, k]) => (
+        <div key={id} className="stock-row" title={id === LIGHT_BALL ? `${k.name}: sem limite; vendidas em pacotes de ${k.pieces[LIGHT_BALL]} (o mínimo de kits conta os pacotes)` : `${k.name}: sem limite`}>
+          <i className="kit-swatch" style={{ background: k.color ?? "#000" }} />
+          <span>{id === LIGHT_BALL ? "Ligações super leves" : k.name}</span>
+          <span className="stock-free">{id === LIGHT_BALL && lcUsed ? `${lcUsed} · ${lightBallPacks(catalog, model)} pct` : "sem limite"}</span>
+          {id === LIGHT_BALL && adjustable && (
+            <button className="ghost stock-act" onClick={() => (useApp.getState().arm(LIGHT_BALL, false), onClose())} title="Clique aqui e depois nas esferas do modelo: cada uma vira ligação super leve (numa LC, volta para C)">
+              Trocar esferas
+            </button>
+          )}
+        </div>
       ))}
       {SOON.filter((k) => !catalog.kits[k.id]).map((k) => (
         <div key={k.id} className="stock-row soon" title={k.note}>
@@ -257,9 +274,11 @@ export function Toolbar() {
   const model = useModel();
   // modo sem limite: quantas caixas, no mínimo, a estrutura pede
   const need = useMemo(() => (inventory.unlimited ? minKits(catalog, usage(model)) : null), [inventory.unlimited, model]);
+  // ligações super leves: sem limite, mas o texto diz quantos pacotes a montagem pede
+  const lcPacks = lightBallPacks(catalog, model);
   const kits = need
     ? need.total ? `sem limite · mín. ${kitsText(need.kits)}` : "sem limite"
-    : kitsText(inventory.kits) || "nenhum";
+    : [kitsText(inventory.kits) || "nenhum", lcPacks ? `${lcPacks}× LC` : ""].filter(Boolean).join(" + ");
 
   const doNew = () => {
     const empty = Object.keys(useApp.getState().history.present.nodes).length === 0;

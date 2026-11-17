@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { pieceMobility, structureMobility, type MoveRef } from "../core/globalMove";
 import { catalog } from "../core/catalog";
 import { available, usage, structureMass } from "../core/inventory";
-import { boardsOf, componentOf, DISP_AXIS, len, sub, toDisp, type Vec3 } from "../core/model";
+import { boardsOf, componentOf, DISP_AXIS, len, nodeCode, sub, toDisp, type Vec3 } from "../core/model";
+import { LIGHT_BALL } from "../core/lightBalls";
 import { boardCenter, boardName, boardSelection, boardSize, boardsGap } from "../core/boards";
 import { NumField } from "../render/Boards";
 import { Chevrons } from "./Palette";
@@ -181,10 +182,12 @@ function Distances({ id }: { id: string }) {
 
 function Selected() {
   const model = useModel();
+  const adjustable = useApp((s) => s.adjustable);
   const sel = useApp((s) => s.selection)!;
   if (sel.kind === "node") {
     const n = model.nodes[sel.id];
     if (!n) return null;
+    const toggleBallOf = useApp.getState().toggleBall;
     const members = Object.values(model.members).filter((m) => m.a === n.id || m.b === n.id);
     const conns = Object.values(model.connectors).filter((c) => c.node === n.id);
     const plates = Object.values(model.plates).filter((p) => p.corners.includes(n.id));
@@ -242,7 +245,7 @@ function Selected() {
     }
     return (
       <>
-        <h2>{gc ? "Ligação de base (GC)" : "Esfera (C)"}</h2>
+        <h2>{gc ? "Ligação de base (GC)" : n.ball === LIGHT_BALL ? "Ligação super leve (LC)" : "Esfera (C)"}</h2>
         <Section title="Posição e geometria">
           <CoordEditor id={n.id} pos={n.pos} support={gc} />
           <dl>
@@ -263,6 +266,12 @@ function Selected() {
             <Row k="Estrutura" v={`${group} ${group === 1 ? "nó" : "nós"} ligados`} />
             <MobilityRow refx={{ kind: "node", id: n.id }} />
           </dl>
+          {/* 2.x: troca C ↔ ligação super leve (mesmo tamanho; muda a massa e a cor) */}
+          {!gc && (adjustable || n.ball) && (
+            <button className="ghost small ball-swap" onClick={() => toggleBallOf(n.id)}>
+              {n.ball === LIGHT_BALL ? "Voltar para a esfera C" : "Trocar por ligação super leve (LC)"}
+            </button>
+          )}
         </Section>
         <Actions removeLabel={gc ? "Remover GC e o que sai dela" : "Remover esfera e peças ligadas"} />
       </>
@@ -660,7 +669,7 @@ function MultiSelected() {
     if (s.kind === "node") {
       const n = model.nodes[s.id];
       if (!n) continue;
-      const k = n.kind === "support" ? "GC" : n.kind === "clip" ? "CLIP-C" : n.kind === "ring" ? n.ring ?? "RING-P" : "C";
+      const k = nodeCode(n);
       count[k] = (count[k] ?? 0) + 1;
       nodeIds.add(n.id);
     } else if (s.kind === "member") {
@@ -767,7 +776,7 @@ export function SelectionTag() {
   if (multi) text = `${multi} peças selecionadas`;
   else if (sel?.kind === "node") {
     const n = model.nodes[sel.id];
-    if (n) text = `${n.kind === "support" ? "GC" : n.kind === "clip" ? "Ponto de cabo" : n.kind === "ring" ? "Anel de cabo" : "Esfera (C)"} · ${posText(n.pos)}`;
+    if (n) text = `${n.kind === "support" ? "GC" : n.kind === "clip" ? "Ponto de cabo" : n.kind === "ring" ? "Anel de cabo" : n.ball === LIGHT_BALL ? "Ligação super leve (LC)" : "Esfera (C)"} · ${posText(n.pos)}`;
   } else if (sel) {
     const code = sel.kind === "member" ? model.members[sel.id]?.code : sel.kind === "plate" ? model.plates[sel.id]?.code : model.connectors[sel.id]?.code;
     const name = code ? catalog.pieces[code]?.name : undefined;

@@ -21,6 +21,16 @@ export interface MolaNode {
   ring?: string;
   /** esfera ou GC com os cabos num clip de múltiplos cabos (M CABLE CLIP C: até 5 cabos numa só CABLE C) */
   mclip?: boolean;
+  /**
+   * esfera: qual peça é (2.x). Sem o campo, a C de sempre; "LC" = ligação super leve (mesmo tamanho e ímã, ≈ 4,7 g,
+   * preta; plano §11.7). Só muda o código, a cor e a massa: encaixes e regras são os da C.
+   */
+  ball?: string;
+}
+
+/** Código da peça de um nó: GC, CLIP-C, o anel, a esfera (C ou a ligação super leve LC). */
+export function nodeCode(n: MolaNode): string {
+  return n.kind === "support" ? "GC" : n.kind === "clip" ? "CLIP-C" : n.kind === "ring" ? n.ring ?? "RING-P" : n.ball ?? "C";
 }
 
 /** Barra (B4, B6, B12), diagonal (D4x6, D6x6, D6x12) ou cabo (CABLE, Kit 3) entre dois nós. */

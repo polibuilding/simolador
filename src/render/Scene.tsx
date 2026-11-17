@@ -86,7 +86,7 @@ function ModelGroup({
         ) : n.kind === "ring" ? (
           <RopeRing key={n.id} position={pos[n.id]} code={n.ring} look={lookOf(n.id)} {...handlers("node", n.id)} />
         ) : (
-          <Sphere key={n.id} position={pos[n.id]} look={lookOf(n.id)} {...handlers("node", n.id)} />
+          <Sphere key={n.id} position={pos[n.id]} light={!!n.ball} look={lookOf(n.id)} {...handlers("node", n.id)} />
         ),
       )}
       {Object.values(model.members).map((m) =>

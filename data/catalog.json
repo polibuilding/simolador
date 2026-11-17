@@ -2,7 +2,7 @@
   "_meta": {
     "generatedBy": "scripts/gerar-dados.mjs",
     "source": "data/parametros.xlsx",
-    "generatedAt": "2026-11-17T22:28:31.079Z",
+    "generatedAt": "2026-11-17T22:45:16.135Z",
     "doNotEdit": "Arquivo gerado. Edite data/parametros.xlsx e rode npm run dados."
   },
   "schemaVersion": 2,
@@ -51,7 +51,8 @@
     "barra_ajustavel_divisa2_modulos": 6,
     "barra_ajustavel_divisa3_modulos": 9,
     "kitx_precisao_comprimento_modulos": 0.01,
-    "kitx_precisao_angulo_graus": 0.1
+    "kitx_precisao_angulo_graus": 0.1,
+    "lc_pacote_unidades": 12
   },
   "pieces": [
     {
@@ -66,6 +67,19 @@
       "status": "desenho",
       "notes": "Diâmetro em Geral",
       "weightG": 13.9
+    },
+    {
+      "code": "LC",
+      "name": "Ligação super leve",
+      "type": "node",
+      "spanM": null,
+      "geometry": {
+        "diameterMm": 15
+      },
+      "behavior": null,
+      "status": "fabricante",
+      "notes": "Esfera de ligação super leve (Ligações Super Leves - LC, vendidas à parte, 12 por pacote; embalagem, foto da equipe 17/11/2026). Mesmo tamanho e mesmo ímã da C (equipe 17/11): muda só a massa e a cor (preta). 2.x, plano §11.7",
+      "weightG": 4.7
     },
     {
       "code": "GC",

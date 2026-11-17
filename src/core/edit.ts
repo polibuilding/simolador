@@ -4,8 +4,7 @@ import type { InventoryConfig } from "./inventory";
 import { frameRadAt } from "./boards";
 import {
   AXES, RC90_BASE_ENGASTA, addMember, boardsOf, memberAlong, rotDir, toDisp, type Connector, type Member, type Model, type Vec3, add, componentOf, cross, directionFrom, dot, len, membersAt, norm, removeConnector,
-  removeMember, removeNode, removePlate, samePos, scale, sub, transformNodes,
-} from "./model";
+  removeMember, removeNode, removePlate, samePos, scale, sub, transformNodes, nodeCode } from "./model";
 import { inclineStep as inclineStepOf, segmentHitsPlate, validateMember, validateMovedModel, type Check } from "./rules";
 import { ropeEndAt, ropeMinMm, ropeSpec } from "./rope";
 import {
@@ -19,7 +18,7 @@ export function codeOf(model: Model, sel: Sel): string | null {
   if (sel.kind === "plate") return model.plates[sel.id]?.code ?? null;
   if (sel.kind === "connector") return model.connectors[sel.id]?.code ?? null;
   const n = model.nodes[sel.id];
-  return n ? (n.kind === "support" ? "GC" : n.kind === "clip" ? "CLIP-C" : n.kind === "ring" ? n.ring ?? "RING-P" : "C") : null;
+  return n ? nodeCode(n) : null;
 }
 
 export function removeSelection(model: Model, sel: Sel): Model {

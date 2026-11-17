@@ -287,7 +287,7 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0.0`, `v1.8.2`…).
 
-- **1.x — geométrica** (atual: 1.10.9): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: oficial 1.10.9; BETA 2.0.0-beta.1): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: flexibilidade, ajustabilidade e criação de peças próprias para representar e simular estruturas que fogem das limitações das peças atuais do kit. O instrumento é o **Kit X** (barra, placa e RC de qualquer ângulo, catálogo próprio e arquivo `.kit`, §11).
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
@@ -534,7 +534,7 @@ Outro produto da Mola vendido à parte (embalagem, foto da equipe): **esferas de
 
 | | Como fica no programa (2.x) |
 |---|---|
-| **Onde** | Entra junto do Kit X, na chave **Ajustável** (§11.0): é uma **opção de ligação** a mais, como as barras reguláveis. |
+| **Onde** | Entra junto do Kit X, na chave **Ajustável** (§11.0): é uma **opção de ligação** a mais, como as barras reguláveis. ✅ 2.0.0-beta.1 |
 | **Como usa** | Um botão **"Ligação super leve"** no Estoque (ou na paleta, ao lado da C). Com o botão ligado, **clicar numa esfera que já está no modelo a troca por LC**; clicar de novo numa LC a volta para C. Esc sai do modo. Dá para trocar várias seguidas e também por seleção (retângulo → "Trocar por LC"). |
 | **No desenho** | Mesma geometria da C (mesmo tamanho: nada de encaixe muda; regras, vistas e pranchas iguais). Cor diferente na cena (a definir, ex.: branca/translúcida) e o código **LC** na lista de peças. |
 | **Estoque** | **Sem limite** (como as reguláveis): nunca bloqueia por falta. As LC **saem da conta de esferas C** dos Kits 1 e 2 (uma esfera trocada não gasta C). |
@@ -542,7 +542,9 @@ Outro produto da Mola vendido à parte (embalagem, foto da equipe): **esferas de
 | **Massa** | 4,7 g cada no resumo ("Massa ≈ … g"), pela embalagem; **pesar** na equipe para confirmar. Na 3.x é o que muda o peso próprio e a dinâmica. |
 | **Arquivo `.mola`** | O nó guarda o tipo de esfera (C ou LC); um arquivo antigo abre com todas C. Abrir um `.mola` com LC liga a chave sozinho (X11). |
 
-**A confirmar com a equipe:** o ímã da LC segura as molas com a mesma força da C? (importa para a 3.x: o ímã que solta.) Pode ir na GC e em todas as ligações (RC90, CC, CC90, placas, diagonais e cabos) como a C? Por enquanto o plano supõe que sim, porque o tamanho é o mesmo.
+**Respostas da equipe (17/11):** o ímã da LC segura as molas com a **mesma força** da C, e ela vai **na GC e com todas as ligações**, como a C. Muda só o peso e a cor (mais escura: **preta**, como as outras peças variáveis da 2.x).
+
+**Feito na 2.0.0-beta.1 (17/11):** chave Ajustável funcionando; LC na paleta (abaixo da C) e no Estoque ("Trocar esferas"); clique troca C ↔ LC (também pelo painel da esfera); preta; sem limite; mínimo de kits em pacotes (`packs` no kit, `lightBalls.ts`); massa; `.mola` com `ball: "LC"` no nó (a 1.x abre como C); regra N6.
 
 ## 12. Biblioteca online (plano de 14/11/2026)
 
@@ -608,3 +610,11 @@ Kit 4 (amarelo, 2024, Kickstarter): **144 peças + chave Allen**, para **arcos e
 - **medidas**: B3, D3x3, D3x6 e o arco A6x6 (raio, ângulo, comprimento e as pontas);
 - **massas**, como as dos Kits 1 e 2;
 - **fotos**: a ligação de superfície, como ela prende o papel e a esfera, e o que a chave ajusta.
+
+## 14. Duas versões no ar: oficial e BETA (equipe, 17/11/2026)
+
+- **Oficial** (https://polibuilding.github.io/simolador/): a versão que a equipe diz que é a atual. Hoje, **1.10.9** (com o botão BETA). Sai do commit escrito em `.github/oficial.txt` (branch `oficial`).
+- **BETA** (…/simolador/beta/): a `main`, com as entregas do dia a dia. Hoje, a linha **2.x** (2.0.0-beta.1, -beta.2…).
+- **Botão provisório "BETA"** no canto de baixo à direita: leva da oficial para a BETA; na BETA, "ir para a oficial". A estrutura aberta vai junto (o navegador é o mesmo). Cada versão guarda a sua cópia para funcionar sem internet, e uma não apaga a da outra.
+- **Quando a BETA vira a oficial** (a equipe avisa): a `main` ganha o número sem "-beta" (ex.: 2.0.0), o commit vai para `.github/oficial.txt` e o push publica. A BETA continua na `main` com a próxima linha.
+- **Cuidado**: as duas dividem o navegador (estrutura aberta, recentes, configurações). Um arquivo com peças da 2.x aberto na 1.10.9 perde o que ela não conhece: as LC viram C.

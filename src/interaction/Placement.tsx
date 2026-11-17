@@ -20,6 +20,8 @@ import { AXES_PX, CLICK_PX, DRAG_PX, GIZMO_PX, guidesFor } from "./queries";
 import { pickSupport, reachStep } from "./steps/support";
 import { freeBar, linkStep, sphereUnder, triangleStep } from "./steps/bars";
 import { mclipStep, ringStep, ropeStep, stiffStep } from "./steps/rope";
+import { ballStep } from "./steps/ball";
+import { LIGHT_BALL } from "../core/lightBalls";
 import { boxSelect } from "./steps/box";
 import { moveStep } from "./steps/move";
 import { logError } from "../ui/errorlog";
@@ -104,6 +106,8 @@ export function Placement() {
 
       // ---- Kit 3: enrijecedor (clique numa mola) e cabo (clique numa esfera e depois em outra) ----
       if (code === STIFF_TOOL) return stiffStep(ctx, ev, rect, model, inv);
+      // ---- 2.x: ligação super leve (clique numa esfera troca C ↔ LC) ----
+      if (code === LIGHT_BALL) return ballStep(ctx, ev, rect, model);
       if (code === "RING-P" || code === "RING-M") return ringStep(ctx, ev, rect, model, code, inv);
       if (code === "MCLIP-C") return mclipStep(ctx, ev, rect, model, inv);
       if (catalog.pieces[code]?.type === "rope") return void ropeStep(ctx, ev, rect, model, code, inv);

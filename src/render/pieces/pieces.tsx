@@ -2,7 +2,7 @@
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
-import { catalog } from "../../core/catalog";
+import { catalog, LIGHT_BALL_COLOR } from "../../core/catalog";
 import { COLORS, PLATE_D, PLATE_W, M } from "../units";
 import { useApp } from "../../ui/store";
 
@@ -49,9 +49,10 @@ export const pickProps = ({ onPick, onHover, onDown, onDouble }: Pickable) => ({
   onPointerOut: onHover ? () => onHover(false) : undefined,
 });
 
-export function Sphere({ position, look = "normal", ...p }: { position: THREE.Vector3; look?: Look } & Pickable) {
+/** Esfera C; `light` = ligação super leve (LC, 2.x): o mesmo tamanho, preta e fosca. */
+export function Sphere({ position, look = "normal", light = false, ...p }: { position: THREE.Vector3; look?: Look; light?: boolean } & Pickable) {
   const render = useApp((s) => s.render);
-  const mat = useMaterial(look, render ? COLORS.steel : "#b9c0c6", 0.95, 0.18);
+  const mat = useMaterial(look, light ? LIGHT_BALL_COLOR : render ? COLORS.steel : "#b9c0c6", light ? 0.25 : 0.95, light ? 0.45 : 0.18);
   return (
     <mesh position={position} material={mat} castShadow {...pickProps(p)}>
       <sphereGeometry args={render ? [SPHERE_R, 32, 24] : [SPHERE_R, 18, 12]} />

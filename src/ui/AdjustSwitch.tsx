@@ -1,41 +1,28 @@
-// Chave "Ajustável" (plano §11.0, X10): liga as peças ajustáveis e o Kit X. Funciona na 2.x; na 1.x aparece
-// desativada ("em breve"), como o Simolar. Clicar explica o que ela vai fazer.
-import { useState } from "react";
-import { useDismiss } from "./Toolbar";
-
-function AdjustInfo({ onClose }: { onClose: () => void }) {
-  const ref = useDismiss(onClose);
-  return (
-    <div ref={ref} className="popover adjust-pop" role="dialog" aria-label="Ajustável">
-      <p className="popover-title">Ajustável · em breve</p>
-      <p className="popover-text">
-        Liga o <b>Kit X</b> e as peças ajustáveis: barra, tirante, placa e RC de qualquer medida. Só a barra existe à venda (as reguláveis da Mola);
-        as outras o siMOLAdor dimensiona para fabricar. As peças que valerem a pena viram o kit do seu grupo.
-      </p>
-      <p className="popover-text">Chega com a linha 2.x (arquitetônica). Desligada, o programa continua como hoje.</p>
-    </div>
-  );
-}
+// Chave "Ajustável" (plano §11.0, X10): liga as peças da 2.x. Na 1.x aparecia desativada ("em breve"); a partir
+// da 2.0 (BETA) ela funciona. Por enquanto liga as ligações super leves (LC, §11.7); o Kit X (barra, tirante, placa
+// e RC ajustáveis) entra nas próximas entregas da BETA. Fica lembrada no navegador (X11).
+import { useApp } from "./store";
 
 export function AdjustSwitch() {
-  const [open, setOpen] = useState(false);
+  const on = useApp((s) => s.adjustable);
+  const set = useApp((s) => s.setAdjustable);
   return (
     <div className="adjust-switch" onPointerDown={(e) => e.stopPropagation()}>
       <button
-        className="adjust-btn"
+        className={`adjust-btn${on ? " on" : ""}`}
         role="switch"
-        aria-checked={false}
-        aria-disabled
-        aria-label="Ajustável (em breve)"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        title="Ajustável: peças ajustáveis e Kit X (em breve, versões 2.x)"
+        aria-checked={on}
+        aria-label="Ajustável"
+        onClick={() => set(!on)}
+        title={
+          on
+            ? "Ajustável ligada: peças da 2.x (ligações super leves). Clique para desligar."
+            : "Ajustável: liga as peças da 2.x. Por enquanto, as ligações super leves (LC); o Kit X (barra, tirante, placa e RC ajustáveis) vem nas próximas entregas da BETA."
+        }
       >
         <span className="adjust-track" aria-hidden><span className="adjust-knob" /></span>
         <span className="adjust-txt">Ajustável</span>
-        <span className="soon-tag">em breve</span>
       </button>
-      {open && <AdjustInfo onClose={() => setOpen(false)} />}
     </div>
   );
 }

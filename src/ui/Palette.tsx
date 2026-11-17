@@ -3,9 +3,10 @@ import { catalog } from "../core/catalog";
 import { available, usage } from "../core/inventory";
 import { ropePlan, ropeSpec, STIFF_TOOL } from "../core/rope";
 import { withUserPieces } from "../core/userPieces";
+import { LIGHT_BALL, lightBallCount, lightBallPacks } from "../core/lightBalls";
 
 /** peças que se colocam clicando na cena (sem arrastar da paleta) */
-const TWO_CLICKS = new Set(["CABLE", STIFF_TOOL]);
+const TWO_CLICKS = new Set(["CABLE", STIFF_TOOL, LIGHT_BALL]);
 import { useApp, useModel } from "./store";
 
 export const GROUPS: { title: string; codes: string[] }[] = [
@@ -207,6 +208,39 @@ function Spheres() {
   );
 }
 
+/**
+ * 2.x (chave Ajustável): ligação super leve (LC). Não se põe nova: clicar no botão e depois numa esfera do modelo
+ * troca a esfera por LC (numa LC, volta para C). Sem limite; o número de pacotes de 12 aparece ao lado.
+ */
+function LightBalls() {
+  const model = useModel();
+  const adjustable = useApp((s) => s.adjustable);
+  const tool = useApp((s) => s.tool);
+  const n = lightBallCount(model);
+  if (!adjustable && !n) return null;
+  const armed = tool.kind === "place" && tool.code === LIGHT_BALL;
+  const packs = lightBallPacks(catalog, model);
+  return (
+    <button
+      className={`piece${armed ? " armed" : ""}`}
+      aria-pressed={armed}
+      title={`Ligação super leve (LC): mesmo tamanho e ímã da C, ≈ 4,7 g · clique aqui e depois nas esferas para trocar (numa LC, volta para C) · sem limite${n ? `; ${n} na montagem = ${packs} ${packs === 1 ? "pacote" : "pacotes"} de 12` : ""}`}
+      {...pieceHandlers(LIGHT_BALL, armed, false, false)}
+    >
+      <svg viewBox="0 0 48 24" aria-hidden>
+        <circle cx="24" cy="12" r="7" className="i-light" />
+      </svg>
+      <span className="piece-name">
+        <strong>{LIGHT_BALL}</strong>
+        <KitDots code={LIGHT_BALL} />
+      </span>
+      <span className="piece-count">
+        <b>{n}</b>{n ? ` · ${packs} pct` : " · ∞"}
+      </span>
+    </button>
+  );
+}
+
 /** Clicar arma a peça (de novo, desarma); arrastar leva a peça para a cena. */
 function pieceHandlers(code: string, armed: boolean, empty: boolean, viaDrag: boolean) {
   const { arm, disarm } = useApp.getState();
@@ -242,6 +276,7 @@ export function Palette({ hidden = false }: { hidden?: boolean }) {
         <section key={g.title}>
           <h2>{g.title}</h2>
           {g.title === "Apoio" && <Spheres />}
+          {g.title === "Apoio" && <LightBalls />}
           {g.codes.map((code) => {
             const { total, left, armed, empty, unit } = info(code);
             return (

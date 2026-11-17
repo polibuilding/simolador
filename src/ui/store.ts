@@ -10,6 +10,7 @@ import { boardsOf, emptyModel, membersAt, rotateNodes, samePos, toDisp, type Mod
 import { overlappingNodes, type Check } from "../core/rules";
 import type { RopeBall } from "../core/rope";
 import { dropUnknownPieces, fromFile, toFile, type SheetMeta } from "../core/serialization";
+import { LIGHT_BALL, toggleBall } from "../core/lightBalls";
 import { applyCandidate, type Candidate } from "../core/snapping";
 import { cutSelection, makeClip, pasteClip, repeatClip, type Clip } from "../core/clipboard";
 import { VERSION as APP_VERSION } from "../version";
@@ -68,6 +69,11 @@ interface State {
   /** inércia da vista: a câmera desliza um pouco depois de soltar o mouse */
   inertia: boolean;
   setInertia: (on: boolean) => void;
+  /** chave Ajustável (2.x, X10): liga as peças da 2.x (por enquanto, as ligações super leves) */
+  adjustable: boolean;
+  setAdjustable: (on: boolean) => void;
+  /** troca a esfera por ligação super leve (LC) ou volta para C */
+  toggleBall: (nodeId: string) => void;
   /** peças com acabamento (metal, hélice das molas, reflexos); desligado = versão simples, mais leve */
   render: boolean;
   setRender: (on: boolean) => void;
@@ -250,14 +256,20 @@ function overlapReport(model: Model): Partial<Pick<State, "multi" | "hint">> {
   };
 }
 
-function restore(): Partial<Pick<State, "history" | "inventory" | "name" | "sheet" | "multi" | "hint">> {
+/** O modelo usa peças da 2.x (ligações super leves ou peças criadas)? */
+function uses2x(model: Model): boolean {
+  return Object.values(model.nodes).some((n) => !!n.ball) || userPiecesUsed(catalog, model).length > 0;
+}
+
+function restore(): Partial<Pick<State, "history" | "inventory" | "name" | "sheet" | "multi" | "hint" | "adjustable">> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
     const f0 = fromFile(JSON.parse(raw));
     registerUserPieces(catalog, f0.pieces); // peças criadas (2.x) que vieram no arquivo
     const f = { ...f0, model: dropUnknownPieces(catalog, f0.model).model };
-    return { history: createHistory(f.model), inventory: f.inventory, name: f.name, ...(f.sheet ? { sheet: f.sheet } : {}), ...overlapReport(f.model) };
+    const on2x = uses2x(f.model) && !readPref("simolador:ajustavel", false) ? (writePref("simolador:ajustavel", true), { adjustable: true }) : {};
+    return { history: createHistory(f.model), inventory: f.inventory, name: f.name, ...(f.sheet ? { sheet: f.sheet } : {}), ...overlapReport(f.model), ...on2x };
   } catch {
     return {};
   }
@@ -306,6 +318,23 @@ export const useApp = create<State>((set, get) => ({
   linkFrom: null,
   ropeBall: null,
   ballHover: null,
+  adjustable: readPref("simolador:ajustavel", false),
+  setAdjustable: (adjustable) => (
+    writePref("simolador:ajustavel", adjustable),
+    set((s) => ({
+      adjustable,
+      ...(!adjustable && s.tool.kind === "place" && s.tool.code === LIGHT_BALL ? { tool: { kind: "select" as const }, ghost: null } : {}),
+      hint: adjustable
+        ? "Ajustável ligada: as ligações super leves (LC) aparecem na paleta e no Estoque."
+        : "Ajustável desligada: o que já está na montagem continua; só some das opções.",
+    }))
+  ),
+  toggleBall: (nodeId) => {
+    const s = get();
+    const r = toggleBall(catalog, s.history.present, nodeId);
+    if (!r.model) return set({ hint: r.error ?? null });
+    set({ history: push(s.history, r.model), ghost: null, hint: r.to === LIGHT_BALL ? "Esfera trocada por ligação super leve (LC)." : "Ligação super leve trocada de volta pela esfera C." });
+  },
   inertia: readPref("simolador:inercia", true),
   setInertia: (inertia) => (writePref("simolador:inercia", inertia), set({ inertia, hint: inertia ? "Inércia ligada: a vista desliza um pouco depois de soltar o mouse (B)." : "Vista firme: para assim que você solta o mouse (B)." })),
   render: readPref("simolador:render", false),
@@ -845,6 +874,8 @@ export const useApp = create<State>((set, get) => ({
       camera: { view: "fit", n: s.camera.n + 1 },
       ...overlapReport(f.model),
       ...(mNote || unknownNote ? { hint: [unknownNote, mNote].filter(Boolean).join(" ") } : {}),
+      // arquivo com peças da 2.x (ligações super leves, peças criadas): a chave Ajustável liga sozinha (X11)
+      ...(!s.adjustable && uses2x(f.model) ? (writePref("simolador:ajustavel", true), { adjustable: true, hint: [unknownNote, mNote, "Este arquivo usa peças da 2.x: a chave Ajustável foi ligada."].filter(Boolean).join(" ") }) : {}),
     }));
   },
 
