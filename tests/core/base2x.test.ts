@@ -9,7 +9,7 @@ import { fromFile, toFile } from "../../src/core/serialization";
 import { insetPolygon2, isConvex2, isPlanar, isRectangle, isSimple2, polyNormal } from "../../src/core/geom";
 import { segmentHitsPlate } from "../../src/core/rules";
 import {
-  adjustableRange, barCode, tieCode, fromKitFile, KIT_X, mustFabricate, pieceLocations, plateCode, rcCode, registerUserPieces,
+  adjustableModel, adjustableModels, adjustableRange, barCode, tieCode, fromKitFile, KIT_X, mustFabricate, pieceLocations, plateCode, rcCode, registerUserPieces,
   removeUserPiece, toKitFile, userPiecesUsed, withUserPieces,
 } from "../../src/core/userPieces";
 import { buildSheets } from "../../src/drawings/sheets";
@@ -61,11 +61,17 @@ describe("nomes das peças criadas (X2, X3) e barra que precisa ser fabricada (X
     expect(plateCode(cat, 5)).toBe("P5-2");
   });
   it("fora de B3–B12 precisa ser fabricada", () => {
-    expect(adjustableRange(catalog)).toEqual([3, 12]);
+    // embalagem das reguláveis (17/11/2026): A.B3-B4, A.B4-B6, A.B6-B9, A.B9-B15
+    expect(adjustableRange(catalog)).toEqual([3, 15]);
+    expect(adjustableModels(catalog).map((m) => m.code)).toEqual(["A.B3-B4", "A.B4-B6", "A.B6-B9", "A.B9-B15"]);
+    expect(adjustableModel(catalog, 3.5)).toBe("A.B3-B4");
+    expect(adjustableModel(catalog, 5.12)).toBe("A.B4-B6");
+    expect(adjustableModel(catalog, 6)).toBe("A.B4-B6"); // na divisa, a mais curta
+    expect(adjustableModel(catalog, 12.5)).toBe("A.B9-B15");
     expect(mustFabricate(catalog, 2.34)).toBe(true);
     expect(mustFabricate(catalog, 3)).toBe(false);
-    expect(mustFabricate(catalog, 12)).toBe(false);
-    expect(mustFabricate(catalog, 12.5)).toBe(true);
+    expect(mustFabricate(catalog, 15)).toBe(false);
+    expect(mustFabricate(catalog, 15.5)).toBe(true);
   });
 });
 

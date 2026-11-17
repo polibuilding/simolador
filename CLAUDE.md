@@ -10,7 +10,7 @@ O usuário monta a estrutura no navegador, com as peças, as regras físicas e o
 
 - **No ar:** https://polibuilding.github.io/simolador/
 - **Repositório:** `polibuilding/simolador`, branch `main`. A publicação é por GitHub Actions no GitHub Pages (`.github/workflows/pages.yml`).
-- **Versão atual:** 1.10.8. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
+- **Versão atual:** 1.10.9. A linha 1.x se chama "geométrica". O histórico está em `CHANGELOG.md`.
 - **Usuários:** estudantes de engenharia e arquitetura, que montam e documentam estruturas para a competição.
 
 ## Como trabalhar com a equipe
@@ -132,7 +132,7 @@ A **GC é rótula** (equipe, 08/11/2026), e a **RC90 trava uma direção só**, 
 - **Kit 3 (1.5.0):**
   - **cabo** em dois cliques, com a sequência esfera · CABLE C · CABLE CLIP C · cabo · CABLE CLIP C · CABLE C · esfera, contado em bolinhas, com plano de corte dos rolos;
   - **enrijecedor**, aplicado clicando na mola B6 ou B12.
-- **Kit X** (= o antigo "Kit A", equipe 08/11): o kit ajustável da 2.x, ligado pela chave **Ajustável** (§11.0 do plano). Barra, tirante, placa e RC ajustáveis; só a barra existe à venda (as reguláveis), as outras o programa dimensiona para fabricar. Códigos: B2.34, T5.83, P5 / P5-2, RC45.2 (X2, X3, X8).
+- **Kit X** (= o antigo "Kit A", equipe 08/11): o kit ajustável da 2.x, ligado pela chave **Ajustável** (§11.0 do plano). Barra, tirante, placa e RC ajustáveis; só a barra existe à venda (as reguláveis), as outras o programa dimensiona para fabricar. Códigos: B2.34, T5.83, P5 / P5-2, RC45.2 (X2, X3, X8). Barras de Comprimento Regulável à venda (embalagem, 17/11): A.B3-B4, A.B4-B6, A.B6-B9, A.B9-B15 (`adjustableModels`/`adjustableModel` em `userPieces.ts`; fora de B3–B15, "fabricar", X4). O "A." é a origem do nome "Kit A".
 - **Medidas:** todas em `docs/kit-mola-pecas.md` e `data/parametros.xlsx`. As do Kit 3 são **estimadas por fotos** (o passo do cabo foi medido em 13/11); as da CC/CC90 saíram das **fotos da equipe** (1.10.6) e foram conferidas pela equipe em 14/11. Massas pesadas pela equipe (13/11) na coluna "Massa (g)" da aba Peças (`weightG`), somadas no resumo (`structureMass` em `inventory.ts`); falta o Kit 3.
 
 ## Versões e publicação
@@ -174,7 +174,7 @@ O número tem três partes, **X.Y.Z**: X é a linha; **Y** sobe quando muda o as
 
 ### Outros
 - **Geometria livre:** geodésicas e barras fora dos planos ortogonais (E19). É a fase 4 do plano.
-- **App local:** fase 5, plano em `plano-simolador.md` §7c. Feito na 1.10.0: arquivos, sem internet, PWA, Sobre e relatório. Feito na 1.10.1: pavimentos na capa, planta baixa cortada a uma altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20). Feito na 1.10.2: base para a 2.x (plano §11.5). Feito na 1.10.3: chave Ajustável desativada, Kit X no Estoque, tirante criado. Feito na 1.10.4: modo escuro, inglês e espanhol, RC90 na base só no plano dela. Feito na 1.10.5: pranchas traduzidas, dicionário completo, chave ao lado da barra, título acompanha o desenho. Feito na 1.10.6: CC e CC90 pelas fotos, massas, passo do cabo medido. Feito na 1.10.7: chapas moduladas (centro na grade, `onQuarter`/`boardFromCenter` em `boards.ts`), setas pelo que se vê (`viewArrows` + `view.right` em `interaction/ctx.ts`), Shift + ← / → gira. Feito na 1.10.8: CC90 sozinha no papel da CC (L5). Próximos: 1.10.9 impressão das pranchas, 1.10.10 modo leve, 1.11 Tauri (instaladores, atualizador, página de download), 1.12 Biblioteca da equipe (§12).
+- **App local:** fase 5, plano em `plano-simolador.md` §7c. Feito na 1.10.0: arquivos, sem internet, PWA, Sobre e relatório. Feito na 1.10.1: pavimentos na capa, planta baixa cortada a uma altura, marcadores de vista arrastáveis, seleção de vários na prancha (F17–F20). Feito na 1.10.2: base para a 2.x (plano §11.5). Feito na 1.10.3: chave Ajustável desativada, Kit X no Estoque, tirante criado. Feito na 1.10.4: modo escuro, inglês e espanhol, RC90 na base só no plano dela. Feito na 1.10.5: pranchas traduzidas, dicionário completo, chave ao lado da barra, título acompanha o desenho. Feito na 1.10.6: CC e CC90 pelas fotos, massas, passo do cabo medido. Feito na 1.10.7: chapas moduladas (centro na grade, `onQuarter`/`boardFromCenter` em `boards.ts`), setas pelo que se vê (`viewArrows` + `view.right` em `interaction/ctx.ts`), Shift + ← / → gira. Feito na 1.10.8: CC90 sozinha no papel da CC (L5). Feito na 1.10.9: reguláveis pela embalagem (B3–B15, quatro modelos). Próximos: 1.10.10 impressão das pranchas, 1.10.11 modo leve, 1.11 Tauri (instaladores, atualizador, página de download), 1.12 Biblioteca da equipe (§12).
 - **Medições pendentes:** o protocolo está em `plano-simolador.md` §9.
 - **Responsáveis por frente** (Q08): falta definir.
 

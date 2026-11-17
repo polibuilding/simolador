@@ -24,6 +24,9 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 ## 1.10 — Pronto para usar fora do site
 
+### 1.10.9 — Barras de Comprimento Regulável pela embalagem · 17/11/2026
+- Preparação da 2.x (nada muda na tela): o programa passa a conhecer os quatro modelos das Barras de Comprimento Regulável da Mola, pela embalagem: **A.B3-B4, A.B4-B6, A.B6-B9 e A.B9-B15**. A faixa vai até B15 (o site dizia B12). Na 2.x, cada barra criada vai dizer qual regulável a faz, ou que precisa ser fabricada.
+
 ### 1.10.8 — CC90 sozinha, no papel da CC · 17/11/2026
 - **A CC90 pode ir sozinha** num par de barras alinhadas, nos mesmos lados da esfera que a CC, e faz o mesmo papel: deixa a viga contínua (a fenda fica vazia). Continua podendo ir em cruz por cima de uma CC do outro par.
 - Tirar a CC de baixo não apaga mais a CC90: ela fica, fazendo o papel da CC no par dela.

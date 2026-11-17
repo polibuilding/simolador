@@ -50,18 +50,33 @@ export function plateCode(cat: Catalog, sides: number): string {
 
 // ---------- barra fora das Barras de Comprimento Regulável (X4) ----------
 
-/** Faixa das Barras de Comprimento Regulável à venda (módulos), da planilha; padrão: B3 a B12 (site da Mola, 07/11/2026). */
+/**
+ * Barras de Comprimento Regulável da Mola: quatro modelos, cada um vai de uma barra a outra girando um lado
+ * (embalagem, foto da equipe 17/11/2026): A.B3-B4, A.B4-B6, A.B6-B9 e A.B9-B15. Os limites vêm da planilha.
+ */
+export function adjustableModels(cat: Catalog): { code: string; lo: number; hi: number }[] {
+  const s = cat.settings;
+  const cuts = [s.barra_ajustavel_min_modulos || 3, s.barra_ajustavel_divisa1_modulos || 4, s.barra_ajustavel_divisa2_modulos || 6, s.barra_ajustavel_divisa3_modulos || 9, s.barra_ajustavel_max_modulos || 15].map(Number);
+  const out: { code: string; lo: number; hi: number }[] = [];
+  for (let i = 0; i + 1 < cuts.length; i++) if (cuts[i + 1] > cuts[i]) out.push({ code: `A.B${cuts[i]}-B${cuts[i + 1]}`, lo: cuts[i], hi: cuts[i + 1] });
+  return out;
+}
+
+/** Faixa de todas as reguláveis juntas (módulos): B3 a B15. */
 export function adjustableRange(cat: Catalog): [number, number] {
-  const lo = Number(cat.settings.barra_ajustavel_min_modulos) || 3;
-  const hi = Number(cat.settings.barra_ajustavel_max_modulos) || 12;
-  return [lo, hi];
+  const m = adjustableModels(cat);
+  return m.length ? [m[0].lo, m[m.length - 1].hi] : [3, 15];
+}
+
+/** Regulável que faz a barra de `lenM` módulos (a mais curta que alcança), ou nada se for preciso fabricar. */
+export function adjustableModel(cat: Catalog, lenM: number): string | null {
+  const eps = lengthStep(cat) / 2;
+  return adjustableModels(cat).find((m) => lenM >= m.lo - eps && lenM <= m.hi + eps)?.code ?? null;
 }
 
 /** A barra de `lenM` módulos não sai das barras reguláveis do kit comercial: precisa ser fabricada (X4). */
 export function mustFabricate(cat: Catalog, lenM: number): boolean {
-  const [lo, hi] = adjustableRange(cat);
-  const eps = lengthStep(cat) / 2;
-  return lenM < lo - eps || lenM > hi + eps;
+  return adjustableModel(cat, lenM) === null;
 }
 
 // ---------- validação ----------
