@@ -42,3 +42,4 @@ v1.10.7 bbbbbad Chapas moduladas, setas pelo que se vê e giro com Shift
 v1.10.8 36cf254 CC90 sozinha, no papel da CC
 v1.10.9 d2adc78 Barras de Comprimento Regulável pela embalagem
 v2.0.0-beta.1 0339062 Chave Ajustável e ligações super leves (BETA)
+v2.0.0-beta.2 9f1d94b Barra e tirante ajustáveis, kits extras e troca por área (BETA)
