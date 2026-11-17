@@ -3,6 +3,7 @@ import { Scene } from "./render/Scene";
 import { Palette } from "./ui/Palette";
 import { PropertiesPanel, SelectionTag, SummaryTab } from "./ui/PropertiesPanel";
 import { HintLine, VersionTag } from "./ui/StatusBar";
+import { ChannelButton } from "./ui/ChannelButton";
 import { Dock } from "./ui/Dock";
 import { Toolbar } from "./ui/Toolbar";
 import { Shortcuts } from "./ui/Shortcuts";
@@ -266,6 +267,7 @@ export default function App() {
       <PropertiesPanel hidden={!propsOpen} />
       <SelectionTag />
       <VersionTag />
+      <ChannelButton />
       <AppNotices />
       <SelectBox />
       <Shortcuts />

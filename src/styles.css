@@ -686,6 +686,12 @@ dl { margin: 0 0 16px; }
   font-size: 12px; line-height: 1.45; color: var(--c-3d4644);
 }
 .hint-line.bad { color: var(--c-b4373b); }
+/* botão provisório BETA / voltar à oficial (17/11/2026), no canto de baixo à direita, acima da versão */
+.channel-btn { position: fixed; right: 10px; bottom: 22px; z-index: 30; height: 24px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--graphite); font: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
+.channel-btn:hover { color: var(--ink); border-color: var(--graphite); }
+.channel-btn.beta { background: #f2b630; border-color: #d99a0f; color: #1f2523; }
+.channel-btn.beta:hover { background: #f6c552; color: #1f2523; }
+.channel-sub { font-weight: 500; letter-spacing: 0; }
 .version-tag { position: fixed; right: 10px; bottom: 6px; z-index: 3; font-size: 10px; font-weight: 500; letter-spacing: 0.04em; color: var(--c-c2c9c6); pointer-events: none; }
 
 /* painel: blocos da peça selecionada */
