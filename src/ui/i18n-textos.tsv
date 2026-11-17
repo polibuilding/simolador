@@ -636,3 +636,33 @@ Voltar {1} para a esfera C	Turn {1} back into sphere C	Volver {1} a la esfera C
 {1} ligações super leves voltaram para C.	{1} lightweight connections went back to C.	{1} conexiones superligeras volvieron a C.
 1 ligação super leve voltou para C.	1 lightweight connection went back to C.	1 conexión superligera volvió a C.
 {1} na montagem (fabricar)	{1} in the assembly (fabricate)	{1} en el montaje (fabricar)
+Entre as duas molas	Between the two springs	Entre los dos resortes
+Entre as duas GCs	Between the two GCs	Entre las dos GC
+Ângulo	Angle	Ángulo
+Distância	Distance	Distancia
+Ângulo (eixo X)	Angle (X axis)	Ángulo (eje X)
+Polígono regular de	Regular polygon of	Polígono regular de
+lados:	sides:	lados:
+↺ esquerda	↺ left	↺ izquierda
+↻ direita	↻ right	↻ derecha
+A primeira selecionada fica; a segunda gira com o que está pendurado nela. Polígonos regulares: ângulo interno = 180° − 360°/N (pentágono 108°, hexágono 120°, decágono 144°).	The first selected stays; the second turns with what hangs from it. Regular polygons: interior angle = 180° − 360°/N (pentagon 108°, hexagon 120°, decagon 144°).	La primera seleccionada queda; la segunda gira con lo que cuelga de ella. Polígonos regulares: ángulo interior = 180° − 360°/N (pentágono 108°, hexágono 120°, decágono 144°).
+Ângulo entre as duas molas: a segunda selecionada gira em volta da esfera comum, no plano das duas	Angle between the two springs: the second selected turns around the shared sphere, in the plane of both	Ángulo entre los dos resortes: el segundo seleccionado gira alrededor de la esfera común, en el plano de ambos
+Distância entre os centros (módulos): a segunda selecionada anda na reta entre as duas	Distance between centers (modules): the second selected moves along the line between them	Distancia entre centros (módulos): la segunda seleccionada se mueve en la recta entre ambas
+Ângulo da reta da primeira para a segunda, a partir do eixo X, visto de cima (anti-horário): a segunda gira em volta da primeira	Angle of the line from the first to the second, from the X axis, seen from above (counterclockwise): the second turns around the first	Ángulo de la recta de la primera a la segunda, desde el eje X, visto desde arriba (antihorario): la segunda gira alrededor de la primera
+Número de lados (3 a 60)	Number of sides (3 to 60)	Número de lados (3 a 60)
+Use de 3 a 60 lados.	Use 3 to 60 sides.	Use de 3 a 60 lados.
+Põe as GCs que faltam, com este lado, virando à esquerda (anti-horário, visto de cima)	Adds the missing GCs, with this side, turning left (counterclockwise, seen from above)	Pone las GC que faltan, con este lado, girando a la izquierda (antihorario, visto desde arriba)
+Põe as GCs que faltam, com este lado, virando à direita (horário, visto de cima)	Adds the missing GCs, with this side, turning right (clockwise, seen from above)	Pone las GC que faltan, con este lado, girando a la derecha (horario, visto desde arriba)
+Ângulo entre as molas: {1}. A segunda girou em volta da esfera comum.	Angle between the springs: {1}. The second turned around the shared sphere.	Ángulo entre los resortes: {1}. El segundo giró alrededor de la esfera común.
+Distância entre as GCs: {1} M.	Distance between the GCs: {1} M.	Distancia entre las GC: {1} M.
+Ângulo da reta entre as GCs: {1}.	Angle of the line between the GCs: {1}.	Ángulo de la recta entre las GC: {1}.
+Polígono de {1} lados: {2} GCs novas.	Polygon of {1} sides: {2} new GCs.	Polígono de {1} lados: {2} GC nuevas.
+As duas molas precisam ter uma esfera em comum.	The two springs must share a sphere.	Los dos resortes deben compartir una esfera.
+Use um ângulo entre 0° e 180°.	Use an angle between 0° and 180°.	Use un ángulo entre 0° y 180°.
+A segunda mola não gira sozinha: o que está preso nela volta para o resto da estrutura (um anel fechado ou uma GC). Solte essa ligação ou escolha a outra mola como segunda.	The second spring can't turn alone: what hangs from it connects back to the rest (a closed ring or a GC). Release that link or pick the other spring as the second.	El segundo resorte no gira solo: lo que cuelga de él vuelve al resto de la estructura (un anillo cerrado o una GC). Suelte esa unión o elija el otro resorte como segundo.
+Tem uma {1} prendendo a segunda mola nesse nó: tire-a para mudar o ângulo.	A {1} holds the second spring at this node: remove it to change the angle.	Una {1} sujeta el segundo resorte en ese nodo: quítela para cambiar el ángulo.
+Selecione duas GCs.	Select two GCs.	Seleccione dos GC.
+A distância precisa ser maior que zero.	The distance must be greater than zero.	La distancia debe ser mayor que cero.
+As duas GCs estão ligadas pela mesma estrutura: a segunda não anda sozinha.	The two GCs are joined by the same structure: the second can't move alone.	Las dos GC están unidas por la misma estructura: la segunda no se mueve sola.
+A estrutura da segunda GC está presa em outra GC: ela não anda sozinha.	The second GC's structure is held by another GC: it can't move alone.	La estructura de la segunda GC está sujeta a otra GC: no se mueve sola.
+Vértice {1} de {2}: {3}	Vertex {1} of {2}: {3}	Vértice {1} de {2}: {3}

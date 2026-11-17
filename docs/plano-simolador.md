@@ -287,7 +287,7 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0.0`, `v1.8.2`…).
 
-- **1.x — geométrica** (atual: oficial 1.10.9; BETA 2.0.0-beta.2): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: oficial 1.10.9; BETA 2.0.0-beta.3): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: flexibilidade, ajustabilidade e criação de peças próprias para representar e simular estruturas que fogem das limitações das peças atuais do kit. O instrumento é o **Kit X** (barra, placa e RC de qualquer ângulo, catálogo próprio e arquivo `.kit`, §11).
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
@@ -555,10 +555,22 @@ Outro produto da Mola vendido à parte (embalagem, foto da equipe): **esferas de
 | Ligação super leve (LC) | ✅ 2.0.0-beta.1; troca por área na beta.2 |
 | Barra ajustável (BX) | ✅ 2.0.0-beta.2: dois cliques entre esferas; código B5.12; regulável ou fabricar; pacotes de reguláveis no Estoque (regra B6) |
 | Tirante ajustável (TX) | ✅ 2.0.0-beta.2: dois cliques; código T7.81; fabricar |
-| Placa de N lados (P5, P5-2…) | **próxima BETA** (2.0.0-beta.3): clicar as esferas do contorno; base de polígono da 1.10.2 |
-| RC de qualquer ângulo (RC45.2…) | **próxima BETA** (2.0.0-beta.3): entre duas molas de um nó, no ângulo delas; vira um vínculo de ângulo |
+| Placa de N lados (P5, P5-2…) | **próxima BETA** (2.0.0-beta.4): clicar as esferas do contorno; base de polígono da 1.10.2 |
+| RC de qualquer ângulo (RC45.2…) | **próxima BETA** (2.0.0-beta.4): entre duas molas de um nó, no ângulo delas; vira um vínculo de ângulo |
+| Edição por pares e polígono regular de GCs | ✅ 2.0.0-beta.3 (regra E16): ângulo entre duas molas, distância e ângulo entre duas GCs, completar polígono regular |
 | Kit X no Estoque | ❌ não aparece (equipe 17/11): só os catálogos de `.kit` e os kits extras à venda (reguláveis, LC) |
 | `.kit`, salvar no catálogo, × apagar, bolinhas pretas | depois da placa e da RC |
+
+### 11.9 Formas e geodésicas: o que mais dá para fazer (17/11/2026)
+
+A equipe quer montar geodésicas e formas (ex.: 10 bases em polígono regular) sabendo os ângulos. Feito na 2.0.0-beta.3: ângulo entre duas molas, distância e ângulo entre duas GCs e completar o polígono regular. Ideias para as próximas BETAs, da mais simples para a mais completa:
+
+1. **Coordenadas polares** no painel da GC e da esfera: raio e ângulo a partir de um centro escolhido (uma GC, uma esfera ou um ponto da chapa).
+2. **Girar a seleção por um ângulo exato** em volta de um ponto (vertical ou do eixo de uma mola).
+3. **Repetir em círculo** (padrão polar): selecionar um pedaço (um pórtico, uma "fatia" de cúpula) e repetir N vezes em volta de um eixo vertical; já existe o repetir em linha (`repeatClip`). É o jeito mais rápido de fazer coberturas radiais e cúpulas por fatias.
+4. **Ângulos de 360°/N no modo Livre**: escolher N e as barras livres param nesses ângulos (além dos 15°).
+5. **Medir sem mudar**: distância e ângulo entre quaisquer dois pontos ou três esferas, com um botão de copiar.
+6. **Gerador de geodésica**: escolher a base (icosaedro), a frequência (1V, 2V, 3V) e o raio; o programa põe as esferas e as barras ajustáveis, e dá a lista de comprimentos (quantas de cada, de qual regulável sai ou fabricar). Depende da RC de qualquer ângulo só se a cúpula precisar de rigidez nas ligações.
 
 ## 12. Biblioteca online (plano de 14/11/2026)
 

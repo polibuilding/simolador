@@ -76,6 +76,8 @@ interface State {
   toggleBall: (nodeId: string) => void;
   /** esferas selecionadas (área ou Ctrl+clique) viram LC de uma vez; se já são todas LC, voltam para C */
   toggleSelectedBalls: () => boolean;
+  /** grava uma edição já pronta e conferida (edição por pares no painel) */
+  applyModel: (model: Model, hint: string) => void;
   /** peças com acabamento (metal, hélice das molas, reflexos); desligado = versão simples, mais leve */
   render: boolean;
   setRender: (on: boolean) => void;
@@ -337,6 +339,7 @@ export const useApp = create<State>((set, get) => ({
     if (!r.model) return set({ hint: r.error ?? null });
     set({ history: push(s.history, r.model), ghost: null, hint: r.to === LIGHT_BALL ? "Esfera trocada por ligação super leve (LC)." : "Ligação super leve trocada de volta pela esfera C." });
   },
+  applyModel: (model, hint) => set((s) => ({ history: push(s.history, model), hint })),
   toggleSelectedBalls: () => {
     const s = get();
     const model = s.history.present;

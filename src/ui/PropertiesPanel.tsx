@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { pieceMobility, structureMobility, type MoveRef } from "../core/globalMove";
 import { catalog } from "../core/catalog";
 import { available, usage, structureMass } from "../core/inventory";
-import { boardsOf, componentOf, DISP_AXIS, len, nodeCode, sub, toDisp, type Vec3 } from "../core/model";
+import { boardsOf, componentOf, DISP_AXIS, len, nodeCode, sub, toDisp, type Model, type Vec3 } from "../core/model";
 import { LIGHT_BALL } from "../core/lightBalls";
+import { barPair, completePolygon, gcPair, setBarAngle, setGcPair } from "../core/pairs";
 import { boardCenter, boardName, boardSelection, boardSize, boardsGap } from "../core/boards";
 import { NumField } from "../render/Boards";
 import { Chevrons } from "./Palette";
@@ -659,6 +660,59 @@ function Repeat({ size }: { size: Vec3 }) {
 }
 
 /** Várias peças selecionadas: lista por código e medidas do conjunto. */
+/**
+ * Duas peças selecionadas (2.x, equipe 17/11): a relação entre elas, editável. Duas molas com uma esfera comum: o
+ * ângulo (a segunda gira). Duas GCs: distância e ângulo da reta (a segunda anda) e completar um polígono regular.
+ */
+function PairTools({ a, b }: { a: { kind: string; id: string }; b: { kind: string; id: string } }) {
+  const model = useModel();
+  const inventory = useApp((s) => s.inventory);
+  const [sides, setSides] = useState(10);
+  const apply = (r: { model?: Model; error?: string }, hint: string) => (r.model ? (useApp.getState().applyModel(r.model, hint), null) : r.error ?? "Não deu.");
+  const deg = (v: number) => `${v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}°`;
+  if (a.kind === "member" && b.kind === "member") {
+    const pr = barPair(catalog, model, a.id, b.id);
+    if (!pr) return null;
+    return (
+      <Section title="Entre as duas molas">
+        <dl>
+          <Row
+            k="Ângulo"
+            v={<NumField value={Math.round(pr.angle * 100) / 100} suffix="°" width={56} title="Ângulo entre as duas molas: a segunda selecionada gira em volta da esfera comum, no plano das duas" onCommit={(v) => apply(setBarAngle(catalog, model, a.id, b.id, v), `Ângulo entre as molas: ${deg(v)}. A segunda girou em volta da esfera comum.`)} />}
+          />
+        </dl>
+        <p className="pair-note">A primeira selecionada fica; a segunda gira com o que está pendurado nela. Polígonos regulares: ângulo interno = 180° − 360°/N (pentágono 108°, hexágono 120°, decágono 144°).</p>
+      </Section>
+    );
+  }
+  if (a.kind === "node" && b.kind === "node") {
+    const pr = gcPair(model, a.id, b.id);
+    if (!pr) return null;
+    return (
+      <Section title="Entre as duas GCs">
+        <dl>
+          <Row
+            k="Distância"
+            v={<><NumField value={Math.round(pr.dist * 100) / 100} suffix="M" width={56} title="Distância entre os centros (módulos): a segunda selecionada anda na reta entre as duas" onCommit={(v) => apply(setGcPair(catalog, model, a.id, b.id, v, pr.angle), `Distância entre as GCs: ${v.toLocaleString("pt-BR")} M.`)} /> <small>{fmt(pr.dist * M, 0)} mm</small></>}
+          />
+          <Row
+            k="Ângulo (eixo X)"
+            v={<NumField value={Math.round(pr.angle * 100) / 100} suffix="°" width={56} title="Ângulo da reta da primeira para a segunda, a partir do eixo X, visto de cima (anti-horário): a segunda gira em volta da primeira" onCommit={(v) => apply(setGcPair(catalog, model, a.id, b.id, pr.dist, v), `Ângulo da reta entre as GCs: ${deg(v)}.`)} />}
+          />
+        </dl>
+        <div className="pair-poly">
+          <span>Polígono regular de</span>
+          <NumField value={sides} width={40} title="Número de lados (3 a 60)" onCommit={(v) => (Number.isInteger(v) && v >= 3 && v <= 60 ? (setSides(v), null) : "Use de 3 a 60 lados.")} />
+          <span>lados:</span>
+          <button className="ghost small" title="Põe as GCs que faltam, com este lado, virando à esquerda (anti-horário, visto de cima)" onClick={() => { const r = completePolygon(catalog, inventory, model, a.id, b.id, sides, true); const e = apply(r, `Polígono de ${sides} lados: ${r.added ?? 0} GCs novas.`); if (e) useApp.setState({ hint: e }); }}>↺ esquerda</button>
+          <button className="ghost small" title="Põe as GCs que faltam, com este lado, virando à direita (horário, visto de cima)" onClick={() => { const r = completePolygon(catalog, inventory, model, a.id, b.id, sides, false); const e = apply(r, `Polígono de ${sides} lados: ${r.added ?? 0} GCs novas.`); if (e) useApp.setState({ hint: e }); }}>↻ direita</button>
+        </div>
+      </Section>
+    );
+  }
+  return null;
+}
+
 function MultiSelected() {
   const model = useModel();
   const multi = useApp((s) => s.multi);
@@ -706,6 +760,7 @@ function MultiSelected() {
         <Row k="Planta (entre centros)" v={`${fmt(span(0), 0)} × ${fmt(span(2), 0)} mm`} />
         <Row k="Altura (entre centros)" v={`${fmt(span(1), 0)} mm`} />
       </dl>
+      {multi.length === 2 && <PairTools a={multi[0]} b={multi[1]} />}
       {/* 2.x: as esferas da seleção viram ligações super leves de uma vez (ou voltam para C) */}
       {(adjustable || (count[LIGHT_BALL] ?? 0) > 0) && (count.C ?? 0) + (count[LIGHT_BALL] ?? 0) > 0 && (
         <button className="ghost small ball-swap" onClick={() => useApp.getState().toggleSelectedBalls()}>

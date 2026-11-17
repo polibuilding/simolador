@@ -26,6 +26,12 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 A linha 2.x é desenvolvida na **BETA** (https://polibuilding.github.io/simolador/beta/), aberta pelo botão **BETA** no canto de baixo à direita. A versão oficial continua a 1.10.9 até a equipe decidir que a BETA vira a oficial.
 
+### 2.0.0-beta.3 — Ângulos e distâncias entre duas peças e polígono regular de bases · 17/11/2026
+- **Duas molas selecionadas** (com uma esfera em comum): o painel da direita mostra o **ângulo entre elas**, e dá para digitar outro. A primeira selecionada fica; a segunda gira em volta da esfera comum, no plano das duas, levando junto o que está pendurado nela. Lembrete no painel: ângulo interno de um polígono regular = 180° − 360°/N (pentágono 108°, decágono 144°).
+- **Duas GCs selecionadas**: a **distância** entre elas e o **ângulo da reta** (a partir do eixo X, visto de cima), os dois editáveis; a segunda anda.
+- **Completar polígono regular**: com duas GCs (um lado), escolha o número de lados e clique "↺ esquerda" ou "↻ direita": as GCs que faltam aparecem, todas na mesma distância. Ex.: um decágono de bases em dois cliques.
+- A placa de vários lados e a RC de qualquer ângulo passam para a próxima BETA.
+
 ### 2.0.0-beta.2 — Barra e tirante ajustáveis, kits extras e troca por área · 17/11/2026
 - **Barra ajustável (BX) e tirante ajustável (TX)**: com a chave Ajustável, aparecem no fim de Barras e de Diagonais. Clique numa esfera e depois em outra: a peça nasce com o comprimento entre as duas (B5.12, T7.81…), preta. A barra diz de qual Barra de Comprimento Regulável ela sai (A.B3-B4 … A.B9-B15) ou que precisa ser fabricada; o tirante é fabricado. As peças criadas aparecem na paleta logo abaixo do BX e do TX e vão no arquivo.
 - **Estoque sem o Kit X**: as peças criadas são do próprio siMOLAdor e estão sempre disponíveis. No lugar, **"Kits extras"**: Barras reguláveis (quantas na montagem e quantos pacotes, 2 de cada modelo por pacote; as que precisam ser fabricadas) e Ligações super leves (pacotes de 12). A barra do Estoque mostra "+ 1× REG + 1× LC", e o carimbo das pranchas, "BARRAS REGULÁVEIS".

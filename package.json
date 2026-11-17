@@ -1,7 +1,7 @@
 {
   "name": "simolador",
   "private": true,
-  "version": "2.0.0-beta.2",
+  "version": "2.0.0-beta.3",
   "description": "Simulador de montagem 3D de estruturas com o Kit Mola",
   "type": "module",
   "scripts": {
