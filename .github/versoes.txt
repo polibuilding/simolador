@@ -40,3 +40,4 @@ v1.10.5 c2b3e25 Pranchas traduzidas, diagonais claras no escuro e título que ac
 v1.10.6 c307d7e CC e CC90 com o formato real, massa das peças e passo do cabo medido
 v1.10.7 bbbbbad Chapas moduladas, setas pelo que se vê e giro com Shift
 v1.10.8 36cf254 CC90 sozinha, no papel da CC
+v1.10.9 d2adc78 Barras de Comprimento Regulável pela embalagem
