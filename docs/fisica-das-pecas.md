@@ -222,6 +222,7 @@ Notação: c/c = centro a centro das esferas; L_f = comprimento flexível (só a
 | Diâmetro | 15,0 mm (14 mm em 2008) | [2022]; [Oliveira] Tab. 3.1 | desenho |
 | Material | aço (é atraída pelos ímãs) | site | confirmado |
 | Massa | **13,9 g**: bate com uma esfera de aço maciço de 15 mm (13,87 g), o que confirma o diâmetro e o material | equipe 13/11/2026 | **pesado** |
+| Massa da **ligação super leve (LC)** | **≈ 4,7 g** (65% mais leve), mesmo tamanho; vendida à parte, 12 por pacote (2.x, plano §11.7). Força do ímã: a medir | embalagem da Mola (17/11/2026) | fabricante; pesar |
 | Papel mecânico | **rótula**: as peças giram em volta dela; transmite força, não momento (a não ser com RC90, CC ou CC90) | [TFG] Fig. 11; [Oliveira] ensaios 1, 5, 9; 1.7.1; equipe 08/11/2026 | confirmado (duas fontes e a equipe) |
 | Peso relativo | "elevado quando comparado ao peso de outros elementos"; pode limitar a montagem | [Oliveira] 8.1 | confirmado |
 

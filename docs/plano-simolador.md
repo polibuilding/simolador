@@ -528,6 +528,22 @@ O Kit X mexe em três coisas que hoje são fixas no programa: a **geometria** (t
 - **Placa côncava ou com furo:** a resposta foi "sempre plana, sem limite de lados". Proposta para a implementação: aceitar côncava desde que os lados não se cruzem; furo fica para depois. Confirmar com a equipe.
 - **A RC ajustável do projeto paralelo:** quando existir, entra como peça física (com faixa de ângulos, como a barra comercial).
 
+### 11.7 Ligações Super Leves — LC (equipe, 17/11/2026)
+
+Outro produto da Mola vendido à parte (embalagem, foto da equipe): **esferas de ligação super leves, código LC**, do **mesmo tamanho** da esfera padrão (C, 15 mm), com **≈ 4,7 g** (a padrão tem 13,9 g: 65% mais leve). **12 unidades por pacote.** Servem para simular construções reais sem o peso grande da esfera: estruturas mais altas, vãos e balanços maiores.
+
+| | Como fica no programa (2.x) |
+|---|---|
+| **Onde** | Entra junto do Kit X, na chave **Ajustável** (§11.0): é uma **opção de ligação** a mais, como as barras reguláveis. |
+| **Como usa** | Um botão **"Ligação super leve"** no Estoque (ou na paleta, ao lado da C). Com o botão ligado, **clicar numa esfera que já está no modelo a troca por LC**; clicar de novo numa LC a volta para C. Esc sai do modo. Dá para trocar várias seguidas e também por seleção (retângulo → "Trocar por LC"). |
+| **No desenho** | Mesma geometria da C (mesmo tamanho: nada de encaixe muda; regras, vistas e pranchas iguais). Cor diferente na cena (a definir, ex.: branca/translúcida) e o código **LC** na lista de peças. |
+| **Estoque** | **Sem limite** (como as reguláveis): nunca bloqueia por falta. As LC **saem da conta de esferas C** dos Kits 1 e 2 (uma esfera trocada não gasta C). |
+| **Kits mínimos** | O "mínimo de kits" passa a dizer também **quantos pacotes de LC** comprar: **arredondar para cima (número de LC ÷ 12)**. Ex.: 15 LC → 2 pacotes. Na lista de peças e na capa: "LC · 15 (2 pacotes de 12)". |
+| **Massa** | 4,7 g cada no resumo ("Massa ≈ … g"), pela embalagem; **pesar** na equipe para confirmar. Na 3.x é o que muda o peso próprio e a dinâmica. |
+| **Arquivo `.mola`** | O nó guarda o tipo de esfera (C ou LC); um arquivo antigo abre com todas C. Abrir um `.mola` com LC liga a chave sozinho (X11). |
+
+**A confirmar com a equipe:** o ímã da LC segura as molas com a mesma força da C? (importa para a 3.x: o ímã que solta.) Pode ir na GC e em todas as ligações (RC90, CC, CC90, placas, diagonais e cabos) como a C? Por enquanto o plano supõe que sim, porque o tamanho é o mesmo.
+
 ## 12. Biblioteca online (plano de 14/11/2026)
 
 Hoje a **Biblioteca** (ao lado da engrenagem) só abre os exemplos que vêm com o programa. A ideia é que as equipes publiquem as estruturas delas e que qualquer um abra, estude e parta delas.
