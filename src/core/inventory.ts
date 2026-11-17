@@ -30,8 +30,9 @@ export function available(cat: Catalog, inv: InventoryConfig, code: string): num
   let total = 0;
   for (const [kitId, kit] of Object.entries(cat.kits)) {
     const count = inv.kits[kitId] ?? 0;
-    // ligações super leves (sem limite, vendidas em pacotes) valem sem escolher caixas no Estoque
-    total += kitAmount(kit, code, kit.unlimited && kit.packs ? Math.max(1, count) : count);
+    // kits sem limite (Kit X das peças criadas, ligações super leves) valem sem escolher caixas: não aparecem no
+    // Estoque (equipe, 17/11/2026)
+    total += kitAmount(kit, code, kit.unlimited ? Math.max(1, count) : count);
   }
   return total;
 }

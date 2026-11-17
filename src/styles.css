@@ -1128,8 +1128,13 @@ dl { margin: 0 0 16px; }
 .adjust-knob { transition: left 0.15s ease; }
 /* ligação super leve na paleta e no estoque */
 .i-light { fill: #1d2022; }
+.i-adjust { fill: none; stroke: #1d2022; stroke-width: 1.6; stroke-linejoin: round; }
+.i-adjust-arrow { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 2; }
+:root[data-theme="dark"] .i-adjust { stroke: #c9cfcd; }
+:root[data-theme="dark"] .i-light { fill: #0b0c0d; stroke: #8a928f; stroke-width: 1; }
 .ball-swap { margin-top: 8px; }
 .stock-row .stock-act { margin-left: auto; font-size: 11.5px; padding: 2px 8px; }
+.stock-sub { margin: 10px 0 2px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .stock-row .stock-free { font-size: 11px; color: var(--muted); }
 .adjust-pop { top: auto; bottom: calc(100% + 8px); right: 0; width: 290px; }
 /* barra estreita (paleta e resumo abertos, tela pequena): a chave fica só com o desenho dela */

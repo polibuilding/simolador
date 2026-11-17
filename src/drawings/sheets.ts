@@ -8,6 +8,7 @@ import type { InventoryConfig } from "../core/inventory";
 import { ballsPerRoll, ropePlan, ropeSpec } from "../core/rope";
 import { minKits, usage } from "../core/inventory";
 import { LIGHT_BALL, lightBallPacks } from "../core/lightBalls";
+import { adjustableNeeds } from "../core/adjustable";
 import { boardsOf, type Model, type Vec3 } from "../core/model";
 import { boardCorners, fromBoardLocal } from "../core/boards";
 import type { IsoCorner, SheetCut, SheetLayout, SheetMeta, SheetShow, SheetView } from "../core/serialization";
@@ -336,8 +337,13 @@ function kitLines(input: SheetInput): string[] {
     const packs = lightBallPacks(cat, model);
     if (packs) kits[LIGHT_BALL] = packs;
   }
+  // Kit X: as peças criadas são do siMOLAdor (fabricar ou reguláveis), não um kit à venda
+  delete kits.X;
+  const reg = adjustableNeeds(cat, model).packs;
   const short = (k: string) => (cat.kits[k]?.name ?? `Kit ${k}`).replace(/^mola structural\s*/i, "").toUpperCase();
-  return Object.entries(kits).filter(([, c]) => c > 0).map(([k, c]) => `${c > 1 ? `${c}× ` : ""}${short(k)}`);
+  const lines = Object.entries(kits).filter(([, c]) => c > 0).map(([k, c]) => `${c > 1 ? `${c}× ` : ""}${short(k)}`);
+  if (reg) lines.push(`${reg > 1 ? `${reg}× ` : ""}BARRAS REGULÁVEIS`);
+  return lines;
 }
 
 function titleBlock(input: SheetInput, pg: PageInfo): Prim[] {

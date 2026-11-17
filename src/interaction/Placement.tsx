@@ -21,6 +21,8 @@ import { pickSupport, reachStep } from "./steps/support";
 import { freeBar, linkStep, sphereUnder, triangleStep } from "./steps/bars";
 import { mclipStep, ringStep, ropeStep, stiffStep } from "./steps/rope";
 import { ballStep } from "./steps/ball";
+import { adjustStep } from "./steps/adjust";
+import { isAdjustTool } from "../core/adjustable";
 import { LIGHT_BALL } from "../core/lightBalls";
 import { boxSelect } from "./steps/box";
 import { moveStep } from "./steps/move";
@@ -108,6 +110,8 @@ export function Placement() {
       if (code === STIFF_TOOL) return stiffStep(ctx, ev, rect, model, inv);
       // ---- 2.x: ligação super leve (clique numa esfera troca C ↔ LC) ----
       if (code === LIGHT_BALL) return ballStep(ctx, ev, rect, model);
+      // ---- 2.x: barra e tirante ajustáveis (clique numa esfera e depois em outra) ----
+      if (isAdjustTool(code)) return adjustStep(ctx, ev, rect, model, code);
       if (code === "RING-P" || code === "RING-M") return ringStep(ctx, ev, rect, model, code, inv);
       if (code === "MCLIP-C") return mclipStep(ctx, ev, rect, model, inv);
       if (catalog.pieces[code]?.type === "rope") return void ropeStep(ctx, ev, rect, model, code, inv);

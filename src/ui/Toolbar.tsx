@@ -3,13 +3,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { catalog } from "../core/catalog";
 import { minKits, usage } from "../core/inventory";
 import { LIGHT_BALL, lightBallCount, lightBallPacks } from "../core/lightBalls";
+import { adjustableNeeds } from "../core/adjustable";
 import { LibraryPanel } from "./Config";
 import { useApp, useModel } from "./store";
 import { canSaveInPlace, listCopies, listRecents, newProjectSafe, openProject, openRecent, restoreCopy, saveProject, type AutoCopy, type RecentFile } from "./files";
 
 /** "2× K1 + 1× K2" */
 export const kitsText = (kits: Record<string, number>) =>
-  Object.entries(kits).filter(([, c]) => c > 0).map(([k, c]) => `${c}× ${/^\d+$/.test(k) ? `K${k}` : k === "X" ? "KX" : k}`).join(" + ");
+  Object.entries(kits).filter(([k, c]) => c > 0 && k !== "X").map(([k, c]) => `${c}× ${/^\d+$/.test(k) ? `K${k}` : k === "X" ? "KX" : k}`).join(" + ");
 
 /** Menu de arquivo (seta ao lado de Salvar): Salvar como, Recentes e Cópias automáticas. */
 function FileMenu({ onClose }: { onClose: () => void }) {
@@ -99,8 +100,6 @@ export function useDismiss(onClose: () => void) {
 /** Kits que ainda vão entrar (aparecem no estoque, desativados). Somem da lista quando o kit entra no catálogo. */
 const SOON = [
   { id: "3", name: "Kit 3", color: "#2F6FD6", tag: "em breve", note: "Kit 3 (azul): cabos, anéis, enrijecedores e duas chapas de base · em breve" },
-  // Kit X = o antigo "Kit A" (equipe 08/11): liga junto com a chave Ajustável, na 2.x
-  { id: "X", name: "Kit X", color: "#000000", tag: "em breve", note: "Kit X (preto): barra, tirante, placa e RC ajustáveis, sem limite, e as peças que você criar · próximas entregas da 2.x (chave Ajustável)" },
 ];
 
 function StockPanel({ onClose }: { onClose: () => void }) {
@@ -112,6 +111,7 @@ function StockPanel({ onClose }: { onClose: () => void }) {
   const adjustable = useApp((s) => s.adjustable);
   const model = useModel();
   const lcUsed = lightBallCount(model);
+  const adj = adjustableNeeds(catalog, model);
   return (
     <div ref={ref} className="popover stock-pop" role="dialog" aria-label="Estoque">
       {Object.entries(catalog.kits).filter(([, k]) => !k.unlimited).map(([id, k]) => (
@@ -125,17 +125,34 @@ function StockPanel({ onClose }: { onClose: () => void }) {
           </span>
         </label>
       ))}
-      {/* kits sem limite da 2.x (chave Ajustável): ligações super leves e Kit X */}
-      {Object.entries(catalog.kits).filter(([id, k]) => k.unlimited && (adjustable || (id === LIGHT_BALL ? lcUsed > 0 : true))).map(([id, k]) => (
-        <div key={id} className="stock-row" title={id === LIGHT_BALL ? `${k.name}: sem limite; vendidas em pacotes de ${k.pieces[LIGHT_BALL]} (o mínimo de kits conta os pacotes)` : `${k.name}: sem limite`}>
-          <i className="kit-swatch" style={{ background: k.color ?? "#000" }} />
-          <span>{id === LIGHT_BALL ? "Ligações super leves" : k.name}</span>
-          <span className="stock-free">{id === LIGHT_BALL && lcUsed ? `${lcUsed} · ${lightBallPacks(catalog, model)} pct` : "sem limite"}</span>
-          {id === LIGHT_BALL && adjustable && (
-            <button className="ghost stock-act" onClick={() => (useApp.getState().arm(LIGHT_BALL, false), onClose())} title="Clique aqui e depois nas esferas do modelo: cada uma vira ligação super leve (numa LC, volta para C)">
+      {/* 2.x (chave Ajustável): os kits extras da Mola, sem limite, com a quantidade de pacotes que a montagem pede.
+          O Kit X não aparece: as peças criadas são do próprio siMOLAdor (só os catálogos de .kit entram aqui). */}
+      {(adjustable || lcUsed > 0 || adj.bars > 0) && <p className="stock-sub">Kits extras · sem limite</p>}
+      {(adjustable || adj.bars > 0) && (
+        <div className="stock-row" title={`Barras de Comprimento Regulável (${Object.entries(adj.perModel).map(([m, n]) => `${m}: ${n}`).join(" · ")}); ${catalog.settings.regulavel_pacote_por_modelo ?? 2} de cada modelo por pacote${adj.fabricate ? `. ${adj.fabricate} fora das reguláveis: fabricar` : ""}`}>
+          <i className="kit-swatch" style={{ background: "#1d2022" }} />
+          <span>Barras reguláveis</span>
+          <span className="stock-free">{adj.bars ? `${adj.bars} · ${adj.packs} pct${adj.fabricate ? ` · ${adj.fabricate} fabricar` : ""}` : "sem limite"}</span>
+        </div>
+      )}
+      {(adjustable || lcUsed > 0) && (
+        <div className="stock-row" title={`Ligações super leves (LC): sem limite; vendidas em pacotes de ${catalog.kits[LIGHT_BALL]?.pieces[LIGHT_BALL] ?? 12} (o mínimo de kits conta os pacotes)`}>
+          <i className="kit-swatch" style={{ background: "#1d2022" }} />
+          <span>Ligações super leves</span>
+          <span className="stock-free">{lcUsed ? `${lcUsed} · ${lightBallPacks(catalog, model)} pct` : "sem limite"}</span>
+          {adjustable && (
+            <button className="ghost stock-act" onClick={() => (useApp.getState().toggleSelectedBalls() || useApp.getState().arm(LIGHT_BALL, false), onClose())} title="Com esferas selecionadas, troca todas; sem seleção, clique aqui e depois nas esferas do modelo (numa LC, volta para C)">
               Trocar esferas
             </button>
           )}
+        </div>
+      )}
+      {/* catálogos de .kit (peças criadas guardadas pela equipe) */}
+      {Object.entries(catalog.kits).filter(([, k]) => k.user).map(([id, k]) => (
+        <div key={id} className="stock-row" title={`${k.name}${k.file ? ` (${k.file})` : ""}: sem limite`}>
+          <i className="kit-swatch" style={{ background: k.color ?? "#000" }} />
+          <span>{k.name}</span>
+          <span className="stock-free">sem limite</span>
         </div>
       ))}
       {SOON.filter((k) => !catalog.kits[k.id]).map((k) => (
@@ -276,9 +293,11 @@ export function Toolbar() {
   const need = useMemo(() => (inventory.unlimited ? minKits(catalog, usage(model)) : null), [inventory.unlimited, model]);
   // ligações super leves: sem limite, mas o texto diz quantos pacotes a montagem pede
   const lcPacks = lightBallPacks(catalog, model);
+  const regPacks = adjustableNeeds(catalog, model).packs;
+  const extra = [regPacks ? `${regPacks}× REG` : "", lcPacks && !need ? `${lcPacks}× LC` : ""].filter(Boolean);
   const kits = need
-    ? need.total ? `sem limite · mín. ${kitsText(need.kits)}` : "sem limite"
-    : [kitsText(inventory.kits) || "nenhum", lcPacks ? `${lcPacks}× LC` : ""].filter(Boolean).join(" + ");
+    ? need.total || extra.length ? `sem limite · mín. ${[kitsText(need.kits), ...extra].filter(Boolean).join(" + ")}` : "sem limite"
+    : [kitsText(inventory.kits) || "nenhum", ...extra].join(" + ");
 
   const doNew = () => {
     const empty = Object.keys(useApp.getState().history.present.nodes).length === 0;

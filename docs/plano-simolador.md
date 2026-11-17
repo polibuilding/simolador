@@ -287,7 +287,7 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0.0`, `v1.8.2`…).
 
-- **1.x — geométrica** (atual: oficial 1.10.9; BETA 2.0.0-beta.1): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: oficial 1.10.9; BETA 2.0.0-beta.2): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: flexibilidade, ajustabilidade e criação de peças próprias para representar e simular estruturas que fogem das limitações das peças atuais do kit. O instrumento é o **Kit X** (barra, placa e RC de qualquer ângulo, catálogo próprio e arquivo `.kit`, §11).
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
@@ -544,7 +544,21 @@ Outro produto da Mola vendido à parte (embalagem, foto da equipe): **esferas de
 
 **Respostas da equipe (17/11):** o ímã da LC segura as molas com a **mesma força** da C, e ela vai **na GC e com todas as ligações**, como a C. Muda só o peso e a cor (mais escura: **preta**, como as outras peças variáveis da 2.x).
 
+**Feito na 2.0.0-beta.2 (17/11):** troca de várias esferas por seleção (área ou Ctrl+clique → LC); o Estoque mostra os "Kits extras" (reguláveis e LC) e não o Kit X; LC, BX e TX também no menu reduzido.
+
 **Feito na 2.0.0-beta.1 (17/11):** chave Ajustável funcionando; LC na paleta (abaixo da C) e no Estoque ("Trocar esferas"); clique troca C ↔ LC (também pelo painel da esfera); preta; sem limite; mínimo de kits em pacotes (`packs` no kit, `lightBalls.ts`); massa; `.mola` com `ball: "LC"` no nó (a 1.x abre como C); regra N6.
+
+### 11.8 Andamento na BETA (17/11/2026)
+
+| Peça ajustável | Situação |
+|---|---|
+| Ligação super leve (LC) | ✅ 2.0.0-beta.1; troca por área na beta.2 |
+| Barra ajustável (BX) | ✅ 2.0.0-beta.2: dois cliques entre esferas; código B5.12; regulável ou fabricar; pacotes de reguláveis no Estoque (regra B6) |
+| Tirante ajustável (TX) | ✅ 2.0.0-beta.2: dois cliques; código T7.81; fabricar |
+| Placa de N lados (P5, P5-2…) | **próxima BETA** (2.0.0-beta.3): clicar as esferas do contorno; base de polígono da 1.10.2 |
+| RC de qualquer ângulo (RC45.2…) | **próxima BETA** (2.0.0-beta.3): entre duas molas de um nó, no ângulo delas; vira um vínculo de ângulo |
+| Kit X no Estoque | ❌ não aparece (equipe 17/11): só os catálogos de `.kit` e os kits extras à venda (reguláveis, LC) |
+| `.kit`, salvar no catálogo, × apagar, bolinhas pretas | depois da placa e da RC |
 
 ## 12. Biblioteca online (plano de 14/11/2026)
 

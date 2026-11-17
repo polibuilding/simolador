@@ -74,6 +74,8 @@ interface State {
   setAdjustable: (on: boolean) => void;
   /** troca a esfera por ligação super leve (LC) ou volta para C */
   toggleBall: (nodeId: string) => void;
+  /** esferas selecionadas (área ou Ctrl+clique) viram LC de uma vez; se já são todas LC, voltam para C */
+  toggleSelectedBalls: () => boolean;
   /** peças com acabamento (metal, hélice das molas, reflexos); desligado = versão simples, mais leve */
   render: boolean;
   setRender: (on: boolean) => void;
@@ -334,6 +336,22 @@ export const useApp = create<State>((set, get) => ({
     const r = toggleBall(catalog, s.history.present, nodeId);
     if (!r.model) return set({ hint: r.error ?? null });
     set({ history: push(s.history, r.model), ghost: null, hint: r.to === LIGHT_BALL ? "Esfera trocada por ligação super leve (LC)." : "Ligação super leve trocada de volta pela esfera C." });
+  },
+  toggleSelectedBalls: () => {
+    const s = get();
+    const model = s.history.present;
+    const ids = [...new Set([...s.multi, ...(s.selection ? [s.selection] : [])].filter((x) => x.kind === "node").map((x) => x.id))].filter((k) => model.nodes[k]?.kind === "sphere");
+    if (!ids.length) return false;
+    const allLight = ids.every((k) => model.nodes[k].ball === LIGHT_BALL);
+    const nodes = { ...model.nodes };
+    for (const k of ids) {
+      const n = { ...nodes[k] };
+      if (allLight) delete n.ball;
+      else n.ball = LIGHT_BALL;
+      nodes[k] = n;
+    }
+    set({ history: push(s.history, { ...model, nodes }), hint: allLight ? `${ids.length} ${ids.length === 1 ? "ligação super leve voltou" : "ligações super leves voltaram"} para C.` : `${ids.length} ${ids.length === 1 ? "esfera trocada" : "esferas trocadas"} por ligação super leve (LC).` });
+    return true;
   },
   inertia: readPref("simolador:inercia", true),
   setInertia: (inertia) => (writePref("simolador:inercia", inertia), set({ inertia, hint: inertia ? "Inércia ligada: a vista desliza um pouco depois de soltar o mouse (B)." : "Vista firme: para assim que você solta o mouse (B)." })),

@@ -2,7 +2,7 @@
   "_meta": {
     "generatedBy": "scripts/gerar-dados.mjs",
     "source": "data/parametros.xlsx",
-    "generatedAt": "2026-11-17T22:45:16.135Z",
+    "generatedAt": "2026-11-17T23:24:36.453Z",
     "doNotEdit": "Arquivo gerado. Edite data/parametros.xlsx e rode npm run dados."
   },
   "schemaVersion": 2,
@@ -50,6 +50,7 @@
     "barra_ajustavel_divisa1_modulos": 4,
     "barra_ajustavel_divisa2_modulos": 6,
     "barra_ajustavel_divisa3_modulos": 9,
+    "regulavel_pacote_por_modelo": 2,
     "kitx_precisao_comprimento_modulos": 0.01,
     "kitx_precisao_angulo_graus": 0.1,
     "lc_pacote_unidades": 12

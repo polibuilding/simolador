@@ -662,6 +662,7 @@ function Repeat({ size }: { size: Vec3 }) {
 function MultiSelected() {
   const model = useModel();
   const multi = useApp((s) => s.multi);
+  const adjustable = useApp((s) => s.adjustable);
   const { removeSelected, select } = useApp.getState();
   const count: Record<string, number> = {};
   const nodeIds = new Set<string>();
@@ -705,6 +706,12 @@ function MultiSelected() {
         <Row k="Planta (entre centros)" v={`${fmt(span(0), 0)} × ${fmt(span(2), 0)} mm`} />
         <Row k="Altura (entre centros)" v={`${fmt(span(1), 0)} mm`} />
       </dl>
+      {/* 2.x: as esferas da seleção viram ligações super leves de uma vez (ou voltam para C) */}
+      {(adjustable || (count[LIGHT_BALL] ?? 0) > 0) && (count.C ?? 0) + (count[LIGHT_BALL] ?? 0) > 0 && (
+        <button className="ghost small ball-swap" onClick={() => useApp.getState().toggleSelectedBalls()}>
+          {(count.C ?? 0) === 0 ? `Voltar ${count[LIGHT_BALL]} para a esfera C` : `Trocar ${count.C} ${count.C === 1 ? "esfera" : "esferas"} por ligação super leve (LC)`}
+        </button>
+      )}
       <table className="bom">
         <thead>
           <tr>

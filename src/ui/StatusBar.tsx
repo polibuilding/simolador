@@ -31,7 +31,7 @@ export function HintLine() {
 export function VersionTag() {
   return (
     <span className="version-tag" title={`siMOLAdor ${VERSION}${EDITION ? ` · versão ${EDITION}` : ""}`}>
-      v{VERSION_SHORT}{IS_BETA ? " beta" : ""}
+      v{VERSION_SHORT}{IS_BETA && !VERSION.includes("beta") ? " beta" : ""}
     </span>
   );
 }

@@ -132,10 +132,11 @@ describe("camada do usuário no catálogo", () => {
 });
 
 describe("estoque com kit sem limite", () => {
-  it("disponível sem limite só com uma caixa do kit; 0 caixas = 0 (nunca NaN)", () => {
+  it("peças criadas: sempre disponíveis, sem escolher caixa do Kit X (equipe 17/11: o Kit X não aparece no Estoque); nunca NaN", () => {
     const cat = fresh();
     registerUserPieces(cat, [userBar]);
-    expect(available(cat, { kits: { "1": 1, [KIT_X]: 0 }, unlimited: false }, "B2.34")).toBe(0);
+    expect(available(cat, { kits: { "1": 1, [KIT_X]: 0 }, unlimited: false }, "B2.34")).toBe(Infinity);
+    expect(available(cat, { kits: { "1": 1 }, unlimited: false }, "B2.34")).toBe(Infinity);
     expect(available(cat, { kits: { "1": 1, [KIT_X]: 1 }, unlimited: false }, "B2.34")).toBe(Infinity);
     expect(available(cat, { kits: { "1": 1, [KIT_X]: 1 }, unlimited: false }, "B6")).toBe(available(catalog, { kits: { "1": 1 }, unlimited: false }, "B6"));
   });

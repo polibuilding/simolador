@@ -26,6 +26,13 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 A linha 2.x é desenvolvida na **BETA** (https://polibuilding.github.io/simolador/beta/), aberta pelo botão **BETA** no canto de baixo à direita. A versão oficial continua a 1.10.9 até a equipe decidir que a BETA vira a oficial.
 
+### 2.0.0-beta.2 — Barra e tirante ajustáveis, kits extras e troca por área · 17/11/2026
+- **Barra ajustável (BX) e tirante ajustável (TX)**: com a chave Ajustável, aparecem no fim de Barras e de Diagonais. Clique numa esfera e depois em outra: a peça nasce com o comprimento entre as duas (B5.12, T7.81…), preta. A barra diz de qual Barra de Comprimento Regulável ela sai (A.B3-B4 … A.B9-B15) ou que precisa ser fabricada; o tirante é fabricado. As peças criadas aparecem na paleta logo abaixo do BX e do TX e vão no arquivo.
+- **Estoque sem o Kit X**: as peças criadas são do próprio siMOLAdor e estão sempre disponíveis. No lugar, **"Kits extras"**: Barras reguláveis (quantas na montagem e quantos pacotes, 2 de cada modelo por pacote; as que precisam ser fabricadas) e Ligações super leves (pacotes de 12). A barra do Estoque mostra "+ 1× REG + 1× LC", e o carimbo das pranchas, "BARRAS REGULÁVEIS".
+- **Trocar várias esferas de uma vez**: selecione por área (ou Ctrl+clique) e clique no LC da paleta, em "Trocar esferas" no Estoque ou no botão do painel da seleção. Se todas já são LC, voltam para C.
+- **Menu reduzido da paleta** também mostra o LC, o BX, o TX e as peças criadas.
+- Próxima BETA: placa de vários lados e RC de qualquer ângulo.
+
 ### 2.0.0-beta.1 — Chave Ajustável e ligações super leves · 17/11/2026
 - **Duas versões no ar**: a oficial (1.10.9) e a BETA (a 2.x do dia a dia). O botão **BETA** leva de uma para a outra, e a estrutura aberta vai junto. Cada uma funciona sem internet por conta própria, e a BETA se instala como "siMOLAdor BETA".
 - **A chave Ajustável funciona** (ao lado da barra de baixo) e fica lembrada no navegador. Abrir um arquivo com peças da 2.x a liga sozinha.

@@ -4,9 +4,10 @@ import { available, usage } from "../core/inventory";
 import { ropePlan, ropeSpec, STIFF_TOOL } from "../core/rope";
 import { withUserPieces } from "../core/userPieces";
 import { LIGHT_BALL, lightBallCount, lightBallPacks } from "../core/lightBalls";
+import { ADJ_BAR, ADJ_TIE, adjustableNeeds, isAdjustTool } from "../core/adjustable";
 
 /** peças que se colocam clicando na cena (sem arrastar da paleta) */
-const TWO_CLICKS = new Set(["CABLE", STIFF_TOOL, LIGHT_BALL]);
+const TWO_CLICKS = new Set(["CABLE", STIFF_TOOL, LIGHT_BALL, ADJ_BAR, ADJ_TIE]);
 import { useApp, useModel } from "./store";
 
 export const GROUPS: { title: string; codes: string[] }[] = [
@@ -23,9 +24,32 @@ export const GROUPS: { title: string; codes: string[] }[] = [
 /** códigos de estoque por trás de uma entrada da paleta (o enrijecedor junta BS6 e BS12) */
 const stockCodes = (code: string) => (code === STIFF_TOOL ? ["BS6", "BS12"] : [code]);
 /** nome para mostrar */
-export const paletteName = (code: string) => (code === STIFF_TOOL ? "Enrijecedor (B6 ou B12)" : catalog.pieces[code]?.name ?? code);
+export const paletteName = (code: string) =>
+  code === STIFF_TOOL ? "Enrijecedor (B6 ou B12)"
+  : code === ADJ_BAR ? "Barra ajustável (qualquer comprimento entre duas esferas)"
+  : code === ADJ_TIE ? "Tirante ajustável (qualquer comprimento entre duas esferas)"
+  : catalog.pieces[code]?.name ?? code;
 
 export function Icon({ code }: { code: string }) {
+  // 2.x: peças ajustáveis e ligação super leve, pretas
+  if (code === LIGHT_BALL) {
+    return (
+      <svg viewBox="0 0 48 24" aria-hidden>
+        <circle cx="24" cy="12" r="7" className="i-light" />
+      </svg>
+    );
+  }
+  if (code === ADJ_BAR || code === ADJ_TIE) {
+    let d = "M7 12";
+    if (code === ADJ_BAR) for (let i = 0; i < 12; i++) d += ` L${10 + i * 2.4} ${i % 2 ? 9 : 15}`;
+    d += " L41 12";
+    return (
+      <svg viewBox="0 0 48 24" aria-hidden>
+        <path d={code === ADJ_BAR ? d : "M8 17 L40 7"} className="i-adjust" />
+        <path d="M5 19.5 H43" className="i-adjust-arrow" />
+      </svg>
+    );
+  }
   if (code === STIFF_TOOL) {
     // mola dentro do tubo transparente
     let d = "M9 12";
@@ -161,16 +185,32 @@ function usePalette() {
   const model = useModel();
   const inventory = useApp((s) => s.inventory);
   const tool = useApp((s) => s.tool);
+  const adjustable = useApp((s) => s.adjustable);
   const used = usage(model);
   const avail = (code: string) => stockCodes(code).reduce((n, c) => n + available(catalog, inventory, c), 0);
   const usedOf = (code: string) => stockCodes(code).reduce((n, c) => n + (used[c] ?? 0), 0);
-  const shown = (code: string) => avail(code) > 0 || usedOf(code) > 0 || (code === "CABLE" && Object.values(model.members).some((m) => m.code === "CABLE"));
+  const shown = (code: string) => {
+    if (code === LIGHT_BALL || isAdjustTool(code)) return true; // já filtradas abaixo
+    // peça criada pela barra/tirante ajustável: só a que está na montagem (as outras ficaram só no catálogo da sessão)
+    const p = catalog.pieces[code];
+    if (p?.origin === "user" && isAdjustTool(p.parent ?? "")) return usedOf(code) > 0;
+    return avail(code) > 0 || usedOf(code) > 0 || (code === "CABLE" && Object.values(model.members).some((m) => m.code === "CABLE"));
+  };
+  // 2.x (chave Ajustável): LC logo depois da GC, barra e tirante ajustáveis no fim dos grupos deles
+  const base = GROUPS.map((g) => {
+    const extra = (c: string, on: boolean) => (on ? [c] : []);
+    if (g.title === "Apoio") return { ...g, codes: [...g.codes, ...extra(LIGHT_BALL, adjustable || (used[LIGHT_BALL] ?? 0) > 0)] };
+    if (g.title === "Barras") return { ...g, codes: [...g.codes, ...extra(ADJ_BAR, adjustable)] };
+    if (g.title === "Diagonais") return { ...g, codes: [...g.codes, ...extra(ADJ_TIE, adjustable)] };
+    return g;
+  });
   // peças criadas (Kit X, 2.x) entram abaixo da peça que as gerou; sem elas, os grupos de sempre
-  const all = withUserPieces(GROUPS, catalog, { bar: "Barras", cable: "Diagonais", plate: "Placas", connector: "Ligações" });
+  const all = withUserPieces(base, catalog, { bar: "Barras", cable: "Diagonais", plate: "Placas", connector: "Ligações" });
   const groups = all.map((g) => ({ ...g, codes: g.codes.filter(shown) })).filter((g) => g.codes.length);
   const rope = ropePlan(catalog, model);
   const info = (code: string) => {
     const armed = tool.kind === "place" && tool.code === code;
+    if (code === LIGHT_BALL || isAdjustTool(code)) return { total: Infinity, left: Infinity, armed, empty: false, unit: "" };
     if (code === "CABLE") {
       // cabo: em centímetros (rolos × 3,35 m menos os pedaços); a quantidade de cabos é limitada pelas ligações
       const rolls = available(catalog, inventory, code);
@@ -241,6 +281,19 @@ function LightBalls() {
   );
 }
 
+/** Barra ajustável: quantas na montagem e quantos pacotes de reguláveis; tirante: quantos (fabricados). */
+function AdjustCount({ code }: { code: string }) {
+  const model = useModel();
+  const n = adjustableNeeds(catalog, model);
+  const count = code === ADJ_BAR ? n.bars : n.ties;
+  if (!count) return null;
+  return (
+    <span className="piece-count" title={code === ADJ_BAR ? `${n.bars} na montagem: ${n.packs} ${n.packs === 1 ? "pacote" : "pacotes"} de reguláveis${n.fabricate ? `; ${n.fabricate} a fabricar` : ""}` : `${n.ties} na montagem (fabricar)`}>
+      <b>{count}</b>{code === ADJ_BAR && n.packs ? ` · ${n.packs} pct` : ""}
+    </span>
+  );
+}
+
 /** Clicar arma a peça (de novo, desarma); arrastar leva a peça para a cena. */
 function pieceHandlers(code: string, armed: boolean, empty: boolean, viaDrag: boolean) {
   const { arm, disarm } = useApp.getState();
@@ -251,6 +304,8 @@ function pieceHandlers(code: string, armed: boolean, empty: boolean, viaDrag: bo
       arm(code, true);
     },
     onPointerUp: () => {
+      // LC com esferas selecionadas (área ou Ctrl+clique): troca todas de uma vez
+      if (code === LIGHT_BALL && !armed && useApp.getState().toggleSelectedBalls()) return;
       if (TWO_CLICKS.has(code)) return armed ? disarm() : empty ? undefined : arm(code, false);
       if (armed && !viaDrag) return disarm();
       useApp.setState({ tool: { kind: "place", code, viaDrag: false } });
@@ -276,8 +331,8 @@ export function Palette({ hidden = false }: { hidden?: boolean }) {
         <section key={g.title}>
           <h2>{g.title}</h2>
           {g.title === "Apoio" && <Spheres />}
-          {g.title === "Apoio" && <LightBalls />}
           {g.codes.map((code) => {
+            if (code === LIGHT_BALL) return <LightBalls key={code} />;
             const { total, left, armed, empty, unit } = info(code);
             return (
               <button
@@ -285,7 +340,7 @@ export function Palette({ hidden = false }: { hidden?: boolean }) {
                 className={`piece${armed ? " armed" : ""}${empty ? " empty" : ""}`}
                 aria-pressed={armed}
                 disabled={empty}
-                title={empty ? `Acabou: ${paletteName(code)}` : `${paletteName(code)} · ${code === "CABLE" ? "clique numa esfera e depois em outra" : code === STIFF_TOOL ? "clique numa mola B6 ou B12" : "clique ou arraste para a cena"}`}
+                title={empty ? `Acabou: ${paletteName(code)}` : `${paletteName(code)} · ${code === "CABLE" || isAdjustTool(code) ? "clique numa esfera e depois em outra" : code === STIFF_TOOL ? "clique numa mola B6 ou B12" : "clique ou arraste para a cena"}`}
                 {...pieceHandlers(code, armed, empty, tool.kind === "place" && tool.viaDrag)}
               >
                 <Icon code={code} />
@@ -293,6 +348,7 @@ export function Palette({ hidden = false }: { hidden?: boolean }) {
                   <strong>{code}</strong>
                   <KitDots code={code} />
                 </span>
+                {isAdjustTool(code) && <AdjustCount code={code} />}
                 {/* sem limite: não mostra quantidade */}
                 {Number.isFinite(total) && (
                   <span className="piece-count" title={unit ? `restam ${left} de ${total} ${unit}` : undefined}>
