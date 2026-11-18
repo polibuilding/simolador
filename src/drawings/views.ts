@@ -1,5 +1,5 @@
 // Projeção ortográfica do modelo nas plantas e vistas A–D, com os símbolos das pranchas do Desafio 2022.
-import type { Catalog } from "../core/catalog";
+import { LIGHT_BALL, type Catalog } from "../core/catalog";
 import { continuousOutline, continuousSize } from "../core/shapes";
 import { insetPolygon2, isRectangle, polyCenter, polyTo2D } from "../core/geom";
 import { type Model, type Vec3, cross, norm, sub } from "../core/model";
@@ -110,6 +110,11 @@ function planar(pr: Projector, pts3: Vec3[], normal: Vec3, thickness: number): P
   return segRect(best[0], best[1], thickness);
 }
 
+/** Peça variável da 2.x (ajustável ou criada, e a ligação super leve): sai escura nas pranchas, como na cena. */
+export function isVariablePiece(cat: Catalog, code: string): boolean {
+  return code === LIGHT_BALL || cat.pieces[code]?.origin === "user";
+}
+
 /** Itens do modelo vistos de uma direção. */
 export function itemsFor(cat: Catalog, model: Model, pr: Projector): Item[] {
   const s = cat.settings;
@@ -167,7 +172,7 @@ export function itemsFor(cat: Catalog, model: Model, pr: Projector): Item[] {
     if (n.kind === "support" && pr.id !== "plan") continue; // a GC já desenha a esfera embutida
     items.push({
       depth: d, order: 5, kind: "node", anchor: [h + R * 0.7, v + R * 0.7], level: w[1],
-      draw: (to, k) => [{ t: "circle", c: to([h, v]), r: R * k, fill: GRAY.node, stroke: "#000", pen: PEN.part, layer: "MOLA-ESFERA" }],
+      draw: (to, k) => [{ t: "circle", c: to([h, v]), r: R * k, fill: n.ball === LIGHT_BALL ? GRAY.variable : GRAY.node, stroke: "#000", pen: PEN.part, layer: "MOLA-ESFERA" }],
     });
   }
 
@@ -233,13 +238,14 @@ export function itemsFor(cat: Catalog, model: Model, pr: Projector): Item[] {
       const kk = L / L3;
       const p1 = add2(a2, mul2(u, (R + t / 2) * kk));
       const p2 = sub2(b2, mul2(u, (R + t / 2) * kk));
+      const tieFill = isVariablePiece(cat, m.code) ? GRAY.variable : GRAY.light;
       const diamond = (c: Pt): Pt[] => [[c[0], c[1] + t * 0.7], [c[0] + t * 0.7, c[1]], [c[0], c[1] - t * 0.7], [c[0] - t * 0.7, c[1]]];
       items.push({
         depth, order: 3, kind: "cable", anchor: mul2(add2(p1, p2), 0.5), level, top,
         draw: (to) => [
           { t: "line", a: to(p1), b: to(p2), stroke: "#000", pen: PEN.thin * 1.5, layer: "MOLA-DIAGONAL" },
-          { t: "poly", pts: diamond(p1).map(to), closed: true, fill: GRAY.light, stroke: "#000", pen: PEN.thin, layer: "MOLA-DIAGONAL" },
-          { t: "poly", pts: diamond(p2).map(to), closed: true, fill: GRAY.light, stroke: "#000", pen: PEN.thin, layer: "MOLA-DIAGONAL" },
+          { t: "poly", pts: diamond(p1).map(to), closed: true, fill: tieFill, stroke: "#000", pen: PEN.thin, layer: "MOLA-DIAGONAL" },
+          { t: "poly", pts: diamond(p2).map(to), closed: true, fill: tieFill, stroke: "#000", pen: PEN.thin, layer: "MOLA-DIAGONAL" },
         ],
       });
       continue;
@@ -248,7 +254,7 @@ export function itemsFor(cat: Catalog, model: Model, pr: Projector): Item[] {
     const rect = segRect(add2(a2, mul2(u, R * 0.6)), sub2(b2, mul2(u, R * 0.6)), s.barra_diametro_mm);
     items.push({
       depth, order: 2, kind: vertical ? "bar-v" : "bar-h", anchor: mul2(add2(a2, b2), 0.5), level, top,
-      draw: poly(rect, GRAY.light, "MOLA-BARRA"),
+      draw: poly(rect, isVariablePiece(cat, m.code) ? GRAY.variable : GRAY.light, "MOLA-BARRA"),
     });
   }
 
@@ -281,12 +287,11 @@ export function itemsFor(cat: Catalog, model: Model, pr: Projector): Item[] {
     const horizontal = Math.abs(n[1]) > 0.5;
     const pts = planar(pr, outline3, n, Number(cat.pieces[p.code]?.geometry.thicknessMm ?? s.placa_espessura_mm));
     const [, , d] = pr.p(center);
-    const facing = pts.length > 4;
     const wallInPlan = pr.id === "plan" && !horizontal;
     items.push({
       depth: d - 0.5, order: 1, kind: horizontal ? "plate-h" : "plate-v",
       anchor: [pr.p(center)[0], pr.p(center)[1]], level: Math.min(...c.map((q) => q[1])),
-      draw: poly(pts, wallInPlan ? GRAY.dark : facing ? GRAY.light : GRAY.light, "MOLA-PLACA", wallInPlan ? PEN.ground : PEN.part),
+      draw: poly(pts, isVariablePiece(cat, p.code) ? GRAY.variable : wallInPlan ? GRAY.dark : GRAY.light, "MOLA-PLACA", wallInPlan ? PEN.ground : PEN.part),
     });
   }
 

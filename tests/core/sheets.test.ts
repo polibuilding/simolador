@@ -44,15 +44,23 @@ describe("pranchas: carimbo", () => {
     expect(texts(sheets[0].prims)).toContain("SEM ESCALA");
   });
 
-  it("título e subtítulo iguais em todas as folhas e editáveis", () => {
+  it("título (o nome da estrutura) e subtítulo iguais em todas as folhas e editáveis", () => {
     const { sheets } = build({ line1: "TORRE", line2: "EQUIPE 3" });
     for (const sh of sheets) {
       const title = sh.prims.find((p) => p.t === "text" && p.edit === "title");
       const sub = sh.prims.find((p) => p.t === "text" && p.edit === "sub");
-      expect(title && title.t === "text" && title.s).toBe("TORRE");
+      expect(title && title.t === "text" && title.s).toBe("PÓRTICO");
       expect(title && title.t === "text" && title.bold).toBe(true);
       expect(sub && sub.t === "text" && sub.s).toBe("EQUIPE 3");
     }
+  });
+
+  it("capa: massa estimada e kits mínimos, mesmo sem limite de peças", () => {
+    const t = texts(buildSheets({ cat: catalog, model: portico.model, inventory: { ...portico.inventory, unlimited: true }, name: "Pórtico", meta: base }).sheets[0].prims);
+    expect(t).toContain("Massa estimada");
+    expect(t.some((x) => /^≈ \d+ g$/.test(x))).toBe(true);
+    expect(t).toContain("Kits mínimos para montar");
+    expect(t.some((x) => /KIT 1/.test(x))).toBe(true);
   });
 
   it("kits usados no carimbo", () => {

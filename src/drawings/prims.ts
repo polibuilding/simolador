@@ -70,6 +70,8 @@ export const GRAY = {
   light: "#dbdbdb", // 0,86
   dark: "#757575", // 0,46
   faint: "#c9c9c9",
+  /** peças variáveis da 2.x (ajustáveis, criadas e ligações super leves): escuras, como na cena */
+  variable: "#2b2b2b",
 };
 
 // Penas (mm no papel)

@@ -287,7 +287,7 @@ Objetivo: o siMOLAdor pode ser **baixado no site da equipe** e usado sem interne
 
 O número aparece no rodapé, depois das logos; o histórico fica em `CHANGELOG.md` e cada versão tem uma etiqueta no Git (`v1.0.0`, `v1.8.2`…).
 
-- **1.x — geométrica** (atual: oficial 1.10.9; BETA 2.0.0-beta.4): montar com as peças e regras reais do kit e gerar as pranchas.
+- **1.x — geométrica** (atual: oficial 1.10.9; BETA 2.0.0-beta.5): montar com as peças e regras reais do kit e gerar as pranchas.
 - **2.x — arquitetônica**: flexibilidade, ajustabilidade e criação de peças próprias para representar e simular estruturas que fogem das limitações das peças atuais do kit. O instrumento é o **Kit X** (barra, placa e RC de qualquer ângulo, catálogo próprio e arquivo `.kit`, §11).
 - **3.x — de engenharia**: deformação, estaticidade e estabilidade.
 
@@ -555,10 +555,11 @@ Outro produto da Mola vendido à parte (embalagem, foto da equipe): **esferas de
 | Ligação super leve (LC) | ✅ 2.0.0-beta.1; troca por área na beta.2 |
 | Barra ajustável (BX) | ✅ 2.0.0-beta.2: dois cliques entre esferas; código B5.12; regulável ou fabricar; pacotes de reguláveis no Estoque (regra B6) |
 | Tirante ajustável (TX) | ✅ 2.0.0-beta.2: dois cliques; código T7.81; fabricar |
-| Placa de N lados (P5, P5-2…) | **próxima BETA** (2.0.0-beta.5): clicar as esferas do contorno; base de polígono da 1.10.2 |
-| RC de qualquer ângulo (RC45.2…) | **próxima BETA** (2.0.0-beta.5): entre duas molas de um nó, no ângulo delas; vira um vínculo de ângulo |
+| Placa de N lados (P5, P5-2…) | **próxima BETA** (2.0.0-beta.6): clicar as esferas do contorno; base de polígono da 1.10.2 |
+| RC de qualquer ângulo (RC45.2…) | **próxima BETA** (2.0.0-beta.6): entre duas molas de um nó, no ângulo delas; vira um vínculo de ângulo |
 | Edição por pares e polígono regular de GCs | ✅ 2.0.0-beta.3 (regra E16): ângulo entre duas molas, distância e ângulo entre duas GCs, completar polígono regular |
 | Tab na ligação de duas esferas | ✅ 2.0.0-beta.4 (regra E17): só a segunda → as duas por igual → só a primeira |
+| Pranchas da 2.x | ✅ 2.0.0-beta.5 (F2, F21): título = nome da estrutura, peças variáveis escuras, massa estimada e kits mínimos na capa |
 | Kit X no Estoque | ❌ não aparece (equipe 17/11): só os catálogos de `.kit` e os kits extras à venda (reguláveis, LC) |
 | `.kit`, salvar no catálogo, × apagar, bolinhas pretas | depois da placa e da RC |
 

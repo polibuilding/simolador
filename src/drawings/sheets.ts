@@ -6,14 +6,14 @@ import type { Catalog } from "../core/catalog";
 import { currentLang, tr } from "../ui/i18n";
 import type { InventoryConfig } from "../core/inventory";
 import { ballsPerRoll, ropePlan, ropeSpec } from "../core/rope";
-import { minKits, usage } from "../core/inventory";
+import { minKits, structureMass, usage } from "../core/inventory";
 import { LIGHT_BALL, lightBallPacks } from "../core/lightBalls";
 import { adjustableNeeds } from "../core/adjustable";
 import { boardsOf, type Model, type Vec3 } from "../core/model";
 import { boardCorners, fromBoardLocal } from "../core/boards";
 import type { IsoCorner, SheetCut, SheetLayout, SheetMeta, SheetShow, SheetView } from "../core/serialization";
 import { CUSTOM_MAX, CUSTOM_MIN, GRAY, PAPER, PEN, movePrim, type PaperName, type Prim, type Pt, type Sheet } from "./prims";
-import { bounds, cutProjector, isoProjector, itemsFor, projector, world, type Item, type Projector, type ViewId } from "./views";
+import { bounds, cutProjector, isoProjector, isVariablePiece, itemsFor, projector, world, type Item, type Projector, type ViewId } from "./views";
 
 export interface SheetInput {
   cat: Catalog;
@@ -328,15 +328,25 @@ interface PageInfo {
   scales: number[];
 }
 
+/** O menor conjunto de kits que monta a estrutura (com os pacotes de LC e de reguláveis), seja qual for o estoque. */
+function minKitLines(input: SheetInput): string[] {
+  return kitText(input, minKits(input.cat, usage(input.model, input.cat)).kits);
+}
+
 /** Kits usados: os do estoque; no modo sem limite, o menor conjunto que cobre as peças. */
 function kitLines(input: SheetInput): string[] {
   const { cat, inventory, model } = input;
-  const kits = inventory.unlimited ? minKits(cat, usage(model, cat)).kits : { ...inventory.kits };
+  if (inventory.unlimited) return minKitLines(input);
+  const kits = { ...inventory.kits };
   // ligações super leves (2.x): sem limite no estoque, mas a capa diz quantos pacotes a montagem pede
-  if (!inventory.unlimited) {
-    const packs = lightBallPacks(cat, model);
-    if (packs) kits[LIGHT_BALL] = packs;
-  }
+  const packs = lightBallPacks(cat, model);
+  if (packs) kits[LIGHT_BALL] = packs;
+  return kitText(input, kits);
+}
+
+function kitText(input: SheetInput, kits: Record<string, number>): string[] {
+  const { cat, model } = input;
+  kits = { ...kits };
   // Kit X: as peças criadas são do siMOLAdor (fabricar ou reguláveis), não um kit à venda
   delete kits.X;
   const reg = adjustableNeeds(cat, model).packs;
@@ -381,7 +391,9 @@ function titleBlock(input: SheetInput, pg: PageInfo): Prim[] {
   const field = (i: number, s: string) => T([cols[i] + 1.6, y0 + 2.6], s, 1.5, { fill: "#6b6b6b" });
   const inner = (i: number) => cols[i + 1] - cols[i] - 3.2;
   // título (maior, em negrito) e subtítulo: os mesmos em todas as pranchas; editam-se clicando neles
-  const { line1, line2 } = input.meta;
+  // o título é o nome da estrutura na montagem (editá-lo aqui renomeia a estrutura)
+  const line1 = input.name.toUpperCase();
+  const { line2 } = input.meta;
   out.push(T([cols[1] + 3, ym + 0.4], line1, fitSize(line1, inner(1) - 1.6, 4.2, true), { bold: true, edit: "title" }));
   out.push(T([cols[1] + 3, ym + 5], line2, fitSize(line2, inner(1) - 1.6, 2.4), { edit: "sub" }));
   // desenhos da prancha, agrupados para caber no quadro
@@ -1037,8 +1049,18 @@ function coverDrawing(input: SheetInput, n: number, extra: ExtraFloor[] = []): P
   out.push(...tagged(iso, "capa:isometrica"));
   // título
   out.push(...tagged([
-    txt([AREA.x0 + 4, AREA.y0 + 10 * fs], input.name.toUpperCase(), 9 * fs, { bold: true }),
-    txt([AREA.x0 + 4, AREA.y0 + 17 * fs], `${input.meta.line1}  |  ${input.meta.line2}`, 3 * fs),
+    txt([AREA.x0 + 4, AREA.y0 + 10 * fs], input.name.toUpperCase(), 9 * fs, { bold: true, edit: "title" }),
+    // "MOLA STRUCTURAL MODEL  |  DESAFIO…": cada parte se edita clicando nela
+    ...(() => {
+      const parts = ([[input.meta.line1, "line1"], [input.meta.line2, "sub"]] as const).filter(([s]) => s.trim());
+      let x = AREA.x0 + 4;
+      return parts.map(([s, key], i) => {
+        const shown = i < parts.length - 1 ? `${s}  |` : s;
+        const at = x;
+        x += textW(`${s}  | `, 3 * fs) * 0.9;
+        return txt([at, AREA.y0 + 17 * fs], shown, 3 * fs, { edit: key });
+      });
+    })(),
   ], "capa:titulo"));
 
   // painel à direita: dados e lista de peças (tabela grande)
@@ -1065,6 +1087,14 @@ function coverDrawing(input: SheetInput, n: number, extra: ExtraFloor[] = []): P
   row("Níveis", String(levelsOf(model, cat).length));
   row("Escala das plantas e vistas", fmtScale(n));
   row("Módulo", `${cat.settings.modulo_mm.toLocaleString("pt-BR")} mm`);
+  // massa estimada (pesagens da equipe); o que não tem massa fica dito ao lado
+  const mass = structureMass(model, cat);
+  row("Massa estimada", `≈ ${f0(mass.g)} g${mass.missing.length ? ` (sem ${mass.missing.join(", ")})` : ""}`);
+  // mínimo de kits para montar, mesmo com o estoque sem limite
+  const minTxt = minKitLines(input).join(" + ") || "—";
+  dados.push(txt([px, y], "Kits mínimos para montar", 2.6 * fs));
+  dados.push(txt([pr1, y], minTxt, fitSize(minTxt, pr1 - px - textW("Kits mínimos para montar", 2.6 * fs) - 4, 2.6 * fs, true, 1.4), { anchor: "end", bold: true }));
+  y += 5 * fs;
   out.push(...tagged(dados, "capa:dados"));
 
   // tabela: faixa de cabeçalho, linhas zebradas, quantidades em destaque, total em faixa escura
@@ -1098,6 +1128,11 @@ function coverDrawing(input: SheetInput, n: number, extra: ExtraFloor[] = []): P
     total += qty;
     if (i % 2) tab.push(rect(yy, rowH, "#f3f3f3"));
     tab.push(txt([colCode, mid(yy)], code, 3.2 * fs, { bold: true }));
+    // peça variável da 2.x: quadradinho escuro, como no desenho
+    if (isVariablePiece(cat, code)) {
+      const sx = colCode + textW(code, 3.2 * fs, true) * 0.85 + 1;
+      tab.push({ t: "poly", pts: [[sx, mid(yy) - 2.2 * fs], [sx + 1.8 * fs, mid(yy) - 2.2 * fs], [sx + 1.8 * fs, mid(yy) - 0.4 * fs], [sx, mid(yy) - 0.4 * fs]], closed: true, fill: GRAY.variable, stroke: null, layer: "MOLA-TEXTO" });
+    }
     const cm = (mm: number) => (mm / 10).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
     tab.push(txt([colName, mid(yy)], rope ? `Cabo: ${cm(plan.mm)} cm | ${plan.balls} bolinhas` : p?.name.replace(` ${code}`, "") ?? code, 3 * fs));
     tab.push(txt([colUsed, mid(yy) + 0.3], String(qty), 4 * fs, { anchor: "end", bold: true }));
@@ -1115,6 +1150,11 @@ function coverDrawing(input: SheetInput, n: number, extra: ExtraFloor[] = []): P
     ? "Sem limite de peças"
     : Object.entries(inventory.kits).filter(([, c]) => c > 0).map(([k, c]) => `${c}× ${cat.kits[k]?.name ?? `Kit ${k}`}`).join("; ");
   tab.push(txt([px, yy], `Kits: ${kitTxt || "—"}`, 2.5 * fs));
+  if (codes.some((c) => isVariablePiece(cat, c))) {
+    yy += 4.2 * fs;
+    tab.push({ t: "poly", pts: [[px, yy - 2 * fs], [px + 2.2 * fs, yy - 2 * fs], [px + 2.2 * fs, yy + 0.2 * fs], [px, yy + 0.2 * fs]], closed: true, fill: GRAY.variable, stroke: null, layer: "MOLA-TEXTO" });
+    tab.push(txt([px + 3.4 * fs, yy], "Peças variáveis (ajustáveis, criadas e ligações super leves): escuras nos desenhos", 2.5 * fs));
+  }
   // cortes do cabo: o que tirar de cada rolo (maiores primeiro)
   if (plan.cuts.length) {
     const order = new Map(plan.cuts.map((c, i) => [c.id, i + 1]));

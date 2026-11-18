@@ -379,7 +379,8 @@ export function SheetsView() {
   // Enter e Esc fecham a edição; o blur que vem depois (o campo some) não grava de novo
   const editDone = useRef(false);
   const valueOf = (key: string) => {
-    if (key === "title") return meta.line1;
+    if (key === "title") return useApp.getState().name;
+    if (key === "line1") return meta.line1;
     if (key === "sub") return meta.line2;
     const v = built.views.find((x) => x.view.id === key.slice(3));
     return key.startsWith("vt:") ? (v?.title ?? "") : (v?.sub ?? "");
@@ -401,7 +402,9 @@ export function SheetsView() {
     editDone.current = true;
     setEditing(null);
     if (e.value === valueOf(e.key)) return;
-    if (e.key === "title") return setMeta({ line1: e.value });
+    // o título das pranchas é o nome da estrutura: mudar aqui renomeia a estrutura (vazio não vale)
+    if (e.key === "title") return e.value.trim() ? useApp.getState().setName(e.value.trim()) : undefined;
+    if (e.key === "line1") return setMeta({ line1: e.value });
     if (e.key === "sub") return setMeta({ line2: e.value });
     setViewText(e.key.slice(3), e.key.startsWith("vt:") ? "title" : "sub", e.value);
   };
