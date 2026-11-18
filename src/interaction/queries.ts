@@ -1,7 +1,7 @@
 // Consultas com cache usadas pelo posicionamento (Placement e steps/): candidatas de encaixe, guias, caminhos e
 // referências do Tab. Tudo indexado pela identidade do modelo: muda o modelo, recalcula.
 import { catalog } from "../core/catalog";
-import { alignStops, connectReach, locusCirclePoint, locusSpherePoint, locusStatus, nearestOnRing, nodeMoveOptions, sphereMeridianLimits, sphereRings, type LocusCircle, type LocusStatus, type NodeMove, type NodeMoveSet } from "../core/edit";
+import { alignStops, connectReach, locusCirclePoint, locusSpherePoint, locusStatus, nearestOnRing, nodeMoveOptions, sphereMeridianLimits, sphereRings, type LinkMode, type LocusCircle, type LocusStatus, type NodeMove, type NodeMoveSet } from "../core/edit";
 import { type GlobalMove } from "../core/globalMove";
 import { supportReach, type ReachGuide } from "../core/reach";
 import { type Clip, type PasteResult } from "../core/clipboard";
@@ -95,11 +95,11 @@ export function barGuidesFor(model: Model, code: string, inv: ReturnType<typeof 
 }
 
 // ligação entre duas esferas (dois cliques): recalcula quando muda o modelo, a peça ou as esferas
-let linkCache: { model: Model; code: string; inv: unknown; a: string; b: string; r: ReturnType<typeof connectReach> } | null = null;
-export function linkFor(model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"], a: string, b: string) {
+let linkCache: { model: Model; code: string; inv: unknown; a: string; b: string; mode: LinkMode; r: ReturnType<typeof connectReach> } | null = null;
+export function linkFor(model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"], a: string, b: string, mode: LinkMode = "second") {
   const c = linkCache;
-  if (c && c.model === model && c.code === code && c.inv === inv && c.a === a && c.b === b) return c.r;
-  linkCache = { model, code, inv, a, b, r: connectReach(catalog, inv, model, code, a, b) };
+  if (c && c.model === model && c.code === code && c.inv === inv && c.a === a && c.b === b && c.mode === mode) return c.r;
+  linkCache = { model, code, inv, a, b, mode, r: connectReach(catalog, inv, model, code, a, b, mode) };
   return linkCache.r;
 }
 

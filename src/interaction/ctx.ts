@@ -21,7 +21,7 @@ export interface Cmd {
   nodeTab: { x: number; y: number; nodeId: string; pts: Vec3[]; labels: string[]; rings: (LocusCircle | null)[]; start: number } | null;
   /** só no movimento atual do cursor: esfera ou bolinha clicada para começar a ligação, e se o fantasma é uma ligação */
   linkPick: string | null;
-  linkGhost: { moved: number } | null;
+  linkGhost: { moved: number; movedA?: number } | null;
   ballPick: RopeBall | null;
   /** retângulo de seleção começado */
   boxStart: { x: number; y: number; shift: boolean } | null;

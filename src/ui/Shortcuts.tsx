@@ -31,6 +31,7 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
     keys: [
       ["1 · 2 · 3", "bolinhas do encaixe: grade (verde) · vão (azul) · triângulos (amarela e laranja)"],
       ["Tab", "mais opções: colocando uma peça, a próxima opção (como R); barra sobre uma esfera: pontos amarelos e laranja; GC: ponto sobreposto (Shift+Tab volta)"],
+      ["Tab (ligando duas esferas)", "quem anda para a mola caber: só a segunda → as duas por igual → só a primeira"],
     ],
   },
   {

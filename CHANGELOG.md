@@ -26,6 +26,10 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 A linha 2.x é desenvolvida na **BETA** (https://polibuilding.github.io/simolador/beta/), aberta pelo botão **BETA** no canto de baixo à direita. A versão oficial continua a 1.10.9 até a equipe decidir que a BETA vira a oficial.
 
+### 2.0.0-beta.4 — Tab escolhe quem anda ao ligar duas esferas · 17/11/2026
+- Ao ligar duas esferas já colocadas (clique na primeira, depois na segunda), continua sendo **só a segunda** que anda para a mola caber. Agora, com a primeira escolhida, o **Tab** troca: **as duas andam por igual** → **só a primeira anda** → volta ao começo (Shift+Tab volta). O rodapé mostra quanto cada uma anda e o modo atual.
+- Se uma das duas não pode andar (presa por uma RC90, por exemplo), "as duas" passa a ser "só a outra", e o rodapé avisa.
+
 ### 2.0.0-beta.3 — Ângulos e distâncias entre duas peças e polígono regular de bases · 17/11/2026
 - **Duas molas selecionadas** (com uma esfera em comum): o painel da direita mostra o **ângulo entre elas**, e dá para digitar outro. A primeira selecionada fica; a segunda gira em volta da esfera comum, no plano das duas, levando junto o que está pendurado nela. Lembrete no painel: ângulo interno de um polígono regular = 180° − 360°/N (pentágono 108°, decágono 144°).
 - **Duas GCs selecionadas**: a **distância** entre elas e o **ângulo da reta** (a partir do eixo X, visto de cima), os dois editáveis; a segunda anda.

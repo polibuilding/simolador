@@ -19,6 +19,7 @@ import { openProject, saveProject } from "./ui/files";
 import { logError } from "./ui/errorlog";
 import { available } from "./core/inventory";
 import { viewArrows } from "./core/boards";
+import { LINK_MODES } from "./core/edit";
 import { view } from "./interaction/ctx";
 
 /** Retângulo de seleção: azul = só o que está inteiro dentro; verde tracejado = o que tocar. */
@@ -159,6 +160,11 @@ function useShortcuts() {
         // pontos de encaixe sobrepostos perto do cursor: Tab escolhe o próximo
         e.preventDefault();
         useApp.setState({ snapCycle: st.snapCycle + 1 });
+      } else if (e.key === "Tab" && !mod && st.tool.kind === "place" && st.linkFrom && ["bar", "cable"].includes(catalog.pieces[st.tool.code]?.type ?? "")) {
+        // ligação de duas esferas começada: Tab troca quem anda (só a segunda → as duas por igual → só a primeira)
+        e.preventDefault();
+        const i = LINK_MODES.indexOf(st.linkMode);
+        useApp.setState({ linkMode: LINK_MODES[(i + (e.shiftKey ? 2 : 1)) % 3] });
       } else if (e.key === "Tab" && !mod && st.tool.kind === "place" && catalog.pieces[st.tool.code]?.type === "bar" && st.guides.yellow && st.triAnchor) {
         // barras sobre uma esfera: Tab percorre os pontos amarelos e laranja dela (Shift+Tab volta)
         e.preventDefault();

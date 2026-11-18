@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import { markTutorial } from "./prefs";
 import { catalog } from "../core/catalog";
-import { codeOf, moveGroup, nodeMoveNearest, nodeMoveOptions, removeMany, removeSelection, rotateSelection, selAfter, type Sel } from "../core/edit";
+import { codeOf, moveGroup, nodeMoveNearest, nodeMoveOptions, removeMany, removeSelection, rotateSelection, selAfter, type LinkMode, type Sel } from "../core/edit";
 import { globalMoveAt, globalMoveOptions, moveScopes, type GlobalMove, type MoveRef, type MoveScope } from "../core/globalMove";
 import { createHistory, push, redo, undo, type History } from "../core/history";
 import { defaultInventory, type InventoryConfig } from "../core/inventory";
@@ -62,6 +62,8 @@ interface State {
   triAnchor: string | null;
   /** primeira esfera escolhida para ligar duas esferas com a peça na mão (dois cliques) */
   linkFrom: string | null;
+  /** ligação de duas esferas: quem anda para a mola caber (Tab troca; volta a "second" a cada ligação nova) */
+  linkMode: LinkMode;
   /** cabo (K7): primeira ponta escolhida numa bolinha de outro cabo (em vez de uma esfera, `linkFrom`) */
   ropeBall: RopeBall | null;
   /** cabo (K7): bolinha sob o cursor (destaque antes de clicar) */
@@ -320,6 +322,7 @@ export const useApp = create<State>((set, get) => ({
   guides: { blue: true, yellow: true },
   triAnchor: null,
   linkFrom: null,
+  linkMode: "second",
   ropeBall: null,
   ballHover: null,
   adjustable: readPref("simolador:ajustavel", false),

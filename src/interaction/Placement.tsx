@@ -18,7 +18,7 @@ import { PROPS_W } from "../render/Scene";
 import { freshCmd, makeCtx, view } from "./ctx";
 import { AXES_PX, CLICK_PX, DRAG_PX, GIZMO_PX, guidesFor } from "./queries";
 import { pickSupport, reachStep } from "./steps/support";
-import { freeBar, linkStep, sphereUnder, triangleStep } from "./steps/bars";
+import { freeBar, linkMoved, linkStep, sphereUnder, triangleStep } from "./steps/bars";
 import { mclipStep, ringStep, ropeStep, stiffStep } from "./steps/rope";
 import { ballStep } from "./steps/ball";
 import { adjustStep } from "./steps/adjust";
@@ -221,7 +221,7 @@ export function Placement() {
       // depois de colocar, recalcula o fantasma no mesmo lugar
       update(ev);
       if (ok && wasLink) {
-        useApp.setState({ hint: wasLink.moved ? `Ligado. A segunda esfera andou ${wasLink.moved.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} M e as molas dela giraram (Ctrl+Z desfaz).` : "Ligado." });
+        useApp.setState({ hint: linkMoved(wasLink.movedA ?? 0, wasLink.moved, true) });
       }
     };
 
@@ -304,6 +304,8 @@ export function Placement() {
         if (s.triAnchor) patch.triAnchor = null;
         if (s.linkFrom || s.ropeBall) Object.assign(patch, { linkFrom: null, ropeBall: null });
       }
+      // cada ligação nova de duas esferas começa com "só a segunda anda"
+      if (!s.linkFrom && s.linkMode !== "second") patch.linkMode = "second";
       // mover só o nó: ao sair ou depois de mexer, o Tab recomeça
       if ((s.history !== p.history || toolChanged) && (hadTab || s.nodeLimits || s.snapCycle) && (p.tool.kind === "moveNode" || p.tool.kind === "moveBody")) {
         cmd.nodeTab = null;
@@ -319,7 +321,7 @@ export function Placement() {
         cmd.freeHold = s.history !== p.history && lastEv ? { x: lastEv.clientX, y: lastEv.clientY } : null;
       }
       if (Object.keys(patch).length) useApp.setState(patch);
-      if (lastEv && (s.linkFrom !== p.linkFrom || s.ropeBall !== p.ropeBall || s.rotIndex !== p.rotIndex || s.barMode !== p.barMode || (toolChanged && s.tool.kind === "paste") || s.snapCycle !== p.snapCycle || s.guides !== p.guides || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap || s.ringY !== p.ringY)) {
+      if (lastEv && (s.linkFrom !== p.linkFrom || s.linkMode !== p.linkMode || s.ropeBall !== p.ropeBall || s.rotIndex !== p.rotIndex || s.barMode !== p.barMode || (toolChanged && s.tool.kind === "paste") || s.snapCycle !== p.snapCycle || s.guides !== p.guides || inclineOn(s) !== inclineOn(p) || (s.tool.kind === "moveGroup" && p.tool.kind === "moveGroup" && s.tool.turns !== p.tool.turns) || s.history !== p.history || s.snap !== p.snap || s.ringY !== p.ringY)) {
         safeUpdate(lastEv);
       }
     });

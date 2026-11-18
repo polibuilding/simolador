@@ -197,7 +197,16 @@ export function sphereUnder(ctx: Ctx, ev: PointerEvent, rect: DOMRect, model: Mo
   return best?.id ?? null;
 }
 
-// ---- ligar duas esferas (dois cliques): a segunda anda até a mola caber ----
+/** Quanto cada esfera anda na ligação (para o rodapé): `done` = já ligado. */
+export function linkMoved(a: number, b: number, done: boolean): string {
+  const f = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+  if (a && b) return done ? `Ligado: a primeira esfera andou ${f(a)} M e a segunda, ${f(b)} M (Ctrl+Z desfaz).` : `A primeira esfera anda ${f(a)} M e a segunda, ${f(b)} M.`;
+  if (b) return done ? `Ligado: a segunda esfera andou ${f(b)} M (Ctrl+Z desfaz).` : `Só a segunda esfera anda: ${f(b)} M.`;
+  if (a) return done ? `Ligado: a primeira esfera andou ${f(a)} M (Ctrl+Z desfaz).` : `Só a primeira esfera anda: ${f(a)} M.`;
+  return done ? "Ligado." : "";
+}
+
+// ---- ligar duas esferas (dois cliques): a segunda anda até a mola caber (Tab: as duas, ou a primeira) ----
 export function linkStep(ctx: Ctx, ev: PointerEvent, rect: DOMRect, model: Model, code: string, inv: ReturnType<typeof useApp.getState>["inventory"]): boolean {
   const cmd = ctx.cmd;
   const st = useApp.getState();
@@ -212,21 +221,24 @@ export function linkStep(ctx: Ctx, ev: PointerEvent, rect: DOMRect, model: Model
     st.setGhost(
       null,
       from
-        ? `Primeira esfera ${fmt(model.nodes[from].pos)}: clique na outra esfera. Clique de novo nesta (ou Esc) cancela.`
+        ? `Primeira esfera ${fmt(model.nodes[from].pos)}: clique na outra esfera (Tab troca quem anda). Clique de novo nesta (ou Esc) cancela.`
         : "Clique para começar a ligação nesta esfera; depois clique na outra esfera. Ou leve o cursor até um ponto verde, amarelo ou laranja.",
     );
     return true;
   }
-  const r = Q.linkFor(model, code, inv, from, on);
+  const mode = st.linkMode;
+  const r = Q.linkFor(model, code, inv, from, on, mode);
+  // Tab troca quem anda (E17); cada parte separada por " · " (traduzida parte por parte)
+  const tab = `Tab: ${{ second: "só a segunda anda", both: "as duas andam igual", first: "só a primeira anda" }[mode]}`;
   if (!r.model) {
-    st.setGhost(null, r.error ?? "Não dá para ligar essas esferas.");
+    st.setGhost(null, `${r.error ?? "Não dá para ligar essas esferas."} · ${tab}`);
     return true;
   }
-  cmd.linkGhost = { moved: r.moved ?? 0 };
-  const moved = r.moved ? ` A segunda esfera anda ${(r.moved).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} M e as molas dela giram para a ${code} caber.` : "";
+  cmd.linkGhost = { moved: r.moved ?? 0, movedA: r.movedA ?? 0 };
+  const moved = linkMoved(r.movedA ?? 0, r.moved ?? 0, false);
   st.setGhost(
     { kind: "group", model: r.model, ids: r.ids ?? new Set([on]), keep: true, check: { ok: true, errors: [], warnings: [] } },
-    `Clique para ligar ${fmt(model.nodes[from].pos)} a ${fmt(model.nodes[on].pos)} com a ${code}.${moved}`,
+    [r.fallback, `Clique para ligar ${fmt(model.nodes[from].pos)} a ${fmt(model.nodes[on].pos)} com a ${code}.`, moved, moved && tab].filter(Boolean).join(" · "),
   );
   return true;
 }

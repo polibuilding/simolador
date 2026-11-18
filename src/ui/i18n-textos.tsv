@@ -666,3 +666,23 @@ A distância precisa ser maior que zero.	The distance must be greater than zero.
 As duas GCs estão ligadas pela mesma estrutura: a segunda não anda sozinha.	The two GCs are joined by the same structure: the second can't move alone.	Las dos GC están unidas por la misma estructura: la segunda no se mueve sola.
 A estrutura da segunda GC está presa em outra GC: ela não anda sozinha.	The second GC's structure is held by another GC: it can't move alone.	La estructura de la segunda GC está sujeta a otra GC: no se mueve sola.
 Vértice {1} de {2}: {3}	Vertex {1} of {2}: {3}	Vértice {1} de {2}: {3}
+Primeira esfera {1}: clique na outra esfera (Tab troca quem anda). Clique de novo nesta (ou Esc) cancela.	First sphere {1}: click the other sphere (Tab changes which one moves). Clicking this one again (or Esc) cancels.	Primera esfera {1}: haz clic en la otra esfera (Tab cambia cuál se mueve). Otro clic en esta (o Esc) cancela.
+Clique para ligar {1} a {2} com a {3}.	Click to join {1} to {2} with the {3}.	Haz clic para unir {1} con {2} usando la {3}.
+A primeira esfera anda {1} M e a segunda, {2} M.	The first sphere moves {1} M and the second, {2} M.	La primera esfera se mueve {1} M y la segunda, {2} M.
+Só a segunda esfera anda: {1} M.	Only the second sphere moves: {1} M.	Solo se mueve la segunda esfera: {1} M.
+Só a primeira esfera anda: {1} M.	Only the first sphere moves: {1} M.	Solo se mueve la primera esfera: {1} M.
+Ligado: a primeira esfera andou {1} M e a segunda, {2} M (Ctrl+Z desfaz).	Joined: the first sphere moved {1} M and the second, {2} M (Ctrl+Z undoes).	Unido: la primera esfera se movió {1} M y la segunda, {2} M (Ctrl+Z deshace).
+Ligado: a segunda esfera andou {1} M (Ctrl+Z desfaz).	Joined: the second sphere moved {1} M (Ctrl+Z undoes).	Unido: la segunda esfera se movió {1} M (Ctrl+Z deshace).
+Ligado: a primeira esfera andou {1} M (Ctrl+Z desfaz).	Joined: the first sphere moved {1} M (Ctrl+Z undoes).	Unido: la primera esfera se movió {1} M (Ctrl+Z deshace).
+Tab: só a segunda anda	Tab: only the second moves	Tab: solo se mueve la segunda
+Tab: as duas andam igual	Tab: both move equally	Tab: las dos se mueven igual
+Tab: só a primeira anda	Tab: only the first moves	Tab: solo se mueve la primera
+Não dá para as duas andarem igual: {1} Só a segunda anda.	Both can't move equally: {1} Only the second moves.	Las dos no pueden moverse igual: {1} Solo se mueve la segunda.
+Não dá para as duas andarem igual: {1} Só a primeira anda.	Both can't move equally: {1} Only the first moves.	Las dos no pueden moverse igual: {1} Solo se mueve la primera.
+A {1} esfera não pode andar: {2}	The {1} sphere can't move: {2}	La {1} esfera no puede moverse: {2}
+A outra esfera anda junto com a {1}: escolha outra esfera, ou outro modo (Tab).	The other sphere moves along with the {1}: choose another sphere, or another mode (Tab).	La otra esfera se mueve junto con la {1}: elige otra esfera u otro modo (Tab).
+As barras presas à {1} esfera não deixam ela ir para lá.	The bars attached to the {1} sphere don't let it go there.	Las barras unidas a la {1} esfera no la dejan ir allí.
+segunda	second	segunda
+primeira	first	primera
+Tab (ligando duas esferas)	Tab (joining two spheres)	Tab (uniendo dos esferas)
+quem anda para a mola caber: só a segunda → as duas por igual → só a primeira	which one moves so the bar fits: only the second → both equally → only the first	cuál se mueve para que la barra quepa: solo la segunda → las dos por igual → solo la primera

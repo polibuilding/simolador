@@ -526,9 +526,13 @@ export function nodeMoveNearest(cat: Catalog, model: Model, nodeId: string, targ
  * Se a distância já é a da peça, só liga. Se não, B anda para o ponto possível mais perto em que a peça cabe:
  * as barras presas a B giram em torno das pontas fixas (como "Mover só o nó"). A fica parada.
  */
+/** Quem anda para a mola caber entre duas esferas (Tab na ligação): só a segunda, as duas por igual ou só a primeira. */
+export type LinkMode = "second" | "both" | "first";
+export const LINK_MODES: LinkMode[] = ["second", "both", "first"];
+
 export function connectReach(
-  cat: Catalog, inv: InventoryConfig, model: Model, code: string, aId: string, bId: string,
-): { model?: Model; ids?: Set<string>; moved?: number; error?: string } {
+  cat: Catalog, inv: InventoryConfig, model: Model, code: string, aId: string, bId: string, mode: LinkMode = "second",
+): { model?: Model; ids?: Set<string>; moved?: number; movedA?: number; error?: string; fallback?: string } {
   const piece = cat.pieces[code];
   const A = model.nodes[aId];
   const B = model.nodes[bId];
@@ -540,23 +544,62 @@ export function connectReach(
   const L = piece.type === "cable" ? Math.hypot(piece.spanM[0], piece.spanM[1]) : piece.spanM[0];
   const tol = cat.settings.tolerancia_encaixe_mm / cat.settings.modulo_mm;
   const fmt = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+  const link = (m: Model): { model?: Model; error?: string } => {
+    const ck = validateMember(cat, inv, m, code, aId, m.nodes[bId].pos, { free: true });
+    return ck.ok ? { model: addMember(m, code, aId, m.nodes[bId].pos).model } : { error: ck.errors[0] };
+  };
   // já na distância certa: só liga
   if (Math.abs(len(sub(B.pos, A.pos)) - L) <= tol) {
-    const ck = validateMember(cat, inv, model, code, aId, B.pos, { free: true });
-    if (!ck.ok) return { error: ck.errors[0] };
-    return { model: addMember(model, code, aId, B.pos).model, ids: new Set([bId]), moved: 0 };
+    const r = link(model);
+    return r.model ? { model: r.model, ids: new Set([bId]), moved: 0, movedA: 0 } : { error: r.error };
   }
-  const set = nodeMoveOptions(cat, model, bId);
-  if (set.locked) return { error: `A segunda esfera não pode andar: ${set.locked.charAt(0).toLowerCase()}${set.locked.slice(1)}` };
-  const p = set.nearestWith?.({ c: A.pos, L }, B.pos);
-  if (!p) return { error: `As barras presas à segunda esfera não deixam ela chegar a ${fmt(L)} M da primeira (a ${code} tem ${fmt(L)} M; estão a ${fmt(len(sub(B.pos, A.pos)))} M).` };
-  const mv = set.evalAt?.(p);
-  if (!mv) return { error: "As barras presas à segunda esfera não deixam ela ir para lá." };
-  if (mv.ids.has(aId)) return { error: "A primeira esfera anda junto com a segunda: escolha outra esfera, ou clique na ordem inversa." };
-  if (!mv.check.ok) return { error: mv.check.errors[0] };
-  const ck = validateMember(cat, inv, mv.model, code, aId, mv.pos, { free: true });
-  if (!ck.ok) return { error: ck.errors[0] };
-  return { model: addMember(mv.model, code, aId, mv.pos).model, ids: mv.ids, moved: len(sub(mv.pos, B.pos)) };
+  /** `who` anda até ficar a `dist` de `c` (o outro nó fica parado) */
+  const walk = (m: Model, who: string, other: string, c: Vec3, dist: number, name: string): { mv?: NodeMove; error?: string } => {
+    const set = nodeMoveOptions(cat, m, who);
+    if (set.locked) return { error: `A ${name} esfera não pode andar: ${set.locked.charAt(0).toLowerCase()}${set.locked.slice(1)}` };
+    const from = m.nodes[who].pos;
+    const p = set.nearestWith?.({ c, L: dist }, from);
+    if (!p) return { error: `As barras presas à ${name} esfera não deixam ela chegar a ${fmt(L)} M da outra (a ${code} tem ${fmt(L)} M; estão a ${fmt(len(sub(m.nodes[other].pos, m.nodes[who].pos)))} M).` };
+    const mv = set.evalAt?.(p);
+    if (!mv) return { error: `As barras presas à ${name} esfera não deixam ela ir para lá.` };
+    if (mv.ids.has(other)) return { error: `A outra esfera anda junto com a ${name}: escolha outra esfera, ou outro modo (Tab).` };
+    if (!mv.check.ok) return { error: mv.check.errors[0] };
+    return { mv };
+  };
+  const one = (m: Model, who: string, other: string, name: string) => {
+    const w = walk(m, who, other, m.nodes[other].pos, L, name);
+    if (!w.mv) return { error: w.error };
+    const r = link(w.mv.model);
+    if (!r.model) return { error: r.error };
+    return { model: r.model, ids: w.mv.ids, d: len(sub(w.mv.pos, m.nodes[who].pos)) };
+  };
+  if (mode === "second" || mode === "first") {
+    const second = mode === "second";
+    const r = second ? one(model, bId, aId, "segunda") : one(model, aId, bId, "primeira");
+    if (!r.model) return { error: r.error };
+    return { model: r.model, ids: r.ids, moved: second ? r.d : 0, movedA: second ? 0 : r.d };
+  }
+  // as duas por igual: cada uma vai até meia mola do ponto médio; a segunda acerta o que sobrar
+  const mid: Vec3 = scale(add(A.pos, B.pos), 0.5);
+  const attempt = (first: string, last: string, nFirst: string, nLast: string) => {
+    const w = walk(model, first, last, mid, L / 2, nFirst);
+    if (!w.mv) return { error: w.error };
+    const r = one(w.mv.model, last, first, nLast);
+    if (!r.model) return { error: r.error };
+    const ids = new Set([...w.mv.ids, ...(r.ids ?? [])]);
+    const dFirst = len(sub(w.mv.pos, model.nodes[first].pos));
+    return { model: r.model, ids, dFirst, dLast: r.d ?? 0 };
+  };
+  const ab = attempt(aId, bId, "primeira", "segunda");
+  if (ab.model) return { model: ab.model, ids: ab.ids, movedA: ab.dFirst, moved: ab.dLast };
+  const ba = attempt(bId, aId, "segunda", "primeira");
+  if (ba.model) return { model: ba.model, ids: ba.ids, movedA: ba.dLast, moved: ba.dFirst };
+  // não deu para dividir: tenta uma só, avisando
+  const sec = connectReach(cat, inv, model, code, aId, bId, "second");
+  if (sec.model) return { ...sec, fallback: `Não dá para as duas andarem igual: ${ab.error ?? ba.error} Só a segunda anda.` };
+  const fst = connectReach(cat, inv, model, code, aId, bId, "first");
+  if (fst.model) return { ...fst, fallback: `Não dá para as duas andarem igual: ${ab.error ?? ba.error} Só a primeira anda.` };
+  return { error: ab.error ?? ba.error };
 }
 
 /* ---------- caminho da esfera: trechos possíveis (azul) e bloqueados (vermelho) ---------- */
