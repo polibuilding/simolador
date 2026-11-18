@@ -59,8 +59,7 @@ describe("pranchas: carimbo", () => {
     const t = texts(buildSheets({ cat: catalog, model: portico.model, inventory: { ...portico.inventory, unlimited: true }, name: "Pórtico", meta: base }).sheets[0].prims);
     expect(t).toContain("Massa estimada");
     expect(t.some((x) => /^≈ \d+ g$/.test(x))).toBe(true);
-    expect(t).toContain("Kits mínimos para montar");
-    expect(t.some((x) => /KIT 1/.test(x))).toBe(true);
+    expect(t.some((x) => /^Kits mínimos para montar: .*KIT 1/.test(x))).toBe(true);
   });
 
   it("kits usados no carimbo", () => {

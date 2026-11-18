@@ -1090,11 +1090,6 @@ function coverDrawing(input: SheetInput, n: number, extra: ExtraFloor[] = []): P
   // massa estimada (pesagens da equipe); o que não tem massa fica dito ao lado
   const mass = structureMass(model, cat);
   row("Massa estimada", `≈ ${f0(mass.g)} g${mass.missing.length ? ` (sem ${mass.missing.join(", ")})` : ""}`);
-  // mínimo de kits para montar, mesmo com o estoque sem limite
-  const minTxt = minKitLines(input).join(" + ") || "—";
-  dados.push(txt([px, y], "Kits mínimos para montar", 2.6 * fs));
-  dados.push(txt([pr1, y], minTxt, fitSize(minTxt, pr1 - px - textW("Kits mínimos para montar", 2.6 * fs) - 4, 2.6 * fs, true, 1.4), { anchor: "end", bold: true }));
-  y += 5 * fs;
   out.push(...tagged(dados, "capa:dados"));
 
   // tabela: faixa de cabeçalho, linhas zebradas, quantidades em destaque, total em faixa escura
@@ -1146,10 +1141,14 @@ function coverDrawing(input: SheetInput, n: number, extra: ExtraFloor[] = []): P
   tab.push({ t: "poly", pts: [[px, top], [pr1, top], [pr1, yy], [px, yy]], closed: true, fill: null, stroke: "#000", pen: PEN.part, layer: "MOLA-TEXTO" });
   for (const x of [colName - 2, colUsed - 16 * fs, colUsed + 3]) tab.push({ t: "line", a: [x, top], b: [x, yy - rowH * 1.15], stroke: "#bdbdbd", pen: PEN.thin, layer: "MOLA-TEXTO" });
   yy += 7 * fs;
-  const kitTxt = inventory.unlimited
-    ? "Sem limite de peças"
-    : Object.entries(inventory.kits).filter(([, c]) => c > 0).map(([k, c]) => `${c}× ${cat.kits[k]?.name ?? `Kit ${k}`}`).join("; ");
-  tab.push(txt([px, yy], `Kits: ${kitTxt || "—"}`, 2.5 * fs));
+  const kitTxt = Object.entries(inventory.kits).filter(([, c]) => c > 0).map(([k, c]) => `${c}× ${cat.kits[k]?.name ?? `Kit ${k}`}`).join("; ");
+  // abaixo da tabela: os kits do estoque e o mínimo para montar (sem limite de peças, só o mínimo)
+  const minTxt = `Kits mínimos para montar: ${minKitLines(input).join(" + ") || "—"}`;
+  if (!inventory.unlimited) {
+    tab.push(txt([px, yy], `Kits: ${kitTxt || "—"}`, 2.5 * fs));
+    yy += 4.2 * fs;
+  }
+  tab.push(txt([px, yy], minTxt, fitSize(minTxt, pr1 - px, 2.5 * fs, false, 1.4)));
   if (codes.some((c) => isVariablePiece(cat, c))) {
     yy += 4.2 * fs;
     tab.push({ t: "poly", pts: [[px, yy - 2 * fs], [px + 2.2 * fs, yy - 2 * fs], [px + 2.2 * fs, yy + 0.2 * fs], [px, yy + 0.2 * fs]], closed: true, fill: GRAY.variable, stroke: null, layer: "MOLA-TEXTO" });
