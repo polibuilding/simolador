@@ -46,3 +46,4 @@ v2.0.0-beta.2 9f1d94b Barra e tirante ajustáveis, kits extras e troca por área
 v2.0.0-beta.3 702497d Ângulos e distâncias entre duas peças e polígono regular de bases (BETA)
 v2.0.0-beta.4 789e1fc Tab escolhe quem anda ao ligar duas esferas (BETA)
 v2.0.0-beta.5 ee789f5 Pranchas com o nome da estrutura, peças variáveis escuras, massa e kits mínimos (BETA)
+v2.0.0-beta.6 8349d72 Kits mínimos abaixo da lista de peças (BETA)
