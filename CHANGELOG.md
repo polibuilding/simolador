@@ -26,6 +26,9 @@ Toda entrega publicada ganha número. Em 28/10/2026 as versões antigas (1.0 a 1
 
 A linha 2.x é desenvolvida na **BETA** (https://polibuilding.github.io/simolador/beta/), aberta pelo botão **BETA** no canto de baixo à direita. A versão oficial continua a 1.10.9 até a equipe decidir que a BETA vira a oficial.
 
+### 2.0.0-beta.6 — Kits mínimos abaixo da lista de peças · 17/11/2026
+- Na capa, os **kits mínimos para montar** saíram de "Dados da estrutura" e foram para baixo da lista de peças, no lugar de "Sem limite de peças", com a mesma letra. Com o estoque contado, a linha "Kits: …" do estoque continua antes deles.
+
 ### 2.0.0-beta.5 — Pranchas com o nome da estrutura, peças variáveis escuras, massa e kits mínimos · 17/11/2026
 - **O título das pranchas é o nome da estrutura** (o da montagem), no carimbo e na capa. Clicar nele e mudar renomeia a estrutura. "MOLA STRUCTURAL MODEL" continua na capa, também editável.
 - **Peças variáveis escuras nas pranchas**: barras e tirantes ajustáveis, peças criadas e ligações super leves saem escuras nas plantas, vistas, cortes e isométricas, como na cena. Na lista de peças, um quadradinho escuro marca o código, com legenda embaixo.
